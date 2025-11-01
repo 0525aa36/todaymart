@@ -18,7 +18,7 @@ import { useState, useEffect } from "react"
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState("")
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
+  const [user, setUser] = useState<{ name: string; email: string; roles?: string[] } | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -62,6 +62,14 @@ export function Header() {
                   <Link href="/mypage" className="text-muted-foreground hover:text-foreground transition-colors">
                     마이페이지
                   </Link>
+                  {user.roles?.includes("ADMIN") && (
+                    <Link
+                      href="/admin"
+                      className="text-primary hover:text-primary/80 transition-colors font-medium"
+                    >
+                      관리자 페이지
+                    </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="text-muted-foreground hover:text-foreground transition-colors"
