@@ -62,7 +62,7 @@ export function Header() {
                   <Link href="/mypage" className="text-muted-foreground hover:text-foreground transition-colors">
                     마이페이지
                   </Link>
-                  {user.roles?.includes("ADMIN") && (
+                  {(user.roles?.includes("ADMIN") || user.roles?.includes("ROLE_ADMIN")) && (
                     <Link
                       href="/admin"
                       className="text-primary hover:text-primary/80 transition-colors font-medium"
