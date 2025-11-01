@@ -29,13 +29,12 @@ public class ReviewController {
             @Valid @RequestBody ReviewRequest request,
             Authentication authentication) {
 
-        // 현재 로그인한 사용자 ID 가져오기 (실제로는 UserDetails에서 추출해야 함)
-        // 임시로 userId 1로 설정 (실제 구현 시 수정 필요)
-        Long userId = 1L; // TODO: authentication에서 userId 추출
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String userEmail = userDetails.getUsername();
 
         Review review = reviewService.createReview(
             request.getProductId(),
-            userId,
+            userEmail,
             request.getRating(),
             request.getTitle(),
             request.getContent()
@@ -72,10 +71,10 @@ public class ReviewController {
     public ResponseEntity<Page<ReviewResponse>> getMyReviews(
             Authentication authentication,
             Pageable pageable) {
-        // 임시로 userId 1로 설정
-        Long userId = 1L; // TODO: authentication에서 userId 추출
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String userEmail = userDetails.getUsername();
 
-        Page<Review> reviews = reviewService.getReviewsByUserId(userId, pageable);
+        Page<Review> reviews = reviewService.getReviewsByUserEmail(userEmail, pageable);
         Page<ReviewResponse> response = reviews.map(ReviewResponse::from);
         return ResponseEntity.ok(response);
     }

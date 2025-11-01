@@ -28,12 +28,12 @@ public class ReviewService {
 
     // 리뷰 생성
     @Transactional
-    public Review createReview(Long productId, Long userId, Integer rating, String title, String content) {
+    public Review createReview(Long productId, String userEmail, Integer rating, String title, String content) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
 
         Review review = new Review();
         review.setProduct(product);
@@ -53,6 +53,13 @@ public class ReviewService {
     // 사용자별 리뷰 조회
     public Page<Review> getReviewsByUserId(Long userId, Pageable pageable) {
         return reviewRepository.findByUserId(userId, pageable);
+    }
+
+    // 이메일로 사용자 리뷰 조회
+    public Page<Review> getReviewsByUserEmail(String userEmail, Pageable pageable) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
+        return reviewRepository.findByUserId(user.getId(), pageable);
     }
 
     // 리뷰 상세 조회
