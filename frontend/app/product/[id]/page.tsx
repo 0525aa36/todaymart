@@ -166,13 +166,77 @@ export default function ProductDetailPage() {
           description: "상품이 장바구니에 추가되었습니다.",
         })
       } else {
-        throw new Error("Failed to add to cart")
+        const errorData = await response.json().catch(() => ({}))
+        console.error("Cart error:", errorData)
+        throw new Error(errorData.message || "Failed to add to cart")
       }
     } catch (error) {
       console.error("Error adding to cart:", error)
       toast({
         title: "오류",
         description: "장바구니에 추가하는 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const buyNow = async () => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      toast({
+        title: "로그인 필요",
+        description: "구매하려면 로그인이 필요합니다.",
+        variant: "destructive",
+      })
+      router.push("/login")
+      return
+    }
+
+    // 장바구니에 추가 후 결제 페이지로 이동
+    try {
+      const response = await fetch("http://localhost:8081/api/cart/items", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          productId: Number(productId),
+          quantity: quantity,
+        }),
+      })
+
+      if (response.ok) {
+        // 바로 체크아웃 페이지로 이동
+        toast({
+          title: "장바구니에 추가됨",
+          description: "결제 페이지로 이동합니다.",
+        })
+        router.push("/checkout")
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        console.error("Buy now error:", errorData)
+
+        // 401 오류인 경우 로그인 페이지로 리다이렉트
+        if (response.status === 401) {
+          toast({
+            title: "인증 오류",
+            description: "다시 로그인해주세요.",
+            variant: "destructive",
+          })
+          localStorage.removeItem("token")
+          localStorage.removeItem("user")
+          router.push("/login")
+          return
+        }
+
+        throw new Error(errorData.message || "Failed to process purchase")
+      }
+    } catch (error) {
+      console.error("Error in buy now:", error)
+      toast({
+        title: "오류",
+        description: error instanceof Error ? error.message : "구매 처리 중 오류가 발생했습니다.",
         variant: "destructive",
       })
     }
@@ -374,7 +438,7 @@ export default function ProductDetailPage() {
                 <Button variant="outline" className="flex-1 bg-transparent" onClick={addToCart}>
                   장바구니
                 </Button>
-                <Button className="flex-1">
+                <Button className="flex-1" onClick={buyNow}>
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   바로구매
                 </Button>
