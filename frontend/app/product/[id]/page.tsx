@@ -68,6 +68,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true)
   const [quantity, setQuantity] = useState(1)
   const [mainImage, setMainImage] = useState("")
+  const [isInWishlist, setIsInWishlist] = useState(false)
 
   // Review form state
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false)
@@ -81,6 +82,7 @@ export default function ProductDetailPage() {
       fetchProduct()
       fetchReviews()
       fetchReviewStats()
+      checkWishlistStatus()
     }
   }, [productId])
 
@@ -237,6 +239,83 @@ export default function ProductDetailPage() {
       toast({
         title: "오류",
         description: error instanceof Error ? error.message : "구매 처리 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const checkWishlistStatus = async () => {
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    try {
+      const response = await fetch(`http://localhost:8081/api/wishlist/check/${productId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        const isWishlisted = await response.json()
+        setIsInWishlist(isWishlisted)
+      }
+    } catch (error) {
+      console.error("Error checking wishlist status:", error)
+    }
+  }
+
+  const toggleWishlist = async () => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      toast({
+        title: "로그인 필요",
+        description: "찜하기를 사용하려면 로그인이 필요합니다.",
+        variant: "destructive",
+      })
+      router.push("/login")
+      return
+    }
+
+    try {
+      if (isInWishlist) {
+        // Remove from wishlist
+        const response = await fetch(`http://localhost:8081/api/wishlist/${productId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        if (response.ok) {
+          setIsInWishlist(false)
+          toast({
+            title: "찜 취소",
+            description: "찜 목록에서 제거되었습니다.",
+          })
+        }
+      } else {
+        // Add to wishlist
+        const response = await fetch("http://localhost:8081/api/wishlist", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ productId: Number(productId) }),
+        })
+
+        if (response.ok) {
+          setIsInWishlist(true)
+          toast({
+            title: "찜 완료",
+            description: "찜 목록에 추가되었습니다.",
+          })
+        } else {
+          const errorData = await response.text()
+          throw new Error(errorData)
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling wishlist:", error)
+      toast({
+        title: "오류",
+        description: "찜하기 처리 중 오류가 발생했습니다.",
         variant: "destructive",
       })
     }
@@ -429,8 +508,14 @@ export default function ProductDetailPage() {
 
               {/* Action Buttons */}
               <div className="flex gap-3 mb-6">
-                <Button variant="outline" size="icon" className="bg-transparent">
-                  <Heart className="h-5 w-5" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className={isInWishlist ? "bg-primary text-primary-foreground" : "bg-transparent"}
+                  onClick={toggleWishlist}
+                  title={isInWishlist ? "찜 취소" : "찜하기"}
+                >
+                  <Heart className={`h-5 w-5 ${isInWishlist ? "fill-current" : ""}`} />
                 </Button>
                 <Button variant="outline" size="icon" className="bg-transparent">
                   <Share2 className="h-5 w-5" />
