@@ -84,16 +84,23 @@ public class ProductCrawlerService {
                     Product product = crawlProductDetailPage(fullUrl);
 
                     if (product != null && isValidProduct(product)) {
+                        logger.info("✓ 상품 검증 성공 - 이름: {}, 가격: {}", product.getName(), product.getPrice());
                         // 중복 체크 (상품명으로)
                         if (!productRepository.existsByName(product.getName())) {
+                            logger.info("DB에 저장 시도 중...");
                             productRepository.save(product);
                             result.incrementSuccess();
-                            logger.info("상품 저장 완료: {}", product.getName());
+                            logger.info("✓ 상품 저장 완료: {}", product.getName());
                         } else {
-                            logger.debug("이미 존재하는 상품: {}", product.getName());
+                            logger.info("이미 존재하는 상품 건너뜀: {}", product.getName());
                             result.incrementSkipped();
                         }
                     } else {
+                        if (product == null) {
+                            logger.error("✗ 상품 객체가 null");
+                        } else {
+                            logger.error("✗ 상품 검증 실패 - 이름: {}, 가격: {}", product.getName(), product.getPrice());
+                        }
                         result.incrementFailed();
                     }
 
@@ -115,6 +122,8 @@ public class ProductCrawlerService {
     }
 
     private Product crawlProductDetailPage(String url) throws IOException {
+        logger.info("=== 상세 페이지 크롤링 시작: {} ===", url);
+
         Document detailPage = Jsoup.connect(url)
                 .userAgent(config.getUserAgent())
                 .timeout(config.getTimeout())
@@ -124,45 +133,64 @@ public class ProductCrawlerService {
 
         // 상품명 추출: 여러 선택자 시도
         Element nameElement = detailPage.selectFirst("h3.prod-title");
+        logger.info("h3.prod-title 시도: {}", nameElement != null ? nameElement.text() : "없음");
+
         if (nameElement == null) {
             nameElement = detailPage.selectFirst("span.title.text-break");
+            logger.info("span.title.text-break 시도: {}", nameElement != null ? nameElement.text() : "없음");
         }
         if (nameElement == null) {
             nameElement = detailPage.selectFirst("h1");
+            logger.info("h1 시도: {}", nameElement != null ? nameElement.text() : "없음");
         }
         if (nameElement != null) {
             product.setName(nameElement.text().trim());
-            logger.debug("상품명: {}", product.getName());
+            logger.info("✓ 상품명 추출 성공: {}", product.getName());
+        } else {
+            logger.error("✗ 상품명 추출 실패");
         }
 
         // 메인 이미지: 여러 선택자 시도
         Element mainImage = detailPage.selectFirst("#detailImgSwiper img");
+        logger.info("#detailImgSwiper img 시도: {}", mainImage != null ? mainImage.absUrl("src") : "없음");
+
         if (mainImage == null) {
             mainImage = detailPage.selectFirst("img#prodImage");
+            logger.info("img#prodImage 시도: {}", mainImage != null ? mainImage.absUrl("src") : "없음");
         }
         if (mainImage == null) {
             mainImage = detailPage.selectFirst(".swiper-slide img");
+            logger.info(".swiper-slide img 시도: {}", mainImage != null ? mainImage.absUrl("src") : "없음");
         }
         if (mainImage != null) {
             String imageUrl = mainImage.absUrl("src");
+            logger.info("✓ 이미지 URL 추출 성공: {}", imageUrl);
             if (!imageUrl.isEmpty() && !imageUrl.contains("noimage")) {
+                logger.info("이미지 다운로드 시도 중...");
                 String savedImageUrl = downloadAndSaveImage(imageUrl);
                 if (savedImageUrl != null) {
                     product.setImageUrl(savedImageUrl);
                     product.setImageUrls(savedImageUrl);
+                    logger.info("✓ 이미지 저장 성공: {}", savedImageUrl);
                 }
             }
+        } else {
+            logger.error("✗ 이미지 추출 실패");
         }
 
         // 가격 및 할인 정보 추출
+        logger.info("가격 정보 추출 시작...");
         extractPriceAndDiscount(detailPage, product);
+        logger.info("추출된 가격: {}, 할인율: {}%", product.getPrice(), product.getDiscountRate());
 
         // 상품 설명: detail-summary 또는 상품명 사용
         Element summaryElement = detailPage.selectFirst("p.detail-summary");
         if (summaryElement != null) {
             product.setDescription(summaryElement.text().trim());
+            logger.info("✓ 상품 설명 추출: {}", product.getDescription());
         } else if (product.getName() != null) {
             product.setDescription(product.getName());
+            logger.info("상품 설명을 상품명으로 설정");
         }
 
         // 기본값 설정
@@ -182,11 +210,15 @@ public class ProductCrawlerService {
     private void extractPriceAndDiscount(Document doc, Product product) {
         // 할인율 추출: 여러 선택자 시도
         Element discountElement = doc.selectFirst("span.discount-percent");
+        logger.info("span.discount-percent 시도: {}", discountElement != null ? discountElement.text() : "없음");
+
         if (discountElement == null) {
             discountElement = doc.selectFirst("span.discount.text-danger");
+            logger.info("span.discount.text-danger 시도: {}", discountElement != null ? discountElement.text() : "없음");
         }
         if (discountElement == null) {
             discountElement = doc.selectFirst(".discount-rate");
+            logger.info(".discount-rate 시도: {}", discountElement != null ? discountElement.text() : "없음");
         }
 
         if (discountElement != null) {
@@ -195,35 +227,93 @@ public class ProductCrawlerService {
                 try {
                     BigDecimal discountRate = new BigDecimal(discountText);
                     product.setDiscountRate(discountRate);
-                    logger.debug("할인율: {}%", discountRate);
+                    logger.info("✓ 할인율 추출 성공: {}%", discountRate);
                 } catch (NumberFormatException e) {
-                    logger.debug("할인율 파싱 실패: {}", discountText);
+                    logger.error("할인율 파싱 실패: {}", discountText);
                 }
             }
         }
 
-        // 가격 정보: 명시적 선택자 먼저 시도
+        // 가격 정보: JavaScript 변수에서 추출 (최우선)
+        String pageHtml = doc.html();
+        Pattern jsVarPattern = Pattern.compile("var m_amt\\s*=\\s*['\"]([0-9]+)['\"]");
+        Matcher jsVarMatcher = jsVarPattern.matcher(pageHtml);
+
+        boolean priceFound = false;
+
+        if (jsVarMatcher.find()) {
+            try {
+                String priceStr = jsVarMatcher.group(1);
+                BigDecimal price = new BigDecimal(priceStr);
+                product.setPrice(price);
+                logger.info("✓ JavaScript 변수에서 가격 추출 성공: {}원", price);
+                priceFound = true;
+            } catch (Exception e) {
+                logger.error("JavaScript 변수 가격 파싱 실패", e);
+            }
+        } else {
+            logger.info("JavaScript 변수 m_amt를 찾을 수 없음");
+        }
+
+        // JavaScript 변수에서 찾았으면 종료
+        if (priceFound) {
+            return;
+        }
+
+        // JSON-LD 스키마에서 추출 시도
+        Elements scriptTags = doc.select("script[type=\"application/ld+json\"]");
+        for (Element scriptTag : scriptTags) {
+            String jsonContent = scriptTag.html();
+            Pattern pricePattern = Pattern.compile("\"price\"\\s*:\\s*([0-9]+)");
+            Matcher priceMatcher = pricePattern.matcher(jsonContent);
+            if (priceMatcher.find()) {
+                try {
+                    String priceStr = priceMatcher.group(1);
+                    BigDecimal price = new BigDecimal(priceStr);
+                    product.setPrice(price);
+                    logger.info("✓ JSON-LD 스키마에서 가격 추출 성공: {}원", price);
+                    priceFound = true;
+                    break;
+                } catch (Exception e) {
+                    logger.error("JSON-LD 가격 파싱 실패", e);
+                }
+            }
+        }
+
+        if (!priceFound) {
+            logger.info("JSON-LD 스키마에서 가격을 찾을 수 없음");
+        } else {
+            return;
+        }
+
+        // 가격 정보: 명시적 선택자 시도
         Element salePriceElement = doc.selectFirst("span.sale-price");
+        logger.info("span.sale-price 시도: {}", salePriceElement != null ? salePriceElement.text() : "없음");
+
         Element originalPriceElement = doc.selectFirst("span.original-price");
+        logger.info("span.original-price 시도: {}", originalPriceElement != null ? originalPriceElement.text() : "없음");
+
         Element goodsPriceElement = doc.selectFirst("#goodsPrice");
+        logger.info("#goodsPrice 시도: {}", goodsPriceElement != null ? goodsPriceElement.text() : "없음");
 
         if (salePriceElement != null) {
             try {
                 BigDecimal salePrice = parsePrice(salePriceElement.text());
                 product.setPrice(salePrice);
-                logger.debug("할인가: {}원", salePrice);
+                logger.info("✓ 할인가 추출 성공: {}원", salePrice);
             } catch (Exception e) {
-                logger.debug("할인가 파싱 실패");
+                logger.error("할인가 파싱 실패", e);
             }
-        } else if (goodsPriceElement != null) {
+        } else if (goodsPriceElement != null && !goodsPriceElement.text().equals("0")) {
             try {
                 BigDecimal price = parsePrice(goodsPriceElement.text());
                 product.setPrice(price);
-                logger.debug("가격: {}원", price);
+                logger.info("✓ 가격 추출 성공: {}원", price);
             } catch (Exception e) {
-                logger.debug("가격 파싱 실패");
+                logger.error("가격 파싱 실패", e);
             }
         } else {
+            logger.info("명시적 가격 선택자 실패, 패턴 매칭 시도...");
             // 가격 정보: 전체 텍스트에서 패턴 매칭 (fallback)
             String pageText = doc.text();
             Pattern pricePattern = Pattern.compile("([0-9,]+)원");
