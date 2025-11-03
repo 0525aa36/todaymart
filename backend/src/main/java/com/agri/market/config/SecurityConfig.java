@@ -66,6 +66,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
                         .requestMatchers("/api/reviews/product/**").permitAll() // Public review endpoints
+                        .requestMatchers("/api/files/**").permitAll() // Public file access (images)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN") // Admin roles for admin endpoints
                         .anyRequest().authenticated()
                 );
