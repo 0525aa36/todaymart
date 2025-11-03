@@ -183,11 +183,41 @@ public class ProductCrawlerService {
         extractPriceAndDiscount(detailPage, product);
         logger.info("추출된 가격: {}, 할인율: {}%", product.getPrice(), product.getDiscountRate());
 
-        // 상품 설명: detail-summary 또는 상품명 사용
+        // 상품 설명: detail-summary 텍스트 + 상세 이미지들 HTML로 구성
+        StringBuilder descriptionHtml = new StringBuilder();
+
         Element summaryElement = detailPage.selectFirst("p.detail-summary");
         if (summaryElement != null) {
-            product.setDescription(summaryElement.text().trim());
-            logger.info("✓ 상품 설명 추출: {}", product.getDescription());
+            descriptionHtml.append("<p>").append(summaryElement.text().trim()).append("</p>");
+            logger.info("✓ 상품 요약 추출: {}", summaryElement.text().trim());
+        }
+
+        // 상세 이미지들 추출 (userfiles 경로의 이미지들)
+        Elements detailImages = detailPage.select("img[src*='userfiles'], img[data-src*='userfiles']");
+        logger.info("상세 이미지 개수: {}", detailImages.size());
+
+        int downloadedCount = 0;
+        for (Element imgElement : detailImages) {
+            String imgUrl = imgElement.absUrl("src");
+            if (imgUrl.isEmpty()) {
+                imgUrl = imgElement.absUrl("data-src");
+            }
+
+            if (!imgUrl.isEmpty() && !imgUrl.contains("noimage")) {
+                logger.info("상세 이미지 다운로드 시도: {}", imgUrl);
+                String savedImgUrl = downloadAndSaveImage(imgUrl);
+                if (savedImgUrl != null) {
+                    descriptionHtml.append("<img src=\"").append(savedImgUrl).append("\" style=\"max-width:100%;\" />");
+                    downloadedCount++;
+                    logger.info("✓ 상세 이미지 저장 완료: {}", savedImgUrl);
+                }
+            }
+        }
+
+        logger.info("✓ 총 {}개의 상세 이미지 다운로드 완료", downloadedCount);
+
+        if (descriptionHtml.length() > 0) {
+            product.setDescription(descriptionHtml.toString());
         } else if (product.getName() != null) {
             product.setDescription(product.getName());
             logger.info("상품 설명을 상품명으로 설정");
