@@ -15,6 +15,7 @@ out/
 *.zip
 *.tar.gz
 /build/
+
 .gradle/
 .project
 .settings

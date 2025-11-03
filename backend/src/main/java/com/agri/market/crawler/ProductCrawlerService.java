@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -101,20 +102,35 @@ public class ProductCrawlerService {
         try {
             Product product = new Product();
 
-            // 상품명 추출
-            Element nameElement = card.selectFirst(config.getProductNameSelector());
-            if (nameElement != null) {
+            // 전체 텍스트 추출 (디버깅용)
+            String fullText = card.text();
+            logger.debug("카드 텍스트: {}", fullText);
+
+            // 1. 상품명 추출 - h4, h5 태그 또는 첫 번째 줄
+            Element nameElement = card.selectFirst("h4, h5");
+            if (nameElement != null && !nameElement.text().trim().isEmpty()) {
                 product.setName(nameElement.text().trim());
+            } else {
+                // h4/h5가 없으면 카드 내 첫 번째 텍스트 라인 사용
+                String[] lines = fullText.split("\n");
+                for (String line : lines) {
+                    String trimmed = line.trim();
+                    if (!trimmed.isEmpty() && trimmed.length() > 2) {
+                        product.setName(trimmed);
+                        break;
+                    }
+                }
             }
 
-            // 가격 정보 추출
-            extractPriceInfo(card, product);
+            // 2. 가격 정보 추출 - 텍스트에서 패턴 매칭
+            extractPriceFromText(fullText, product);
 
-            // 이미지 추출 및 다운로드
-            Element imgElement = card.selectFirst(config.getImageSelector());
+            // 3. 이미지 추출 및 다운로드
+            Element imgElement = card.selectFirst("img");
             if (imgElement != null) {
                 String imageUrl = imgElement.absUrl("src");
                 if (!imageUrl.isEmpty() && !imageUrl.contains("noimage")) {
+                    logger.debug("이미지 URL: {}", imageUrl);
                     String savedImageUrl = downloadAndSaveImage(imageUrl);
                     if (savedImageUrl != null) {
                         product.setImageUrl(savedImageUrl);
@@ -130,7 +146,7 @@ public class ProductCrawlerService {
             if (product.getOrigin() == null) {
                 product.setOrigin("국내산");
             }
-            if (product.getDescription() == null) {
+            if (product.getDescription() == null && product.getName() != null) {
                 product.setDescription(product.getName());
             }
             if (product.getStock() == null) {
@@ -145,50 +161,52 @@ public class ProductCrawlerService {
         }
     }
 
-    private void extractPriceInfo(Element card, Product product) {
-        // 할인가 추출
-        Element discountPriceElement = card.selectFirst(config.getDiscountPriceSelector());
-        String priceText = null;
+    private void extractPriceFromText(String text, Product product) {
+        // 모든 가격 패턴 찾기 (숫자,숫자원 형식)
+        Pattern pricePattern = Pattern.compile("([0-9,]+)원");
+        Matcher matcher = pricePattern.matcher(text);
 
-        if (discountPriceElement != null) {
-            priceText = discountPriceElement.text();
-        } else {
-            // 할인가가 없으면 일반 가격 텍스트에서 추출
-            String cardText = card.text();
-            Pattern pricePattern = Pattern.compile("([0-9,]+)원");
-            Matcher matcher = pricePattern.matcher(cardText);
-            if (matcher.find()) {
-                priceText = matcher.group(1);
+        List<BigDecimal> prices = new ArrayList<>();
+        while (matcher.find()) {
+            try {
+                BigDecimal price = parsePrice(matcher.group(1));
+                prices.add(price);
+            } catch (Exception e) {
+                logger.debug("가격 파싱 실패: {}", matcher.group(1));
             }
         }
 
-        if (priceText != null) {
-            BigDecimal price = parsePrice(priceText);
-            product.setPrice(price);
+        // 가격이 2개 이상이면 작은 것이 할인가, 큰 것이 정가
+        if (prices.size() >= 2) {
+            BigDecimal price1 = prices.get(0);
+            BigDecimal price2 = prices.get(1);
+
+            // 할인가는 작은 값
+            BigDecimal salePrice = price1.min(price2);
+            BigDecimal originalPrice = price1.max(price2);
+
+            product.setPrice(salePrice);
+
+            // 할인율 계산
+            if (originalPrice.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal discount = originalPrice.subtract(salePrice);
+                BigDecimal rate = discount.multiply(new BigDecimal("100"))
+                                         .divide(originalPrice, 2, RoundingMode.HALF_UP);
+                product.setDiscountRate(rate);
+            }
+        } else if (prices.size() == 1) {
+            product.setPrice(prices.get(0));
         }
 
-        // 할인율 추출
-        Element discountRateElement = card.selectFirst(config.getDiscountRateSelector());
-        if (discountRateElement != null) {
-            String rateText = discountRateElement.text().replaceAll("[^0-9.]", "");
+        // 할인율 텍스트에서 직접 추출 (더 정확함)
+        Pattern ratePattern = Pattern.compile("([0-9]+)%");
+        Matcher rateMatcher = ratePattern.matcher(text);
+        if (rateMatcher.find()) {
             try {
-                BigDecimal discountRate = new BigDecimal(rateText);
+                BigDecimal discountRate = new BigDecimal(rateMatcher.group(1));
                 product.setDiscountRate(discountRate);
             } catch (NumberFormatException e) {
-                logger.debug("할인율 파싱 실패: {}", rateText);
-            }
-        } else {
-            // 텍스트에서 할인율 추출 시도
-            String cardText = card.text();
-            Pattern ratePattern = Pattern.compile("([0-9]+)%");
-            Matcher matcher = ratePattern.matcher(cardText);
-            if (matcher.find()) {
-                try {
-                    BigDecimal discountRate = new BigDecimal(matcher.group(1));
-                    product.setDiscountRate(discountRate);
-                } catch (NumberFormatException e) {
-                    logger.debug("할인율 파싱 실패");
-                }
+                logger.debug("할인율 파싱 실패");
             }
         }
     }
