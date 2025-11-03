@@ -46,3 +46,10 @@ yarn-error.log*
 # misc
 *.swp
 *.swo
+
+# Claude Code settings
+.claude/settings.local.json
+
+# Uploaded files
+backend/uploads/
+uploads/
