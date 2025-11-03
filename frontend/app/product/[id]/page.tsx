@@ -599,7 +599,7 @@ export default function ProductDetailPage() {
                 <div className="space-y-4">
                   <h3 className="text-xl font-bold">상품 설명</h3>
                   <div
-                    className="leading-relaxed"
+                    className="leading-relaxed [&_img]:mx-auto [&_img]:block [&_img]:my-4"
                     dangerouslySetInnerHTML={{ __html: product.description }}
                   />
                 </div>
