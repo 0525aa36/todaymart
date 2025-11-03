@@ -440,7 +440,9 @@ export default function ProductDetailPage() {
                   {product.origin}
                 </Badge>
                 <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
-                <p className="text-muted-foreground mb-4">{product.description}</p>
+                <p className="text-muted-foreground mb-4">
+                  {product.description.replace(/<[^>]*>/g, '').substring(0, 100)}...
+                </p>
 
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex items-center">
@@ -596,12 +598,10 @@ export default function ProductDetailPage() {
 
                 <div className="space-y-4">
                   <h3 className="text-xl font-bold">상품 설명</h3>
-                  <p className="leading-relaxed whitespace-pre-wrap">{product.description}</p>
-                  {product.imageUrl && (
-                    <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-                      <Image src={product.imageUrl} alt={product.name} fill className="object-cover" unoptimized />
-                    </div>
-                  )}
+                  <div
+                    className="leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: product.description }}
+                  />
                 </div>
               </div>
             </TabsContent>
