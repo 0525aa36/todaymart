@@ -33,10 +33,16 @@ public class Product {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
+    @Column(precision = 5, scale = 2)
+    private BigDecimal discountRate; // 할인율 (0.00 ~ 100.00)
+
     @Column(nullable = false)
     private Integer stock;
 
     private String imageUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String imageUrls; // 여러 이미지 URL을 콤마로 구분하여 저장
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -45,4 +51,13 @@ public class Product {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    // 할인이 적용된 실제 판매 가격 계산
+    public BigDecimal getDiscountedPrice() {
+        if (discountRate != null && discountRate.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal discount = price.multiply(discountRate).divide(new BigDecimal("100"));
+            return price.subtract(discount);
+        }
+        return price;
+    }
 }
