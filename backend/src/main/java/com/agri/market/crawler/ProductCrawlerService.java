@@ -192,12 +192,15 @@ public class ProductCrawlerService {
             logger.info("✓ 상품 요약 추출: {}", summaryElement.text().trim());
         }
 
-        // 상세 이미지들 추출 (userfiles 경로의 이미지들)
+        // 상세 이미지들 추출 (userfiles 경로의 이미지들, 마지막 이미지 제외)
         Elements detailImages = detailPage.select("img[src*='userfiles'], img[data-src*='userfiles']");
         logger.info("상세 이미지 개수: {}", detailImages.size());
 
         int downloadedCount = 0;
-        for (Element imgElement : detailImages) {
+        // 마지막 이미지 제외 (마지막 이미지는 불필요한 이미지)
+        int imagesToProcess = detailImages.size() > 0 ? detailImages.size() - 1 : 0;
+        for (int i = 0; i < imagesToProcess; i++) {
+            Element imgElement = detailImages.get(i);
             String imgUrl = imgElement.absUrl("src");
             if (imgUrl.isEmpty()) {
                 imgUrl = imgElement.absUrl("data-src");
@@ -214,7 +217,7 @@ public class ProductCrawlerService {
             }
         }
 
-        logger.info("✓ 총 {}개의 상세 이미지 다운로드 완료", downloadedCount);
+        logger.info("✓ 총 {}개의 상세 이미지 다운로드 완료 (마지막 이미지 제외)", downloadedCount);
 
         if (descriptionHtml.length() > 0) {
             product.setDescription(descriptionHtml.toString());

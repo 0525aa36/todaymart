@@ -23,7 +23,10 @@
       "Bash(ss:*)",
       "WebFetch(domain:www.onong.co.kr)",
       "Bash(TOKEN=\"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTc2MjE0MjA0MCwiZXhwIjoxNzYyMjI4NDQwfQ.3Xff6YDgI1GyrahTuBitapI9X9RfYZVoVcJw8gz46N4Wz-mVnrONX5YcGCW--MuKfTzosvSd4N2H4XO9x50L_A\")",
-      "Bash(__NEW_LINE__ curl -X PUT \"http://localhost:8081/api/admin/crawler/toggle?enabled=true\" )"
+      "Bash(__NEW_LINE__ curl -X PUT \"http://localhost:8081/api/admin/crawler/toggle?enabled=true\" )",
+      "Bash(__NEW_LINE__ echo \"\")",
+      "Bash(__NEW_LINE__ curl -X POST \"http://localhost:8081/api/admin/crawler/run\" )",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

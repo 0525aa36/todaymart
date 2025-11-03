@@ -10,6 +10,7 @@ import lombok.Setter;
 @ConfigurationProperties(prefix = "crawler")
 @Getter
 @Setter
+
 public class CrawlerConfig {
 
     private String targetUrl = "https://www.onong.co.kr/";
