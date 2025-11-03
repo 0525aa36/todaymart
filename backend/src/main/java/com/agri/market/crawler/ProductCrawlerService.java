@@ -53,19 +53,35 @@ public class ProductCrawlerService {
         CrawlResult result = new CrawlResult();
 
         try {
-            Document doc = Jsoup.connect(config.getTargetUrl())
+            // 1단계: 메인 페이지에서 상품 링크 수집
+            Document mainPage = Jsoup.connect(config.getTargetUrl())
                     .userAgent(config.getUserAgent())
                     .timeout(config.getTimeout())
                     .get();
 
-            Elements productCards = doc.select(config.getProductCardSelector());
-            logger.info("발견된 상품 카드 수: {}", productCards.size());
+            Elements productLinks = mainPage.select("a[href^='/Goods/Detail/']");
+            logger.info("발견된 상품 링크 수: {}", productLinks.size());
 
-            for (Element card : productCards) {
+            // 중복 제거
+            List<String> uniqueLinks = new ArrayList<>();
+            for (Element link : productLinks) {
+                String href = link.attr("href");
+                if (!uniqueLinks.contains(href)) {
+                    uniqueLinks.add(href);
+                }
+            }
+
+            logger.info("고유 상품 수: {}", uniqueLinks.size());
+
+            // 2단계: 각 상품 상세 페이지 방문
+            for (String productUrl : uniqueLinks) {
                 try {
                     Thread.sleep(config.getRequestDelay()); // Rate limiting
 
-                    Product product = extractProductFromCard(card);
+                    String fullUrl = "https://www.onong.co.kr" + productUrl;
+                    logger.debug("상품 페이지 방문: {}", fullUrl);
+
+                    Product product = crawlProductDetailPage(fullUrl);
 
                     if (product != null && isValidProduct(product)) {
                         // 중복 체크 (상품명으로)
@@ -82,7 +98,7 @@ public class ProductCrawlerService {
                     }
 
                 } catch (Exception e) {
-                    logger.error("상품 처리 중 오류 발생", e);
+                    logger.error("상품 처리 중 오류 발생: {}", productUrl, e);
                     result.incrementFailed();
                 }
             }
@@ -90,12 +106,111 @@ public class ProductCrawlerService {
         } catch (IOException e) {
             logger.error("크롤링 중 오류 발생", e);
             result.setMessage("크롤링 실패: " + e.getMessage());
+        } catch (InterruptedException e) {
+            logger.error("크롤링 중단됨", e);
+            result.setMessage("크롤링 중단됨");
+            Thread.currentThread().interrupt();
         }
 
         logger.info("크롤링 완료 - 성공: {}, 실패: {}, 건너뜀: {}",
                     result.getSuccessCount(), result.getFailedCount(), result.getSkippedCount());
 
         return result;
+    }
+
+    private Product crawlProductDetailPage(String url) throws IOException {
+        Document detailPage = Jsoup.connect(url)
+                .userAgent(config.getUserAgent())
+                .timeout(config.getTimeout())
+                .get();
+
+        Product product = new Product();
+
+        // 상품명 추출: span.title.text-break
+        Element nameElement = detailPage.selectFirst("span.title.text-break");
+        if (nameElement != null) {
+            product.setName(nameElement.text().trim());
+            logger.debug("상품명: {}", product.getName());
+        }
+
+        // 메인 이미지: img#prodImage
+        Element mainImage = detailPage.selectFirst("img#prodImage");
+        if (mainImage != null) {
+            String imageUrl = mainImage.absUrl("src");
+            if (!imageUrl.isEmpty() && !imageUrl.contains("noimage")) {
+                String savedImageUrl = downloadAndSaveImage(imageUrl);
+                if (savedImageUrl != null) {
+                    product.setImageUrl(savedImageUrl);
+                    product.setImageUrls(savedImageUrl);
+                }
+            }
+        }
+
+        // 가격 및 할인 정보 추출
+        extractPriceAndDiscount(detailPage, product);
+
+        // 상품 설명: detail-summary
+        Element summaryElement = detailPage.selectFirst("p.detail-summary");
+        if (summaryElement != null) {
+            product.setDescription(summaryElement.text().trim());
+        } else if (product.getName() != null) {
+            product.setDescription(product.getName());
+        }
+
+        // 기본값 설정
+        if (product.getCategory() == null) {
+            product.setCategory("농수산물");
+        }
+        if (product.getOrigin() == null) {
+            product.setOrigin("국내산");
+        }
+        if (product.getStock() == null) {
+            product.setStock(100);
+        }
+
+        return product;
+    }
+
+    private void extractPriceAndDiscount(Document doc, Product product) {
+        // 할인율 추출: span.discount.text-danger
+        Element discountElement = doc.selectFirst("span.discount.text-danger");
+        if (discountElement != null) {
+            String discountText = discountElement.text().replaceAll("[^0-9]", "");
+            if (!discountText.isEmpty()) {
+                try {
+                    BigDecimal discountRate = new BigDecimal(discountText);
+                    product.setDiscountRate(discountRate);
+                    logger.debug("할인율: {}%", discountRate);
+                } catch (NumberFormatException e) {
+                    logger.debug("할인율 파싱 실패: {}", discountText);
+                }
+            }
+        }
+
+        // 가격 정보: 전체 텍스트에서 패턴 매칭
+        String pageText = doc.text();
+        Pattern pricePattern = Pattern.compile("([0-9,]+)원");
+        Matcher matcher = pricePattern.matcher(pageText);
+
+        List<BigDecimal> prices = new ArrayList<>();
+        while (matcher.find()) {
+            try {
+                BigDecimal price = parsePrice(matcher.group(1));
+                prices.add(price);
+            } catch (Exception e) {
+                // 무시
+            }
+        }
+
+        // 가격이 여러 개 있으면 작은 값이 할인가
+        if (prices.size() >= 2) {
+            BigDecimal minPrice = prices.stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+            product.setPrice(minPrice);
+            logger.debug("가격: {}원", minPrice);
+        } else if (prices.size() == 1) {
+            product.setPrice(prices.get(0));
+            logger.debug("가격: {}원", prices.get(0));
+        }
     }
 
     private Product extractProductFromCard(Element card) {
