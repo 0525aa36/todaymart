@@ -106,10 +106,6 @@ public class ProductCrawlerService {
         } catch (IOException e) {
             logger.error("크롤링 중 오류 발생", e);
             result.setMessage("크롤링 실패: " + e.getMessage());
-        } catch (InterruptedException e) {
-            logger.error("크롤링 중단됨", e);
-            result.setMessage("크롤링 중단됨");
-            Thread.currentThread().interrupt();
         }
 
         logger.info("크롤링 완료 - 성공: {}, 실패: {}, 건너뜀: {}",
