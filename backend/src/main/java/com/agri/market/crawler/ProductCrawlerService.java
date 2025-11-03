@@ -122,15 +122,27 @@ public class ProductCrawlerService {
 
         Product product = new Product();
 
-        // 상품명 추출: span.title.text-break
-        Element nameElement = detailPage.selectFirst("span.title.text-break");
+        // 상품명 추출: 여러 선택자 시도
+        Element nameElement = detailPage.selectFirst("h3.prod-title");
+        if (nameElement == null) {
+            nameElement = detailPage.selectFirst("span.title.text-break");
+        }
+        if (nameElement == null) {
+            nameElement = detailPage.selectFirst("h1");
+        }
         if (nameElement != null) {
             product.setName(nameElement.text().trim());
             logger.debug("상품명: {}", product.getName());
         }
 
-        // 메인 이미지: img#prodImage
-        Element mainImage = detailPage.selectFirst("img#prodImage");
+        // 메인 이미지: 여러 선택자 시도
+        Element mainImage = detailPage.selectFirst("#detailImgSwiper img");
+        if (mainImage == null) {
+            mainImage = detailPage.selectFirst("img#prodImage");
+        }
+        if (mainImage == null) {
+            mainImage = detailPage.selectFirst(".swiper-slide img");
+        }
         if (mainImage != null) {
             String imageUrl = mainImage.absUrl("src");
             if (!imageUrl.isEmpty() && !imageUrl.contains("noimage")) {
@@ -145,7 +157,7 @@ public class ProductCrawlerService {
         // 가격 및 할인 정보 추출
         extractPriceAndDiscount(detailPage, product);
 
-        // 상품 설명: detail-summary
+        // 상품 설명: detail-summary 또는 상품명 사용
         Element summaryElement = detailPage.selectFirst("p.detail-summary");
         if (summaryElement != null) {
             product.setDescription(summaryElement.text().trim());
@@ -168,8 +180,15 @@ public class ProductCrawlerService {
     }
 
     private void extractPriceAndDiscount(Document doc, Product product) {
-        // 할인율 추출: span.discount.text-danger
-        Element discountElement = doc.selectFirst("span.discount.text-danger");
+        // 할인율 추출: 여러 선택자 시도
+        Element discountElement = doc.selectFirst("span.discount-percent");
+        if (discountElement == null) {
+            discountElement = doc.selectFirst("span.discount.text-danger");
+        }
+        if (discountElement == null) {
+            discountElement = doc.selectFirst(".discount-rate");
+        }
+
         if (discountElement != null) {
             String discountText = discountElement.text().replaceAll("[^0-9]", "");
             if (!discountText.isEmpty()) {
@@ -183,29 +202,54 @@ public class ProductCrawlerService {
             }
         }
 
-        // 가격 정보: 전체 텍스트에서 패턴 매칭
-        String pageText = doc.text();
-        Pattern pricePattern = Pattern.compile("([0-9,]+)원");
-        Matcher matcher = pricePattern.matcher(pageText);
+        // 가격 정보: 명시적 선택자 먼저 시도
+        Element salePriceElement = doc.selectFirst("span.sale-price");
+        Element originalPriceElement = doc.selectFirst("span.original-price");
+        Element goodsPriceElement = doc.selectFirst("#goodsPrice");
 
-        List<BigDecimal> prices = new ArrayList<>();
-        while (matcher.find()) {
+        if (salePriceElement != null) {
             try {
-                BigDecimal price = parsePrice(matcher.group(1));
-                prices.add(price);
+                BigDecimal salePrice = parsePrice(salePriceElement.text());
+                product.setPrice(salePrice);
+                logger.debug("할인가: {}원", salePrice);
             } catch (Exception e) {
-                // 무시
+                logger.debug("할인가 파싱 실패");
             }
-        }
+        } else if (goodsPriceElement != null) {
+            try {
+                BigDecimal price = parsePrice(goodsPriceElement.text());
+                product.setPrice(price);
+                logger.debug("가격: {}원", price);
+            } catch (Exception e) {
+                logger.debug("가격 파싱 실패");
+            }
+        } else {
+            // 가격 정보: 전체 텍스트에서 패턴 매칭 (fallback)
+            String pageText = doc.text();
+            Pattern pricePattern = Pattern.compile("([0-9,]+)원");
+            Matcher matcher = pricePattern.matcher(pageText);
 
-        // 가격이 여러 개 있으면 작은 값이 할인가
-        if (prices.size() >= 2) {
-            BigDecimal minPrice = prices.stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
-            product.setPrice(minPrice);
-            logger.debug("가격: {}원", minPrice);
-        } else if (prices.size() == 1) {
-            product.setPrice(prices.get(0));
-            logger.debug("가격: {}원", prices.get(0));
+            List<BigDecimal> prices = new ArrayList<>();
+            while (matcher.find()) {
+                try {
+                    BigDecimal price = parsePrice(matcher.group(1));
+                    if (price.compareTo(new BigDecimal("100")) > 0) { // 100원 이상만
+                        prices.add(price);
+                    }
+                } catch (Exception e) {
+                    // 무시
+                }
+            }
+
+            // 가격이 여러 개 있으면 작은 값이 할인가
+            if (prices.size() >= 2) {
+                BigDecimal minPrice = prices.stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+                product.setPrice(minPrice);
+                logger.debug("가격: {}원", minPrice);
+            } else if (prices.size() == 1) {
+                product.setPrice(prices.get(0));
+                logger.debug("가격: {}원", prices.get(0));
+            }
         }
     }
 
