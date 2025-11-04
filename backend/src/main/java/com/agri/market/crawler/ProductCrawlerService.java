@@ -2,6 +2,7 @@ package com.agri.market.crawler;
 
 import com.agri.market.file.FileStorageService;
 import com.agri.market.product.Product;
+import com.agri.market.product.ProductImage;
 import com.agri.market.product.ProductRepository;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -170,7 +171,14 @@ public class ProductCrawlerService {
                 String savedImageUrl = downloadAndSaveImage(imageUrl);
                 if (savedImageUrl != null) {
                     product.setImageUrl(savedImageUrl);
-                    product.setImageUrls(savedImageUrl);
+
+                    // 정규화: ProductImage 엔티티로 저장
+                    ProductImage productImage = new ProductImage();
+                    productImage.setImageUrl(savedImageUrl);
+                    productImage.setImageType(ProductImage.ImageType.MAIN);
+                    productImage.setDisplayOrder(0);
+                    product.addImage(productImage);
+
                     logger.info("✓ 이미지 저장 성공: {}", savedImageUrl);
                 }
             }
@@ -211,6 +219,14 @@ public class ProductCrawlerService {
                 String savedImgUrl = downloadAndSaveImage(imgUrl);
                 if (savedImgUrl != null) {
                     descriptionHtml.append("<img src=\"").append(savedImgUrl).append("\" style=\"max-width:100%;\" />");
+
+                    // 정규화: ProductImage 엔티티로 저장
+                    ProductImage detailImage = new ProductImage();
+                    detailImage.setImageUrl(savedImgUrl);
+                    detailImage.setImageType(ProductImage.ImageType.DETAIL);
+                    detailImage.setDisplayOrder(downloadedCount + 1); // 메인 이미지가 0이므로 1부터 시작
+                    product.addImage(detailImage);
+
                     downloadedCount++;
                     logger.info("✓ 상세 이미지 저장 완료: {}", savedImgUrl);
                 }
@@ -412,7 +428,13 @@ public class ProductCrawlerService {
                     String savedImageUrl = downloadAndSaveImage(imageUrl);
                     if (savedImageUrl != null) {
                         product.setImageUrl(savedImageUrl);
-                        product.setImageUrls(savedImageUrl);
+
+                        // 정규화: ProductImage 엔티티로 저장
+                        ProductImage productImage = new ProductImage();
+                        productImage.setImageUrl(savedImageUrl);
+                        productImage.setImageType(ProductImage.ImageType.MAIN);
+                        productImage.setDisplayOrder(0);
+                        product.addImage(productImage);
                     }
                 }
             }
