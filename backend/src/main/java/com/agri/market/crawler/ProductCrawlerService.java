@@ -2,6 +2,8 @@ package com.agri.market.crawler;
 
 import com.agri.market.file.FileStorageService;
 import com.agri.market.product.Product;
+import com.agri.market.product.ProductImage;
+import com.agri.market.product.ProductOption;
 import com.agri.market.product.ProductRepository;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -170,7 +172,14 @@ public class ProductCrawlerService {
                 String savedImageUrl = downloadAndSaveImage(imageUrl);
                 if (savedImageUrl != null) {
                     product.setImageUrl(savedImageUrl);
-                    product.setImageUrls(savedImageUrl);
+
+                    // 정규화: ProductImage 엔티티로 저장
+                    ProductImage productImage = new ProductImage();
+                    productImage.setImageUrl(savedImageUrl);
+                    productImage.setImageType(ProductImage.ImageType.MAIN);
+                    productImage.setDisplayOrder(0);
+                    product.addImage(productImage);
+
                     logger.info("✓ 이미지 저장 성공: {}", savedImageUrl);
                 }
             }
@@ -211,6 +220,14 @@ public class ProductCrawlerService {
                 String savedImgUrl = downloadAndSaveImage(imgUrl);
                 if (savedImgUrl != null) {
                     descriptionHtml.append("<img src=\"").append(savedImgUrl).append("\" style=\"max-width:100%;\" />");
+
+                    // 정규화: ProductImage 엔티티로 저장
+                    ProductImage detailImage = new ProductImage();
+                    detailImage.setImageUrl(savedImgUrl);
+                    detailImage.setImageType(ProductImage.ImageType.DETAIL);
+                    detailImage.setDisplayOrder(downloadedCount + 1); // 메인 이미지가 0이므로 1부터 시작
+                    product.addImage(detailImage);
+
                     downloadedCount++;
                     logger.info("✓ 상세 이미지 저장 완료: {}", savedImgUrl);
                 }
@@ -225,6 +242,10 @@ public class ProductCrawlerService {
             product.setDescription(product.getName());
             logger.info("상품 설명을 상품명으로 설정");
         }
+
+        // 상품 옵션 추출
+        logger.info("상품 옵션 추출 시작...");
+        extractProductOptions(detailPage, product);
 
         // 기본값 설정
         if (product.getCategory() == null) {
@@ -412,7 +433,13 @@ public class ProductCrawlerService {
                     String savedImageUrl = downloadAndSaveImage(imageUrl);
                     if (savedImageUrl != null) {
                         product.setImageUrl(savedImageUrl);
-                        product.setImageUrls(savedImageUrl);
+
+                        // 정규화: ProductImage 엔티티로 저장
+                        ProductImage productImage = new ProductImage();
+                        productImage.setImageUrl(savedImageUrl);
+                        productImage.setImageType(ProductImage.ImageType.MAIN);
+                        productImage.setDisplayOrder(0);
+                        product.addImage(productImage);
                     }
                 }
             }
@@ -537,6 +564,88 @@ public class ProductCrawlerService {
                !product.getName().isEmpty() &&
                product.getPrice() != null &&
                product.getPrice().compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    private void extractProductOptions(Document doc, Product product) {
+        try {
+            // 상품 옵션 select 태그 찾기
+            Element selectElement = doc.selectFirst("select.jsStockOptions");
+            if (selectElement == null) {
+                selectElement = doc.selectFirst("select#stock_option1");
+            }
+
+            if (selectElement == null) {
+                logger.info("상품 옵션 select 태그를 찾을 수 없음");
+                return;
+            }
+
+            // 모든 option 태그 가져오기
+            Elements options = selectElement.select("option");
+            logger.info("발견된 옵션 수: {}", options.size());
+
+            int optionCount = 0;
+            for (Element option : options) {
+                String value = option.attr("value").trim();
+                String dataPrice = option.attr("data-price");
+                String dataStock = option.attr("data-stock");
+                String dataTitle = option.attr("data-title");
+
+                // 기본 선택 옵션이나 빈 값은 건너뛰기
+                if (value.isEmpty() || value.equals("상품옵션") || dataTitle.contains("상품옵션")) {
+                    continue;
+                }
+
+                try {
+                    ProductOption productOption = new ProductOption();
+
+                    // 옵션명과 값 분리 (예: "동해안 활 참문어 1KG")
+                    productOption.setOptionName("중량/용량");
+                    productOption.setOptionValue(value.trim());
+
+                    // 가격 설정 (data-price에서 추출)
+                    if (!dataPrice.isEmpty()) {
+                        BigDecimal additionalPrice = new BigDecimal(dataPrice);
+                        // 상품 기본 가격과의 차액 계산
+                        BigDecimal priceDiff = additionalPrice.subtract(product.getPrice());
+                        productOption.setAdditionalPrice(priceDiff);
+                    } else {
+                        productOption.setAdditionalPrice(BigDecimal.ZERO);
+                    }
+
+                    // 재고 설정
+                    if (!dataStock.isEmpty()) {
+                        int stock = Integer.parseInt(dataStock);
+                        productOption.setStock(stock);
+                        productOption.setIsAvailable(stock > 0);
+                    } else {
+                        productOption.setStock(0);
+                        productOption.setIsAvailable(false);
+                    }
+
+                    // 품절 여부 확인 (클래스에 disabled가 있거나 텍스트에 [품절]이 있으면)
+                    boolean isDisabled = option.hasClass("disabled") ||
+                                        option.text().contains("[품절]") ||
+                                        dataTitle.contains("[품절]");
+                    if (isDisabled) {
+                        productOption.setIsAvailable(false);
+                    }
+
+                    product.addOption(productOption);
+                    optionCount++;
+
+                    logger.debug("옵션 추가: {} - 가격: {}, 재고: {}, 가능: {}",
+                                value, dataPrice, dataStock, productOption.getIsAvailable());
+
+                } catch (NumberFormatException e) {
+                    logger.warn("옵션 파싱 실패 ({}): {}", value, e.getMessage());
+                }
+            }
+
+            logger.info("✓ 총 {}개의 상품 옵션 추출 완료", optionCount);
+
+        } catch (Exception e) {
+            logger.error("상품 옵션 추출 중 오류 발생", e);
+        }
     }
 
     // 크롤링 결과 DTO

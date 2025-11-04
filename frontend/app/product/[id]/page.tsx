@@ -11,6 +11,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -56,6 +63,15 @@ interface ReviewStats {
   reviewCount: number
 }
 
+interface ProductOption {
+  id: number
+  optionName: string
+  optionValue: string
+  additionalPrice: number
+  stock: number
+  isAvailable: boolean
+}
+
 export default function ProductDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -69,6 +85,8 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [mainImage, setMainImage] = useState("")
   const [isInWishlist, setIsInWishlist] = useState(false)
+  const [productOptions, setProductOptions] = useState<ProductOption[]>([])
+  const [selectedOption, setSelectedOption] = useState<ProductOption | null>(null)
 
   // Review form state
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false)
@@ -80,6 +98,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (productId) {
       fetchProduct()
+      fetchProductOptions()
       fetchReviews()
       fetchReviewStats()
       checkWishlistStatus()
@@ -110,6 +129,18 @@ export default function ProductDetailPage() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchProductOptions = async () => {
+    try {
+      const response = await fetch(`http://localhost:8081/api/products/${productId}/options`)
+      if (response.ok) {
+        const data = await response.json()
+        setProductOptions(data) // 이미 서버에서 필터링됨
+      }
+    } catch (error) {
+      console.error("Error fetching product options:", error)
     }
   }
 
@@ -472,6 +503,42 @@ export default function ProductDetailPage() {
 
               <Separator className="my-6" />
 
+              {/* Product Options */}
+              {productOptions.length > 0 && (
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <Label className="mb-3 block">옵션 선택</Label>
+                    <Select
+                      value={selectedOption?.id.toString()}
+                      onValueChange={(value) => {
+                        const option = productOptions.find((opt) => opt.id.toString() === value)
+                        setSelectedOption(option || null)
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="옵션을 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id.toString()}>
+                            {option.optionValue}
+                            {option.additionalPrice !== 0 && (
+                              <span className="text-muted-foreground ml-2">
+                                ({option.additionalPrice > 0 ? "+" : ""}
+                                {option.additionalPrice.toLocaleString()}원)
+                              </span>
+                            )}
+                            <span className="text-xs text-muted-foreground ml-2">
+                              (재고: {option.stock}개)
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
               {/* Quantity */}
               <div className="space-y-4 mb-6">
                 <div>
@@ -489,8 +556,8 @@ export default function ProductDetailPage() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                      disabled={quantity >= product.stock}
+                      onClick={() => setQuantity(Math.min((selectedOption?.stock || product.stock), quantity + 1))}
+                      disabled={quantity >= (selectedOption?.stock || product.stock)}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -504,8 +571,15 @@ export default function ProductDetailPage() {
               <div className="bg-muted/50 rounded-lg p-4 mb-6">
                 <div className="flex items-center justify-between text-lg">
                   <span className="font-semibold">총 상품 금액</span>
-                  <span className="text-2xl font-bold text-primary">{(product.price * quantity).toLocaleString()}원</span>
+                  <span className="text-2xl font-bold text-primary">
+                    {((product.price + (selectedOption?.additionalPrice || 0)) * quantity).toLocaleString()}원
+                  </span>
                 </div>
+                {selectedOption && selectedOption.additionalPrice !== 0 && (
+                  <div className="text-sm text-muted-foreground mt-2">
+                    기본가: {product.price.toLocaleString()}원 + 옵션: {selectedOption.additionalPrice.toLocaleString()}원
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}

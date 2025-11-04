@@ -8,6 +8,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "products")
@@ -39,10 +41,19 @@ public class Product {
     @Column(nullable = false)
     private Integer stock;
 
+    // 하위 호환성과 성능을 위해 메인 이미지 URL 유지
     private String imageUrl;
 
-    @Column(columnDefinition = "TEXT")
-    private String imageUrls; // 여러 이미지 URL을 콤마로 구분하여 저장
+    // 정규화: 이미지들을 별도 테이블로 관리
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    @com.fasterxml.jackson.annotation.JsonManagedReference("product-images")
+    private List<ProductImage> images = new ArrayList<>();
+
+    // 정규화: 상품 옵션들을 별도 테이블로 관리
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonManagedReference("product-options")
+    private List<ProductOption> options = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -59,5 +70,17 @@ public class Product {
             return price.subtract(discount);
         }
         return price;
+    }
+
+    // 편의 메서드: 이미지 추가
+    public void addImage(ProductImage image) {
+        images.add(image);
+        image.setProduct(this);
+    }
+
+    // 편의 메서드: 옵션 추가
+    public void addOption(ProductOption option) {
+        options.add(option);
+        option.setProduct(this);
     }
 }
