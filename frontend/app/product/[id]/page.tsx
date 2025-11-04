@@ -134,11 +134,10 @@ export default function ProductDetailPage() {
 
   const fetchProductOptions = async () => {
     try {
-      const response = await fetch(`http://localhost:8081/api/admin/products/${productId}/options`)
+      const response = await fetch(`http://localhost:8081/api/products/${productId}/options`)
       if (response.ok) {
         const data = await response.json()
-        const availableOptions = data.filter((opt: ProductOption) => opt.isAvailable)
-        setProductOptions(availableOptions)
+        setProductOptions(data) // 이미 서버에서 필터링됨
       }
     } catch (error) {
       console.error("Error fetching product options:", error)
