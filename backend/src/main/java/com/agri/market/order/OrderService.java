@@ -4,12 +4,18 @@ import com.agri.market.cart.Cart;
 import com.agri.market.cart.CartItem;
 import com.agri.market.cart.CartRepository;
 import com.agri.market.dto.OrderRequest;
+import com.agri.market.exception.ForbiddenException;
+import com.agri.market.notification.NotificationService;
+import com.agri.market.notification.NotificationType;
+import com.agri.market.payment.Payment;
+import com.agri.market.payment.PaymentRepository;
 import com.agri.market.product.Product;
 import com.agri.market.product.ProductRepository;
 import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,14 +34,21 @@ public class OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final CartRepository cartRepository;
+    private final PaymentRepository paymentRepository;
+
+    private final NotificationService notificationService;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
-                        UserRepository userRepository, ProductRepository productRepository, CartRepository cartRepository) {
+                        UserRepository userRepository, ProductRepository productRepository,
+                        CartRepository cartRepository, PaymentRepository paymentRepository,
+                        NotificationService notificationService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.cartRepository = cartRepository;
+        this.paymentRepository = paymentRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -84,6 +97,22 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
         orderItemRepository.saveAll(orderItems);
 
+        // 알림 발송
+        // 사용자에게 주문 완료 알림
+        notificationService.sendToUser(
+            user.getEmail(),
+            "주문이 완료되었습니다",
+            "주문번호 " + savedOrder.getId() + "번 주문이 성공적으로 접수되었습니다.",
+            NotificationType.ORDER_STATUS_CHANGED
+        );
+
+        // 관리자에게 새 주문 알림
+        notificationService.sendToAllAdmins(
+            "새로운 주문이 접수되었습니다",
+            "주문번호 " + savedOrder.getId() + "번 (" + user.getName() + "님)",
+            NotificationType.NEW_ORDER
+        );
+
         // Clear cart after order creation (assuming order is created from cart)
         cartRepository.findByUser(user).ifPresent(cartRepository::delete);
 
@@ -92,6 +121,38 @@ public class OrderService {
 
     public Optional<Order> getOrderById(Long orderId) {
         return orderRepository.findById(orderId);
+    }
+
+    /**
+     * 주문 조회 (권한 검증 포함)
+     * @param orderId 주문 ID
+     * @param userEmail 사용자 이메일
+     * @param authentication 인증 정보
+     * @return 주문 정보
+     */
+    public Optional<Order> getOrderByIdWithAuth(Long orderId, String userEmail, Authentication authentication) {
+        Optional<Order> orderOpt = orderRepository.findById(orderId);
+
+        if (orderOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Order order = orderOpt.get();
+
+        // ADMIN 권한이 있으면 모든 주문 조회 가능
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+        if (isAdmin) {
+            return Optional.of(order);
+        }
+
+        // 일반 사용자는 본인 주문만 조회 가능
+        if (!order.getUser().getEmail().equals(userEmail)) {
+            throw new ForbiddenException("You are not authorized to view this order");
+        }
+
+        return Optional.of(order);
     }
 
     public List<Order> getOrdersByUser(String userEmail) {
@@ -151,15 +212,30 @@ public class OrderService {
         // 재고 복구
         restoreStock(orderId);
 
+        // 결제 완료된 경우 환불 처리
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            Payment payment = paymentRepository.findByOrder(order)
+                    .orElse(null);
+
+            if (payment != null && payment.getRefundAmount() == null) {
+                // 환불 처리
+                payment.setRefundAmount(payment.getAmount());
+                payment.setRefundedAt(LocalDateTime.now());
+                payment.setRefundTransactionId("REFUND_" + System.currentTimeMillis());
+                payment.setRefundReason(cancellationReason);
+                payment.setStatus(PaymentStatus.FAILED);
+                paymentRepository.save(payment);
+            }
+
+            order.setPaymentStatus(PaymentStatus.FAILED);
+        } else if (order.getPaymentStatus() == PaymentStatus.PENDING) {
+            order.setPaymentStatus(PaymentStatus.FAILED);
+        }
+
         // 주문 상태 변경
         order.setOrderStatus(OrderStatus.CANCELLED);
         order.setCancellationReason(cancellationReason);
-        order.setCancelledAt(java.time.LocalDateTime.now());
-
-        // 결제 상태도 취소로 변경 (결제 완료된 경우 환불 처리는 PaymentService에서)
-        if (order.getPaymentStatus() == PaymentStatus.PENDING) {
-            order.setPaymentStatus(PaymentStatus.FAILED);
-        }
+        order.setCancelledAt(LocalDateTime.now());
 
         return orderRepository.save(order);
     }

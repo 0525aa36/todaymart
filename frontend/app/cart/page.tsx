@@ -13,6 +13,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Minus, Plus, X, ShoppingBag, Truck } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { ApiError, apiFetch, getErrorMessage } from "@/lib/api-client"
 
 interface Product {
   id: number
@@ -22,9 +23,20 @@ interface Product {
   stock: number
 }
 
+interface ProductOption {
+  id: number
+  name: string
+  optionName: string
+  optionValue: string
+  additionalPrice: number
+  stock: number
+  isAvailable: boolean
+}
+
 interface CartItem {
   id: number
   product: Product
+  productOption?: ProductOption | null
   quantity: number
   price: number
 }
@@ -57,30 +69,20 @@ export default function CartPage() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8081/api/cart", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setCart(data)
-        // Select all items by default
-        setSelectedItems(data.cartItems.map((item: CartItem) => item.id))
-      } else if (response.status === 404) {
-        // Cart doesn't exist yet - empty cart
+      const data = await apiFetch<Cart>("/api/cart", { auth: true })
+      setCart(data)
+      setSelectedItems(data.cartItems.map((item: CartItem) => item.id))
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
         setCart(null)
       } else {
-        throw new Error("Failed to fetch cart")
+        console.error("Error fetching cart:", error)
+        toast({
+          title: "오류",
+          description: getErrorMessage(error, "장바구니를 불러오는 중 오류가 발생했습니다."),
+          variant: "destructive",
+        })
       }
-    } catch (error) {
-      console.error("Error fetching cart:", error)
-      toast({
-        title: "오류",
-        description: "장바구니를 불러오는 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
     } finally {
       setLoading(false)
     }
@@ -93,26 +95,19 @@ export default function CartPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:8081/api/cart/items/${itemId}`, {
+      await apiFetch(`/api/cart/items/${itemId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify({ quantity: newQuantity }),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        // Refresh cart
-        await fetchCart()
-      } else {
-        throw new Error("Failed to update quantity")
-      }
+      await fetchCart()
     } catch (error) {
       console.error("Error updating quantity:", error)
       toast({
         title: "오류",
-        description: "수량 변경 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "수량 변경 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -123,29 +118,23 @@ export default function CartPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:8081/api/cart/items/${itemId}`, {
+      await apiFetch(`/api/cart/items/${itemId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        // Refresh cart
-        await fetchCart()
-        setSelectedItems(selectedItems.filter((id) => id !== itemId))
-        toast({
-          title: "삭제 완료",
-          description: "상품이 장바구니에서 삭제되었습니다.",
-        })
-      } else {
-        throw new Error("Failed to remove item")
-      }
+      await fetchCart()
+      setSelectedItems(selectedItems.filter((id) => id !== itemId))
+      toast({
+        title: "삭제 완료",
+        description: "상품이 장바구니에서 삭제되었습니다.",
+      })
     } catch (error) {
       console.error("Error removing item:", error)
       toast({
         title: "오류",
-        description: "상품 삭제 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "상품 삭제 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -259,6 +248,18 @@ export default function CartPage() {
                               {item.product.name}
                             </h3>
                           </Link>
+
+                          {item.productOption && (
+                            <div className="text-sm text-muted-foreground mb-2">
+                              <span className="font-medium">옵션:</span> {item.productOption.optionValue || item.productOption.name}
+                              {item.productOption.additionalPrice !== 0 && (
+                                <span className="ml-1">
+                                  ({item.productOption.additionalPrice > 0 ? "+" : ""}
+                                  {item.productOption.additionalPrice.toLocaleString()}원)
+                                </span>
+                              )}
+                            </div>
+                          )}
 
                           <div className="flex items-center gap-2 mb-3">
                             <span className="text-lg font-bold">{item.price.toLocaleString()}원</span>

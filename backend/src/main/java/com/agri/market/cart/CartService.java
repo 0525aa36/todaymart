@@ -2,6 +2,8 @@ package com.agri.market.cart;
 
 import com.agri.market.dto.AddToCartRequest;
 import com.agri.market.product.Product;
+import com.agri.market.product.ProductOption;
+import com.agri.market.product.ProductOptionRepository;
 import com.agri.market.product.ProductRepository;
 import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
@@ -18,13 +20,16 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final ProductOptionRepository productOptionRepository;
 
     public CartService(CartRepository cartRepository, CartItemRepository cartItemRepository,
-                       UserRepository userRepository, ProductRepository productRepository) {
+                       UserRepository userRepository, ProductRepository productRepository,
+                       ProductOptionRepository productOptionRepository) {
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.productOptionRepository = productOptionRepository;
     }
 
     @Transactional
@@ -35,6 +40,23 @@ public class CartService {
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + request.getProductId()));
 
+        // 옵션 처리
+        ProductOption productOption = null;
+        if (request.getProductOptionId() != null) {
+            productOption = productOptionRepository.findById(request.getProductOptionId())
+                    .orElseThrow(() -> new RuntimeException("Product option not found with id: " + request.getProductOptionId()));
+
+            // 옵션이 해당 상품에 속하는지 검증
+            if (!productOption.getProduct().getId().equals(product.getId())) {
+                throw new RuntimeException("Product option does not belong to this product");
+            }
+
+            // 옵션 재고 확인
+            if (productOption.getStock() < request.getQuantity()) {
+                throw new RuntimeException("Not enough stock for option: " + productOption.getName());
+            }
+        }
+
         Cart cart = cartRepository.findByUser(user)
                 .orElseGet(() -> {
                     Cart newCart = new Cart();
@@ -42,18 +64,41 @@ public class CartService {
                     return cartRepository.save(newCart);
                 });
 
-        Optional<CartItem> existingCartItem = cartItemRepository.findByCartAndProduct(cart, product);
+        // 같은 상품 + 같은 옵션의 조합을 가진 기존 장바구니 아이템 찾기
+        final ProductOption finalProductOption = productOption;
+        Optional<CartItem> existingCartItem = cart.getCartItems().stream()
+                .filter(item -> item.getProduct().getId().equals(product.getId()))
+                .filter(item -> {
+                    if (finalProductOption == null && item.getProductOption() == null) {
+                        return true;
+                    }
+                    if (finalProductOption != null && item.getProductOption() != null) {
+                        return item.getProductOption().getId().equals(finalProductOption.getId());
+                    }
+                    return false;
+                })
+                .findFirst();
 
         if (existingCartItem.isPresent()) {
+            // 기존 아이템 수량 증가
             CartItem cartItem = existingCartItem.get();
             cartItem.setQuantity(cartItem.getQuantity() + request.getQuantity());
             cartItemRepository.save(cartItem);
         } else {
+            // 새 아이템 추가
             CartItem cartItem = new CartItem();
             cartItem.setCart(cart);
             cartItem.setProduct(product);
+            cartItem.setProductOption(productOption);
             cartItem.setQuantity(request.getQuantity());
-            cartItem.setPrice(product.getPrice()); // Store price at the time of adding
+
+            // 가격 계산: 기본 가격 + 옵션 추가 가격
+            BigDecimal itemPrice = product.getPrice();
+            if (productOption != null && productOption.getAdditionalPrice() != null) {
+                itemPrice = itemPrice.add(productOption.getAdditionalPrice());
+            }
+            cartItem.setPrice(itemPrice);
+
             cartItemRepository.save(cartItem);
             cart.getCartItems().add(cartItem);
         }
