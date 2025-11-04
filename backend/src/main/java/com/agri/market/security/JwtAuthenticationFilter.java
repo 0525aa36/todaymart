@@ -32,10 +32,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        String requestURI = request.getRequestURI();
+        logger.info("Processing request: {} {}", request.getMethod(), requestURI);
+        
         try {
             String jwt = parseJwt(request);
+            logger.info("JWT token extracted: {}", jwt != null ? "present" : "null");
+            
             if (jwt != null && jwtTokenProvider.validateJwtToken(jwt)) {
                 String username = jwtTokenProvider.getUserNameFromJwtToken(jwt);
+                logger.info("JWT validation successful for user: {}", username);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 UsernamePasswordAuthenticationToken authentication =
@@ -46,9 +52,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                logger.info("Authentication set successfully for user: {}", username);
+            } else {
+                logger.warn("JWT token validation failed or token is null for request: {}", requestURI);
             }
         } catch (Exception e) {
-            logger.error("Cannot set user authentication: {}", e.getMessage());
+            logger.error("Cannot set user authentication for {}: {}", requestURI, e.getMessage(), e);
         }
 
         filterChain.doFilter(request, response);
@@ -56,9 +65,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private String parseJwt(HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
+        logger.info("Authorization header: {}", headerAuth != null ? "Bearer ***" : "null");
 
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
-            return headerAuth.substring(7);
+            String token = headerAuth.substring(7);
+            logger.info("Extracted JWT token length: {}", token.length());
+            return token;
         }
 
         return null;
