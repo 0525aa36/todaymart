@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Edit, Trash2, ArrowLeft } from "lucide-react"
+import { Plus, Edit, Trash2, ArrowLeft, Settings } from "lucide-react"
 import Link from "next/link"
 
 interface Product {
@@ -44,6 +44,15 @@ interface Product {
   imageUrls?: string
   createdAt: string
   updatedAt: string
+}
+
+interface ProductOption {
+  id: number
+  optionName: string
+  optionValue: string
+  additionalPrice: number
+  stock: number
+  isAvailable: boolean
 }
 
 export default function AdminProductsPage() {
@@ -68,6 +77,20 @@ export default function AdminProductsPage() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const [descriptionImages, setDescriptionImages] = useState<string[]>([])
+
+  // Options state
+  const [optionsDialogOpen, setOptionsDialogOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [productOptions, setProductOptions] = useState<ProductOption[]>([])
+  const [editingOption, setEditingOption] = useState<ProductOption | null>(null)
+  const [optionFormOpen, setOptionFormOpen] = useState(false)
+  const [optionFormData, setOptionFormData] = useState({
+    optionName: "",
+    optionValue: "",
+    additionalPrice: "",
+    stock: "",
+    isAvailable: true,
+  })
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -339,6 +362,146 @@ export default function AdminProductsPage() {
     })
   }
 
+  // ========== Option Management Functions ==========
+
+  const handleManageOptions = async (product: Product) => {
+    setSelectedProduct(product)
+    setOptionsDialogOpen(true)
+    await fetchProductOptions(product.id)
+  }
+
+  const fetchProductOptions = async (productId: number) => {
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    try {
+      const response = await fetch(`http://localhost:8081/api/admin/products/${productId}/options`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setProductOptions(data)
+      }
+    } catch (error) {
+      console.error("Error fetching options:", error)
+      toast({
+        title: "오류",
+        description: "옵션 목록을 불러오는 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleAddOption = () => {
+    setEditingOption(null)
+    setOptionFormData({
+      optionName: "",
+      optionValue: "",
+      additionalPrice: "",
+      stock: "",
+      isAvailable: true,
+    })
+    setOptionFormOpen(true)
+  }
+
+  const handleEditOption = (option: ProductOption) => {
+    setEditingOption(option)
+    setOptionFormData({
+      optionName: option.optionName,
+      optionValue: option.optionValue,
+      additionalPrice: option.additionalPrice.toString(),
+      stock: option.stock.toString(),
+      isAvailable: option.isAvailable,
+    })
+    setOptionFormOpen(true)
+  }
+
+  const handleSubmitOption = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedProduct) return
+
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    const optionData = {
+      optionName: optionFormData.optionName,
+      optionValue: optionFormData.optionValue,
+      additionalPrice: parseFloat(optionFormData.additionalPrice) || 0,
+      stock: parseInt(optionFormData.stock) || 0,
+      isAvailable: optionFormData.isAvailable,
+    }
+
+    try {
+      const url = editingOption
+        ? `http://localhost:8081/api/admin/products/options/${editingOption.id}`
+        : `http://localhost:8081/api/admin/products/${selectedProduct.id}/options`
+
+      const response = await fetch(url, {
+        method: editingOption ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(optionData),
+      })
+
+      if (response.ok) {
+        toast({
+          title: editingOption ? "수정 완료" : "추가 완료",
+          description: `옵션이 성공적으로 ${editingOption ? "수정" : "추가"}되었습니다.`,
+        })
+        setOptionFormOpen(false)
+        fetchProductOptions(selectedProduct.id)
+      } else {
+        throw new Error("Failed to save option")
+      }
+    } catch (error) {
+      console.error("Error saving option:", error)
+      toast({
+        title: "오류",
+        description: "옵션 저장 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteOption = async (optionId: number) => {
+    if (!confirm("정말 삭제하시겠습니까?")) return
+    if (!selectedProduct) return
+
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    try {
+      const response = await fetch(`http://localhost:8081/api/admin/products/options/${optionId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok || response.status === 204) {
+        toast({
+          title: "삭제 완료",
+          description: "옵션이 삭제되었습니다.",
+        })
+        fetchProductOptions(selectedProduct.id)
+      } else {
+        throw new Error("Failed to delete option")
+      }
+    } catch (error) {
+      console.error("Error deleting option:", error)
+      toast({
+        title: "오류",
+        description: "옵션 삭제 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -575,12 +738,27 @@ export default function AdminProductsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleManageOptions(product)}
+                            className="mr-2"
+                            title="옵션 관리"
+                          >
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleEdit(product)}
                             className="mr-2"
+                            title="수정"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(product.id)}
+                            title="삭제"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -595,6 +773,162 @@ export default function AdminProductsPage() {
       </main>
 
       <Footer />
+
+      {/* Options Management Dialog */}
+      <Dialog open={optionsDialogOpen} onOpenChange={setOptionsDialogOpen}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>상품 옵션 관리: {selectedProduct?.name}</DialogTitle>
+            <DialogDescription>
+              이 상품의 옵션을 추가하거나 수정할 수 있습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold">옵션 목록 ({productOptions.length}개)</h3>
+              <Button onClick={handleAddOption} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                옵션 추가
+              </Button>
+            </div>
+            {productOptions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                등록된 옵션이 없습니다. 새 옵션을 추가해보세요!
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>옵션명</TableHead>
+                    <TableHead>옵션값</TableHead>
+                    <TableHead>추가금액</TableHead>
+                    <TableHead>재고</TableHead>
+                    <TableHead>사용가능</TableHead>
+                    <TableHead className="text-right">작업</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {productOptions.map((option) => (
+                    <TableRow key={option.id}>
+                      <TableCell>{option.optionName}</TableCell>
+                      <TableCell>{option.optionValue}</TableCell>
+                      <TableCell>
+                        {option.additionalPrice === 0
+                          ? "-"
+                          : `${option.additionalPrice > 0 ? "+" : ""}${option.additionalPrice.toLocaleString()}원`}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={option.stock > 0 ? "default" : "destructive"}>
+                          {option.stock}개
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={option.isAvailable ? "default" : "secondary"}>
+                          {option.isAvailable ? "가능" : "불가"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditOption(option)}
+                          className="mr-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteOption(option.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Option Form Dialog */}
+      <Dialog open={optionFormOpen} onOpenChange={setOptionFormOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <form onSubmit={handleSubmitOption}>
+            <DialogHeader>
+              <DialogTitle>{editingOption ? "옵션 수정" : "옵션 추가"}</DialogTitle>
+              <DialogDescription>
+                {editingOption ? "옵션 정보를 수정하세요" : "새 옵션 정보를 입력하세요"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="optionName">옵션명 *</Label>
+                <Input
+                  id="optionName"
+                  value={optionFormData.optionName}
+                  onChange={(e) => setOptionFormData({ ...optionFormData, optionName: e.target.value })}
+                  required
+                  placeholder="예: 중량/용량, 색상"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="optionValue">옵션값 *</Label>
+                <Input
+                  id="optionValue"
+                  value={optionFormData.optionValue}
+                  onChange={(e) => setOptionFormData({ ...optionFormData, optionValue: e.target.value })}
+                  required
+                  placeholder="예: 1kg, 빨강"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="additionalPrice">추가금액 (원)</Label>
+                  <Input
+                    id="additionalPrice"
+                    type="number"
+                    value={optionFormData.additionalPrice}
+                    onChange={(e) => setOptionFormData({ ...optionFormData, additionalPrice: e.target.value })}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-muted-foreground">기본 가격과의 차액</p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="optionStock">재고 *</Label>
+                  <Input
+                    id="optionStock"
+                    type="number"
+                    value={optionFormData.stock}
+                    onChange={(e) => setOptionFormData({ ...optionFormData, stock: e.target.value })}
+                    required
+                    min="0"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isAvailable"
+                  checked={optionFormData.isAvailable}
+                  onChange={(e) => setOptionFormData({ ...optionFormData, isAvailable: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="isAvailable">판매 가능</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOptionFormOpen(false)}>
+                취소
+              </Button>
+              <Button type="submit">{editingOption ? "수정" : "추가"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
