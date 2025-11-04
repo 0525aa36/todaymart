@@ -1,6 +1,8 @@
 package com.agri.market.payment;
 
 import com.agri.market.dto.WebhookRequest;
+import com.agri.market.exception.ForbiddenException;
+import com.agri.market.exception.UnauthorizedException;
 import com.agri.market.order.Order;
 import com.agri.market.order.OrderRepository;
 import com.agri.market.order.OrderService;
@@ -8,6 +10,8 @@ import com.agri.market.order.OrderStatus;
 import com.agri.market.order.PaymentStatus;
 import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +26,9 @@ public class PaymentService {
     private final OrderService orderService;
     private final UserRepository userRepository;
 
+    @Value("${payment.webhook.secret:default-secret-key}")
+    private String webhookSecret;
+
     public PaymentService(PaymentRepository paymentRepository, OrderRepository orderRepository,
                          OrderService orderService, UserRepository userRepository) {
         this.paymentRepository = paymentRepository;
@@ -31,29 +38,36 @@ public class PaymentService {
     }
 
     @Transactional
-    public Payment requestPayment(Long orderId) {
+    public Payment requestPayment(Long orderId, String userEmail) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+
+        // 권한 검증: 주문 주인만 결제 요청 가능
+        if (!order.getUser().getEmail().equals(userEmail)) {
+            throw new ForbiddenException("You are not authorized to request payment for this order");
+        }
 
         if (order.getPaymentStatus() != PaymentStatus.PENDING) {
             throw new RuntimeException("Payment already processed for order: " + orderId);
         }
 
-        // Simulate payment gateway interaction
-        // In a real scenario, this would involve calling an external payment gateway API
-        // For now, we'll create a PENDING payment record
         Payment payment = new Payment();
         payment.setOrder(order);
         payment.setAmount(order.getTotalAmount());
         payment.setStatus(PaymentStatus.PENDING);
-        payment.setTransactionId("MOCK_TXN_" + System.currentTimeMillis()); // Mock transaction ID
+        payment.setTransactionId("MOCK_TXN_" + System.currentTimeMillis());
         paymentRepository.save(payment);
 
         return payment;
     }
 
     @Transactional
-    public void handleWebhook(WebhookRequest webhookRequest) {
+    public void handleWebhook(WebhookRequest webhookRequest, String providedSecret) {
+        // 웹훅 서명 검증
+        if (providedSecret == null || !webhookSecret.equals(providedSecret)) {
+            throw new UnauthorizedException("Invalid webhook secret");
+        }
+
         Order order = orderRepository.findById(webhookRequest.getOrderId())
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + webhookRequest.getOrderId()));
 
@@ -62,17 +76,15 @@ public class PaymentService {
 
         if ("PAID".equalsIgnoreCase(webhookRequest.getStatus())) {
             order.setPaymentStatus(PaymentStatus.PAID);
-            order.setOrderStatus(OrderStatus.PAID); // Assuming order is paid once payment is successful
+            order.setOrderStatus(OrderStatus.PAID);
             payment.setStatus(PaymentStatus.PAID);
         } else if ("FAILED".equalsIgnoreCase(webhookRequest.getStatus())) {
             order.setPaymentStatus(PaymentStatus.FAILED);
-            order.setOrderStatus(OrderStatus.CANCELLED); // Or some other appropriate status
+            order.setOrderStatus(OrderStatus.CANCELLED);
             payment.setStatus(PaymentStatus.FAILED);
-
-            // 결제 실패 시 재고 복구
             orderService.restoreStock(order.getId());
         }
-        // Update transaction ID if provided by webhook
+
         if (webhookRequest.getTransactionId() != null && !webhookRequest.getTransactionId().isEmpty()) {
             payment.setTransactionId(webhookRequest.getTransactionId());
         }
@@ -82,21 +94,24 @@ public class PaymentService {
     }
 
     /**
-     * 결제 환불 처리 (Mock)
-     * @param orderId 주문 ID
-     * @param refundReason 환불 사유
-     * @return 환불된 Payment
+     * 결제 환불 처리 (ADMIN 전용)
      */
     @Transactional
-    public Payment processRefund(Long orderId, String refundReason) {
+    public Payment processRefund(Long orderId, String refundReason, Authentication authentication) {
+        // ADMIN 권한 검증
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin) {
+            throw new ForbiddenException("Only administrators can process refunds");
+        }
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
 
-        // 결제 정보 조회
         Payment payment = paymentRepository.findByOrder(order)
                 .orElseThrow(() -> new RuntimeException("Payment not found for order: " + orderId));
 
-        // 환불 가능 여부 확인
         if (payment.getStatus() != PaymentStatus.PAID) {
             throw new RuntimeException("Cannot refund: Payment is not in PAID status");
         }
@@ -105,14 +120,12 @@ public class PaymentService {
             throw new RuntimeException("Payment already refunded");
         }
 
-        // Mock 환불 처리 (실제로는 결제 게이트웨이 API 호출)
         payment.setRefundAmount(payment.getAmount());
         payment.setRefundedAt(java.time.LocalDateTime.now());
         payment.setRefundTransactionId("REFUND_TXN_" + System.currentTimeMillis());
         payment.setRefundReason(refundReason);
-        payment.setStatus(PaymentStatus.FAILED); // 환불 완료 시 FAILED로 변경 (또는 REFUNDED 상태 추가 가능)
+        payment.setStatus(PaymentStatus.FAILED);
 
-        // 주문 상태도 CANCELLED로 변경
         order.setOrderStatus(OrderStatus.CANCELLED);
         order.setPaymentStatus(PaymentStatus.FAILED);
 

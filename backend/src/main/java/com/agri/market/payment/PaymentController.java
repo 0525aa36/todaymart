@@ -23,13 +23,19 @@ public class PaymentController {
 
     @PostMapping("/{orderId}/request")
     public ResponseEntity<Payment> requestPayment(@PathVariable Long orderId) {
-        Payment payment = paymentService.requestPayment(orderId);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String userEmail = userDetails.getUsername();
+
+        Payment payment = paymentService.requestPayment(orderId, userEmail);
         return ResponseEntity.ok(payment);
     }
 
     @PostMapping("/webhook")
-    public ResponseEntity<String> handleWebhook(@RequestBody WebhookRequest webhookRequest) {
-        paymentService.handleWebhook(webhookRequest);
+    public ResponseEntity<String> handleWebhook(
+            @RequestBody WebhookRequest webhookRequest,
+            @RequestHeader(value = "X-Webhook-Secret", required = false) String webhookSecret) {
+        paymentService.handleWebhook(webhookRequest, webhookSecret);
         return ResponseEntity.ok("Webhook received and processed.");
     }
 
@@ -38,7 +44,9 @@ public class PaymentController {
             @PathVariable Long orderId,
             @Valid @RequestBody RefundRequest refundRequest) {
         try {
-            Payment refundedPayment = paymentService.processRefund(orderId, refundRequest.getRefundReason());
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            Payment refundedPayment = paymentService.processRefund(orderId, refundRequest.getRefundReason(), authentication);
             return ResponseEntity.ok(refundedPayment);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

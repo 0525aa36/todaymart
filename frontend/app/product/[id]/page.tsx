@@ -31,6 +31,7 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ShoppingCart, Heart, Share2, Minus, Plus, Star, Truck, Shield, RefreshCw } from "lucide-react"
+import { ApiError, apiFetch, getErrorMessage } from "@/lib/api-client"
 
 interface Product {
   id: number
@@ -107,26 +108,25 @@ export default function ProductDetailPage() {
 
   const fetchProduct = async () => {
     try {
-      const response = await fetch(`http://localhost:8081/api/products/${productId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setProduct(data)
-        setMainImage(data.imageUrl)
-      } else if (response.status === 404) {
+      const data = await apiFetch<Product>(`/api/products/${productId}`)
+      setProduct(data)
+      setMainImage(data.imageUrl)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
         toast({
           title: "오류",
           description: "상품을 찾을 수 없습니다.",
           variant: "destructive",
         })
         router.push("/")
+      } else {
+        console.error("Error fetching product:", error)
+        toast({
+          title: "오류",
+          description: getErrorMessage(error, "상품 정보를 불러오는 중 오류가 발생했습니다."),
+          variant: "destructive",
+        })
       }
-    } catch (error) {
-      console.error("Error fetching product:", error)
-      toast({
-        title: "오류",
-        description: "상품 정보를 불러오는 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
     } finally {
       setLoading(false)
     }
@@ -134,11 +134,8 @@ export default function ProductDetailPage() {
 
   const fetchProductOptions = async () => {
     try {
-      const response = await fetch(`http://localhost:8081/api/products/${productId}/options`)
-      if (response.ok) {
-        const data = await response.json()
-        setProductOptions(data) // 이미 서버에서 필터링됨
-      }
+      const data = await apiFetch<ProductOption[]>(`/api/products/${productId}/options`)
+      setProductOptions(data)
     } catch (error) {
       console.error("Error fetching product options:", error)
     }
@@ -146,11 +143,10 @@ export default function ProductDetailPage() {
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch(`http://localhost:8081/api/reviews/product/${productId}?size=10&sort=createdAt,desc`)
-      if (response.ok) {
-        const data = await response.json()
-        setReviews(data.content || [])
-      }
+      const data = await apiFetch<{ content?: Review[] }>(
+        `/api/reviews/product/${productId}?size=10&sort=createdAt,desc`,
+      )
+      setReviews(data.content || [])
     } catch (error) {
       console.error("Error fetching reviews:", error)
     }
@@ -158,11 +154,8 @@ export default function ProductDetailPage() {
 
   const fetchReviewStats = async () => {
     try {
-      const response = await fetch(`http://localhost:8081/api/reviews/product/${productId}/stats`)
-      if (response.ok) {
-        const data = await response.json()
-        setReviewStats(data)
-      }
+      const data = await apiFetch<ReviewStats>(`/api/reviews/product/${productId}/stats`)
+      setReviewStats(data)
     } catch (error) {
       console.error("Error fetching review stats:", error)
     }
@@ -180,34 +173,37 @@ export default function ProductDetailPage() {
       return
     }
 
+    // 옵션이 있는 상품인데 옵션을 선택하지 않은 경우
+    if (productOptions.length > 0 && !selectedOption) {
+      toast({
+        title: "옵션 선택 필요",
+        description: "상품 옵션을 선택해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      const response = await fetch("http://localhost:8081/api/cart/items", {
+      await apiFetch("/api/cart/items", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify({
           productId: Number(productId),
           quantity: quantity,
+          productOptionId: selectedOption?.id || null,
         }),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: "장바구니 추가",
-          description: "상품이 장바구니에 추가되었습니다.",
-        })
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        console.error("Cart error:", errorData)
-        throw new Error(errorData.message || "Failed to add to cart")
-      }
+      toast({
+        title: "장바구니 추가",
+        description: "상품이 장바구니에 추가되었습니다.",
+      })
     } catch (error) {
       console.error("Error adding to cart:", error)
       toast({
         title: "오류",
-        description: "장바구니에 추가하는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "장바구니에 추가하는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -225,51 +221,50 @@ export default function ProductDetailPage() {
       return
     }
 
+    // 옵션이 있는 상품인데 옵션을 선택하지 않은 경우
+    if (productOptions.length > 0 && !selectedOption) {
+      toast({
+        title: "옵션 선택 필요",
+        description: "상품 옵션을 선택해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
     // 장바구니에 추가 후 결제 페이지로 이동
     try {
-      const response = await fetch("http://localhost:8081/api/cart/items", {
+      await apiFetch("/api/cart/items", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify({
           productId: Number(productId),
           quantity: quantity,
+          productOptionId: selectedOption?.id || null,
         }),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        // 바로 체크아웃 페이지로 이동
-        toast({
-          title: "장바구니에 추가됨",
-          description: "결제 페이지로 이동합니다.",
-        })
-        router.push("/checkout")
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        console.error("Buy now error:", errorData)
-
-        // 401 오류인 경우 로그인 페이지로 리다이렉트
-        if (response.status === 401) {
-          toast({
-            title: "인증 오류",
-            description: "다시 로그인해주세요.",
-            variant: "destructive",
-          })
-          localStorage.removeItem("token")
-          localStorage.removeItem("user")
-          router.push("/login")
-          return
-        }
-
-        throw new Error(errorData.message || "Failed to process purchase")
-      }
+      toast({
+        title: "장바구니에 추가됨",
+        description: "결제 페이지로 이동합니다.",
+      })
+      router.push("/checkout")
     } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        toast({
+          title: "인증 오류",
+          description: "다시 로그인해주세요.",
+          variant: "destructive",
+        })
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        router.push("/login")
+        return
+      }
       console.error("Error in buy now:", error)
       toast({
         title: "오류",
-        description: error instanceof Error ? error.message : "구매 처리 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "구매 처리 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -280,14 +275,8 @@ export default function ProductDetailPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:8081/api/wishlist/check/${productId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      if (response.ok) {
-        const isWishlisted = await response.json()
-        setIsInWishlist(isWishlisted)
-      }
+      const isWishlisted = await apiFetch<boolean>(`/api/wishlist/check/${productId}`, { auth: true })
+      setIsInWishlist(isWishlisted)
     } catch (error) {
       console.error("Error checking wishlist status:", error)
     }
@@ -307,46 +296,36 @@ export default function ProductDetailPage() {
 
     try {
       if (isInWishlist) {
-        // Remove from wishlist
-        const response = await fetch(`http://localhost:8081/api/wishlist/${productId}`, {
+        await apiFetch(`/api/wishlist/${productId}`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+          auth: true,
+          parseResponse: "none",
         })
 
-        if (response.ok) {
-          setIsInWishlist(false)
-          toast({
-            title: "찜 취소",
-            description: "찜 목록에서 제거되었습니다.",
-          })
-        }
+        setIsInWishlist(false)
+        toast({
+          title: "찜 취소",
+          description: "찜 목록에서 제거되었습니다.",
+        })
       } else {
-        // Add to wishlist
-        const response = await fetch("http://localhost:8081/api/wishlist", {
+        await apiFetch("/api/wishlist", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          auth: true,
           body: JSON.stringify({ productId: Number(productId) }),
+          parseResponse: "none",
         })
 
-        if (response.ok) {
-          setIsInWishlist(true)
-          toast({
-            title: "찜 완료",
-            description: "찜 목록에 추가되었습니다.",
-          })
-        } else {
-          const errorData = await response.text()
-          throw new Error(errorData)
-        }
+        setIsInWishlist(true)
+        toast({
+          title: "찜 완료",
+          description: "찜 목록에 추가되었습니다.",
+        })
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error)
       toast({
         title: "오류",
-        description: "찜하기 처리 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "찜하기 처리 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -375,40 +354,33 @@ export default function ProductDetailPage() {
 
     setSubmittingReview(true)
     try {
-      const response = await fetch("http://localhost:8081/api/reviews", {
+      await apiFetch("/api/reviews", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify({
           productId: Number(productId),
           rating: reviewRating,
           title: reviewTitle,
           content: reviewContent,
         }),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: "리뷰 작성 완료",
-          description: "리뷰가 성공적으로 등록되었습니다.",
-        })
-        setReviewDialogOpen(false)
-        setReviewTitle("")
-        setReviewContent("")
-        setReviewRating(5)
-        // Refresh reviews
-        fetchReviews()
-        fetchReviewStats()
-      } else {
-        throw new Error("Failed to submit review")
-      }
+      toast({
+        title: "리뷰 작성 완료",
+        description: "리뷰가 성공적으로 등록되었습니다.",
+      })
+      setReviewDialogOpen(false)
+      setReviewTitle("")
+      setReviewContent("")
+      setReviewRating(5)
+      fetchReviews()
+      fetchReviewStats()
     } catch (error) {
       console.error("Error submitting review:", error)
       toast({
         title: "오류",
-        description: "리뷰 작성 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "리뷰 작성 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {

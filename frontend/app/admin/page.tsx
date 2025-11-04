@@ -45,6 +45,8 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { apiFetch, getErrorMessage } from "@/lib/api-client"
+import { useNotifications } from "@/hooks/use-notifications"
 
 interface Product {
   id: number
@@ -82,6 +84,9 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
+  // 관리자 실시간 알림 활성화
+  useNotifications(true)
+
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -95,6 +100,15 @@ export default function AdminDashboard() {
     }
 
     fetchData()
+
+    // 새 주문 알림 이벤트 리스너
+    const handleNewOrder = () => {
+      console.log("새 주문 알림 수신, 데이터 새로고침...")
+      fetchData()
+    }
+
+    window.addEventListener('new-order', handleNewOrder)
+    return () => window.removeEventListener('new-order', handleNewOrder)
   }, [])
 
   const fetchData = async () => {
@@ -103,25 +117,16 @@ export default function AdminDashboard() {
 
     try {
       // Fetch orders (Admin - all orders)
-      const ordersResponse = await fetch("http://localhost:8081/api/admin/orders", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (ordersResponse.ok) {
-        const ordersData = await ordersResponse.json()
-        setOrders(ordersData.content || [])
-      }
+      const ordersData = await apiFetch<{ content?: Order[] }>("/api/admin/orders", { auth: true })
+      setOrders(ordersData.content || [])
 
-      // Fetch products
-      const productsResponse = await fetch("http://localhost:8081/api/products?size=1000")
-      if (productsResponse.ok) {
-        const productsData = await productsResponse.json()
-        setProducts(productsData.content || [])
-      }
+      const productsData = await apiFetch<{ content?: Product[] }>("/api/products?size=1000")
+      setProducts(productsData.content || [])
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({
         title: "오류",
-        description: "데이터를 불러오는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "데이터를 불러오는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -212,33 +217,29 @@ export default function AdminDashboard() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8081/api/admin/orders/export", {
-        headers: { Authorization: `Bearer ${token}` },
+      const blob = await apiFetch<Blob>("/api/admin/orders/export", {
+        auth: true,
+        parseResponse: "blob",
       })
 
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `orders_${new Date().toISOString().split("T")[0]}.xlsx`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `orders_${new Date().toISOString().split("T")[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
 
-        toast({
-          title: "다운로드 완료",
-          description: "주문 내역이 엑셀 파일로 다운로드되었습니다.",
-        })
-      } else {
-        throw new Error("Export failed")
-      }
+      toast({
+        title: "다운로드 완료",
+        description: "주문 내역이 엑셀 파일로 다운로드되었습니다.",
+      })
     } catch (error) {
       console.error("Error exporting excel:", error)
       toast({
         title: "오류",
-        description: "엑셀 다운로드 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "엑셀 다운로드 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }

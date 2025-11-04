@@ -15,6 +15,7 @@ import { useState, useEffect } from "react"
 import { ChevronRight, Check } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { ApiError, apiFetch, getErrorMessage } from "@/lib/api-client"
 
 interface CartItem {
   id: number
@@ -33,6 +34,17 @@ interface Cart {
   cartItems: CartItem[]
 }
 
+interface UserAddress {
+  id: number
+  label: string
+  recipient: string
+  phone: string
+  postcode: string
+  addressLine1: string
+  addressLine2: string
+  isDefault: boolean
+}
+
 export default function CheckoutPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -42,6 +54,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [cart, setCart] = useState<Cart | null>(null)
+  const [addressPrefilled, setAddressPrefilled] = useState(false)
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -66,6 +79,7 @@ export default function CheckoutPage() {
     }
 
     fetchCart()
+    prefillDefaultAddress()
   }, [])
 
   const fetchCart = async () => {
@@ -73,34 +87,53 @@ export default function CheckoutPage() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8081/api/cart", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const data = await apiFetch<Cart>("/api/cart", { auth: true })
+      setCart(data)
 
-      if (response.ok) {
-        const data = await response.json()
-        setCart(data)
-
-        if (!data.cartItems || data.cartItems.length === 0) {
-          toast({
-            title: "장바구니가 비어있습니다",
-            description: "주문할 상품을 먼저 담아주세요.",
-            variant: "destructive",
-          })
-          router.push("/cart")
-        }
-      } else {
-        throw new Error("Failed to fetch cart")
+      if (!data.cartItems || data.cartItems.length === 0) {
+        toast({
+          title: "장바구니가 비어있습니다",
+          description: "주문할 상품을 먼저 담아주세요.",
+          variant: "destructive",
+        })
+        router.push("/cart")
       }
     } catch (error) {
       console.error("Error fetching cart:", error)
       toast({
         title: "오류",
-        description: "장바구니를 불러오는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "장바구니를 불러오는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const prefillDefaultAddress = async () => {
+    const token = localStorage.getItem("token")
+    if (!token || addressPrefilled) return
+
+    try {
+      const addresses = await apiFetch<UserAddress[]>("/api/addresses", { auth: true })
+      if (!addresses.length) return
+      const defaultAddress = addresses.find((addr) => addr.isDefault) ?? addresses[0]
+      setFormData((prev) => ({
+        ...prev,
+        recipientName: prev.recipientName || defaultAddress.recipient,
+        recipientPhone: prev.recipientPhone || defaultAddress.phone,
+        shippingPostcode: prev.shippingPostcode || defaultAddress.postcode,
+        shippingAddressLine1: prev.shippingAddressLine1 || defaultAddress.addressLine1,
+        shippingAddressLine2: prev.shippingAddressLine2 || defaultAddress.addressLine2 || "",
+      }))
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        // 사용자 인증이 만료된 경우 주소 선입력을 건너뜁니다.
+        return
+      }
+      console.error("Error pre-filling address:", error)
+    } finally {
+      setAddressPrefilled(true)
     }
   }
 
@@ -125,43 +158,32 @@ export default function CheckoutPage() {
 
     setSubmitting(true)
     try {
-      const orderRequest = {
-        recipientName: formData.recipientName,
-        recipientPhone: formData.recipientPhone,
-        shippingPostcode: formData.shippingPostcode,
-        shippingAddressLine1: formData.shippingAddressLine1,
-        shippingAddressLine2: formData.shippingAddressLine2,
-        items: orderItems.map((item) => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-        })),
-      }
-
-      const response = await fetch("http://localhost:8081/api/orders", {
+      const order = await apiFetch<{ id: number }>("/api/orders", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(orderRequest),
+        auth: true,
+        body: JSON.stringify({
+          recipientName: formData.recipientName,
+          recipientPhone: formData.recipientPhone,
+          shippingPostcode: formData.shippingPostcode,
+          shippingAddressLine1: formData.shippingAddressLine1,
+          shippingAddressLine2: formData.shippingAddressLine2,
+          items: orderItems.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+          })),
+        }),
       })
 
-      if (response.ok) {
-        const order = await response.json()
-        toast({
-          title: "주문 완료",
-          description: "주문이 성공적으로 완료되었습니다.",
-        })
-        router.push(`/mypage/orders/${order.id}`)
-      } else {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "주문 생성에 실패했습니다.")
-      }
+      toast({
+        title: "주문 완료",
+        description: "주문이 성공적으로 완료되었습니다.",
+      })
+      router.push(`/mypage/orders/${order.id}`)
     } catch (error) {
       console.error("Error creating order:", error)
       toast({
         title: "주문 실패",
-        description: error instanceof Error ? error.message : "주문 처리 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "주문 처리 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
