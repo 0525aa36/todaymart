@@ -74,7 +74,17 @@ interface Order {
     id: number
     name: string
     email: string
+    phone: string
   }
+  recipientName: string
+  recipientPhone: string
+  shippingPostcode: string
+  shippingAddressLine1: string
+  shippingAddressLine2?: string
+  senderName?: string
+  senderPhone?: string
+  deliveryMessage?: string
+  trackingNumber?: string
 }
 
 export default function AdminDashboard() {
@@ -278,6 +288,17 @@ export default function AdminDashboard() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">관리자 대시보드</h1>
             <p className="text-muted-foreground">농수산물 쇼핑몰 관리</p>
+            <div className="flex gap-2 mt-4">
+              <Link href="/admin/banners">
+                <Button variant="outline">배너 관리</Button>
+              </Link>
+              <Link href="/admin/products">
+                <Button variant="outline">상품 관리</Button>
+              </Link>
+              <Link href="/admin/orders">
+                <Button variant="outline">주문 관리</Button>
+              </Link>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -411,33 +432,47 @@ export default function AdminDashboard() {
                   {recentOrders.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">주문 내역이 없습니다</p>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>주문번호</TableHead>
-                          <TableHead>고객명</TableHead>
-                          <TableHead>상품</TableHead>
-                          <TableHead>금액</TableHead>
-                          <TableHead>상태</TableHead>
-                          <TableHead>주문일</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {recentOrders.map((order) => (
-                          <TableRow key={order.id}>
-                            <TableCell className="font-medium">#{order.id}</TableCell>
-                            <TableCell>{order.user.name}</TableCell>
-                            <TableCell>
-                              {order.orderItems[0]?.product.name}
-                              {order.orderItems.length > 1 && ` 외 ${order.orderItems.length - 1}개`}
-                            </TableCell>
-                            <TableCell>{order.totalAmount.toLocaleString()}원</TableCell>
-                            <TableCell>{getStatusBadge(order.orderStatus)}</TableCell>
-                            <TableCell>{formatDate(order.createdAt)}</TableCell>
+                    <div className="max-h-96 overflow-y-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>주문번호</TableHead>
+                            <TableHead>송하인</TableHead>
+                            <TableHead>송하인 연락처</TableHead>
+                            <TableHead>수취인</TableHead>
+                            <TableHead>수취인 연락처</TableHead>
+                            <TableHead>우편번호</TableHead>
+                            <TableHead>주소</TableHead>
+                            <TableHead>상품명</TableHead>
+                            <TableHead>수량</TableHead>
+                            <TableHead>배송 메세지</TableHead>
+                            <TableHead>송장번호</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {recentOrders.flatMap((order) =>
+                            order.orderItems.map((item, index) => (
+                              <TableRow key={`${order.id}-${item.id}`}>
+                                <TableCell className="font-medium">#{order.id}</TableCell>
+                                <TableCell>{order.senderName || order.user.name}</TableCell>
+                                <TableCell>{order.senderPhone || order.user.phone}</TableCell>
+                                <TableCell>{order.recipientName}</TableCell>
+                                <TableCell>{order.recipientPhone}</TableCell>
+                                <TableCell>{order.shippingPostcode}</TableCell>
+                                <TableCell>
+                                  {order.shippingAddressLine1}
+                                  {order.shippingAddressLine2 && ` ${order.shippingAddressLine2}`}
+                                </TableCell>
+                                <TableCell>{item.product.name}</TableCell>
+                                <TableCell>{item.quantity}</TableCell>
+                                <TableCell>{order.deliveryMessage || '-'}</TableCell>
+                                <TableCell>{order.trackingNumber || '-'}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   )}
                 </CardContent>
               </Card>
