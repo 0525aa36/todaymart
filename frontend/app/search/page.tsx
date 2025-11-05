@@ -10,16 +10,20 @@ import { Badge } from "@/components/ui/badge"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Search, SlidersHorizontal } from "lucide-react"
+import { apiFetch } from "@/lib/api-client"
 
 interface Product {
   id: number
   name: string
   category: string
   origin: string
-  description: string
   price: number
+  discountRate: number | null
+  discountedPrice: number
   stock: number
   imageUrl: string
+  averageRating: number
+  reviewCount: number
 }
 
 interface SearchResponse {
@@ -62,17 +66,11 @@ export default function SearchPage() {
       params.append("page", page.toString())
       params.append("size", "12")
 
-      const response = await fetch(`http://localhost:8081/api/products/search?${params.toString()}`)
-      if (response.ok) {
-        const data: SearchResponse = await response.json()
-        setProducts(data.content)
-        setTotalElements(data.totalElements)
-        setTotalPages(data.totalPages)
-        setCurrentPage(data.number)
-      } else {
-        console.error("Failed to fetch products")
-        setProducts([])
-      }
+      const data = await apiFetch<SearchResponse>(`/api/products/search?${params.toString()}`)
+      setProducts(data.content)
+      setTotalElements(data.totalElements)
+      setTotalPages(data.totalPages)
+      setCurrentPage(data.number)
     } catch (error) {
       console.error("Error fetching products:", error)
       setProducts([])
@@ -202,10 +200,11 @@ export default function SearchPage() {
                     key={product.id}
                     id={product.id.toString()}
                     name={product.name}
-                    price={product.price}
+                    price={product.discountedPrice}
+                    originalPrice={product.discountRate && product.discountRate > 0 ? product.price : undefined}
                     image={product.imageUrl || "/placeholder-product.jpg"}
-                    rating={4.5}
-                    reviewCount={0}
+                    rating={product.averageRating || 0}
+                    reviewCount={product.reviewCount || 0}
                   />
                 ))}
               </div>

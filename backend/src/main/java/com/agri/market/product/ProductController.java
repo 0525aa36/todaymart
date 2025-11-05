@@ -1,6 +1,9 @@
 package com.agri.market.product;
 
+import com.agri.market.dto.ProductListDto;
 import com.agri.market.dto.ProductOptionDto;
+import com.agri.market.dto.ProductOptionResponse;
+import com.agri.market.dto.ProductWithOptionsDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -21,23 +24,48 @@ public class ProductController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<Product>> getAllProducts(Pageable pageable) {
-        return ResponseEntity.ok(productService.getAllProducts(pageable));
+    public ResponseEntity<Page<ProductListDto>> getAllProducts(Pageable pageable) {
+        return ResponseEntity.ok(productService.getAllProductsWithReviewStats(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
-        Optional<Product> product = productService.getProductById(id);
-        return product.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<ProductWithOptionsDto> getProductById(@PathVariable Long id) {
+        Optional<Product> productOpt = productService.getProductById(id);
+        if (productOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        Product product = productOpt.get();
+        ProductWithOptionsDto dto = new ProductWithOptionsDto();
+        dto.setId(product.getId());
+        dto.setName(product.getName());
+        dto.setCategory(product.getCategory());
+        dto.setOrigin(product.getOrigin());
+        dto.setDescription(product.getDescription());
+        dto.setPrice(product.getPrice());
+        dto.setDiscountRate(product.getDiscountRate());
+        dto.setStock(product.getStock());
+        dto.setImageUrl(product.getImageUrl());
+        dto.setCreatedAt(product.getCreatedAt());
+        dto.setUpdatedAt(product.getUpdatedAt());
+        dto.setDiscountedPrice(product.getDiscountedPrice());
+        
+        // 옵션 정보 추가
+        List<ProductOptionResponse> options = product.getOptions().stream()
+                .map(ProductOptionResponse::new)
+                .collect(Collectors.toList());
+        dto.setOptions(options);
+        
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<Page<Product>> searchProducts(
+    public ResponseEntity<Page<ProductListDto>> searchProducts(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String origin,
             Pageable pageable) {
-        Page<Product> products = productService.searchProducts(keyword, category, origin, pageable);
+        Page<ProductListDto> products = productService.searchProductsWithReviewStats(keyword, category, origin, pageable);
         return ResponseEntity.ok(products);
     }
 
