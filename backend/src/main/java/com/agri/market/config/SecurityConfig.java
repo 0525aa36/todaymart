@@ -67,6 +67,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/products/**").permitAll()
                         .requestMatchers("/api/reviews/product/**").permitAll() // Public review endpoints
                         .requestMatchers("/api/files/**").permitAll() // Public file access (images)
+                        .requestMatchers("/api/banners").permitAll() // Public banner endpoints
+                        .requestMatchers("/api/notifications/stream").permitAll() // SSE endpoint with token auth
                         .requestMatchers("/api/admin/**").hasRole("ADMIN") // Admin roles for admin endpoints
                         .anyRequest().authenticated()
                 );
