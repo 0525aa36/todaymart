@@ -74,9 +74,6 @@ export function ProductCard({
               className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
             {badge && <Badge className="absolute top-2 left-2 bg-accent text-accent-foreground">{badge}</Badge>}
-            {discount > 0 && (
-              <Badge className="absolute top-2 right-2 bg-primary text-primary-foreground">{discount}%</Badge>
-            )}
           </div>
         </Link>
 
@@ -93,11 +90,16 @@ export function ProductCard({
             </div>
           )}
 
-          <div className="flex items-end gap-2 mb-3">
+          <div className="space-y-1 mb-3">
             {originalPrice && (
-              <span className="text-xs text-muted-foreground line-through">{originalPrice.toLocaleString()}원</span>
+              <div className="text-xs text-muted-foreground line-through">{originalPrice.toLocaleString()}원</div>
             )}
-            <span className="text-lg font-bold">{price.toLocaleString()}원</span>
+            <div className="flex items-center gap-2">
+              {originalPrice && (
+                <span className="text-lg font-bold text-orange-500">{discount}%</span>
+              )}
+              <span className="text-lg font-bold">{price.toLocaleString()}원</span>
+            </div>
           </div>
 
           <Button 
