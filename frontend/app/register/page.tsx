@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { AddressSearch } from "@/components/address-search"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ChevronRight, Check } from "lucide-react"
+import { apiFetch, getErrorMessage } from "@/lib/api-client"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -109,11 +111,8 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await fetch("http://localhost:8081/api/auth/register", {
+      await apiFetch("/api/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
@@ -125,22 +124,18 @@ export default function RegisterPage() {
           addressLine1: formData.addressLine1,
           addressLine2: formData.addressLine2,
         }),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        setStep(3)
-        toast({
-          title: "회원가입 완료",
-          description: "신선마켓에 오신 것을 환영합니다!",
-        })
-      } else {
-        const error = await response.text()
-        throw new Error(error || "회원가입에 실패했습니다.")
-      }
-    } catch (error: any) {
+      setStep(3)
+      toast({
+        title: "회원가입 완료",
+        description: "신선마켓에 오신 것을 환영합니다!",
+      })
+    } catch (error) {
       toast({
         title: "회원가입 실패",
-        description: error.message || "회원가입 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "회원가입 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -367,10 +362,19 @@ export default function RegisterPage() {
                           value={formData.postcode}
                           onChange={(e) => setFormData({ ...formData, postcode: e.target.value })}
                           className={errors.postcode ? "border-red-500" : ""}
+                          readOnly
                         />
-                        <Button type="button" variant="outline">
-                          우편번호 찾기
-                        </Button>
+                        <AddressSearch
+                          onComplete={(data) => {
+                            setFormData({
+                              ...formData,
+                              postcode: data.zonecode,
+                              addressLine1: data.address,
+                            })
+                            setErrors({ ...errors, postcode: "", addressLine1: "" })
+                          }}
+                          buttonText="우편번호 찾기"
+                        />
                       </div>
                       {errors.postcode && <p className="text-sm text-red-500 mt-1">{errors.postcode}</p>}
                     </div>
@@ -383,6 +387,7 @@ export default function RegisterPage() {
                         value={formData.addressLine1}
                         onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
                         className={errors.addressLine1 ? "border-red-500" : ""}
+                        readOnly
                       />
                       {errors.addressLine1 && <p className="text-sm text-red-500 mt-1">{errors.addressLine1}</p>}
                     </div>
