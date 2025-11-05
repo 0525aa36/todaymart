@@ -116,7 +116,19 @@ async function extractPayload(response: Response): Promise<unknown> {
 
 export function getErrorMessage(error: unknown, fallback = "오류가 발생했습니다."): string {
   if (error instanceof ApiError) {
-    return error.message
+    // 특정 HTTP 상태 코드에 따른 메시지
+    switch (error.status) {
+      case 401:
+        return "로그인이 필요합니다."
+      case 403:
+        return "접근 권한이 없습니다."
+      case 404:
+        return "요청한 리소스를 찾을 수 없습니다."
+      case 500:
+        return "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+      default:
+        return error.message
+    }
   }
   if (error instanceof Error) {
     return error.message

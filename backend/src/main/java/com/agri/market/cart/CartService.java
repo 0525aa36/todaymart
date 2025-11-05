@@ -37,7 +37,7 @@ public class CartService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
 
-        Product product = productRepository.findById(request.getProductId())
+        Product product = productRepository.findByIdWithImagesAndOptions(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + request.getProductId()));
 
         // 옵션 처리
@@ -57,7 +57,7 @@ public class CartService {
             }
         }
 
-        Cart cart = cartRepository.findByUser(user)
+        Cart cart = cartRepository.findByUserWithItems(user)
                 .orElseGet(() -> {
                     Cart newCart = new Cart();
                     newCart.setUser(user);
@@ -102,13 +102,28 @@ public class CartService {
             cartItemRepository.save(cartItem);
             cart.getCartItems().add(cartItem);
         }
+
+        // Manually initialize product images to avoid LazyInitializationException
+        cart.getCartItems().forEach(item -> item.getProduct().getImages().size());
+
         return cart;
     }
 
-    public Optional<Cart> getCartByUserEmail(String userEmail) {
+    @Transactional
+    public Cart getCartByUserEmail(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
-        return cartRepository.findByUser(user);
+
+        Cart cart = cartRepository.findByUserWithItems(user).orElseGet(() -> {
+            Cart newCart = new Cart();
+            newCart.setUser(user);
+            return cartRepository.save(newCart);
+        });
+
+        // Manually initialize product images to avoid LazyInitializationException
+        cart.getCartItems().forEach(item -> item.getProduct().getImages().size());
+
+        return cart;
     }
 
     @Transactional
@@ -153,7 +168,7 @@ public class CartService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
 
-        Optional<Cart> cartOpt = cartRepository.findByUser(user);
+        Optional<Cart> cartOpt = cartRepository.findByUserWithItems(user);
         if (cartOpt.isPresent()) {
             Cart cart = cartOpt.get();
             cart.getCartItems().clear();

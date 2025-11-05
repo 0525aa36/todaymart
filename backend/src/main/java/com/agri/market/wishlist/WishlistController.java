@@ -1,5 +1,6 @@
 package com.agri.market.wishlist;
 
+import com.agri.market.dto.WishlistItemDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,12 +20,12 @@ public class WishlistController {
     }
 
     @GetMapping
-    public ResponseEntity<List<WishlistItem>> getWishlist() {
+    public ResponseEntity<List<WishlistItemDto>> getWishlist() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String userEmail = userDetails.getUsername();
 
-        List<WishlistItem> wishlist = wishlistService.getWishlistByUser(userEmail);
+        List<WishlistItemDto> wishlist = wishlistService.getWishlistByUser(userEmail);
         return ResponseEntity.ok(wishlist);
     }
 

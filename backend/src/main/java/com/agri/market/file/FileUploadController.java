@@ -60,6 +60,11 @@ public class FileUploadController {
 
     @GetMapping("/{fileName:.+}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileName) {
+        // 경로 탈출 방지: .., /, \ 포함된 파일명 거부
+        if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+            return ResponseEntity.badRequest().build();
+        }
+
         try {
             Path filePath = fileStorageService.loadFile(fileName);
             Resource resource = new UrlResource(filePath.toUri());

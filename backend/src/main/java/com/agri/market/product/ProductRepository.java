@@ -43,4 +43,20 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // 중복 체크용
     boolean existsByName(String name);
+
+    // Lazy loading 문제 해결: images를 fetch join으로 미리 로드
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images")
+    List<Product> findAllWithImages();
+
+    // Pageable 지원 버전
+    @Query(value = "SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images",
+           countQuery = "SELECT COUNT(DISTINCT p) FROM Product p")
+    Page<Product> findAllWithImages(Pageable pageable);
+
+    // 개별 상품 조회 시 images를 fetch join으로 미리 로드
+    // Note: options는 별도 API로 조회하거나 필요시 LAZY로 로드
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.images " +
+           "WHERE p.id = :id")
+    Optional<Product> findByIdWithImagesAndOptions(@Param("id") Long id);
 }

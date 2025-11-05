@@ -195,6 +195,10 @@ export default function ProductDetailPage() {
         parseResponse: "none",
       })
 
+      // 장바구니 업데이트 이벤트 발생 - 헤더의 장바구니 개수가 즉시 업데이트됨
+      console.log("[Product Page] Dispatching cartUpdated event")
+      window.dispatchEvent(new Event("cartUpdated"))
+
       toast({
         title: "장바구니 추가",
         description: "상품이 장바구니에 추가되었습니다.",

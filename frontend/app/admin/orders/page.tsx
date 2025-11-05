@@ -35,6 +35,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, Search, Truck, Package2, Edit } from "lucide-react"
 import Link from "next/link"
+import { apiFetch, getErrorMessage } from "@/lib/api-client"
 
 interface OrderItem {
   id: number
@@ -102,21 +103,13 @@ export default function AdminOrdersPage() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8081/api/admin/orders?size=100", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setOrders(data.content || [])
-      } else {
-        throw new Error("Failed to fetch orders")
-      }
+      const data = await apiFetch<{ content?: Order[] }>("/api/admin/orders?size=100", { auth: true })
+      setOrders(data.content || [])
     } catch (error) {
       console.error("Error fetching orders:", error)
       toast({
         title: "오류",
-        description: "주문 목록을 불러오는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "주문 목록을 불러오는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -132,31 +125,24 @@ export default function AdminOrdersPage() {
 
     setUpdating(true)
     try {
-      const response = await fetch(`http://localhost:8081/api/admin/orders/${selectedOrder.id}/status`, {
+      await apiFetch(`/api/admin/orders/${selectedOrder.id}/status`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify({ status: newStatus }),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: "상태 변경 완료",
-          description: "주문 상태가 변경되었습니다.",
-        })
-        setStatusDialogOpen(false)
-        fetchOrders()
-      } else {
-        const errorData = await response.text()
-        throw new Error(errorData || "Failed to update status")
-      }
+      toast({
+        title: "상태 변경 완료",
+        description: "주문 상태가 변경되었습니다.",
+      })
+      setStatusDialogOpen(false)
+      fetchOrders()
     } catch (error) {
       console.error("Error updating status:", error)
       toast({
         title: "상태 변경 실패",
-        description: error instanceof Error ? error.message : "상태 변경 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "상태 변경 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -172,32 +158,25 @@ export default function AdminOrdersPage() {
 
     setUpdating(true)
     try {
-      const response = await fetch(`http://localhost:8081/api/admin/orders/${selectedOrder.id}/tracking`, {
+      await apiFetch(`/api/admin/orders/${selectedOrder.id}/tracking`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify({ trackingNumber: trackingNumber.trim() }),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: "송장번호 등록 완료",
-          description: "송장번호가 등록되었습니다.",
-        })
-        setTrackingDialogOpen(false)
-        setTrackingNumber("")
-        fetchOrders()
-      } else {
-        const errorData = await response.text()
-        throw new Error(errorData || "Failed to update tracking number")
-      }
+      toast({
+        title: "송장번호 등록 완료",
+        description: "송장번호가 등록되었습니다.",
+      })
+      setTrackingDialogOpen(false)
+      setTrackingNumber("")
+      fetchOrders()
     } catch (error) {
       console.error("Error updating tracking:", error)
       toast({
         title: "송장번호 등록 실패",
-        description: error instanceof Error ? error.message : "송장번호 등록 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "송장번호 등록 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {

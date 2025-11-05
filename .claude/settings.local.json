@@ -26,9 +26,35 @@
       "Bash(__NEW_LINE__ curl -X PUT \"http://localhost:8081/api/admin/crawler/toggle?enabled=true\" )",
       "Bash(__NEW_LINE__ echo \"\")",
       "Bash(__NEW_LINE__ curl -X POST \"http://localhost:8081/api/admin/crawler/run\" )",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(python3:*)",
+      "Bash(gh pr create:*)",
+      "Bash(pkill:*)",
+      "Bash(__NEW_LINE__ curl -X POST \"http://localhost:8081/api/notifications/test-admin\" )",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTc2MjI0MDI3OSwiZXhwIjoxNzYyMzI2Njc5fQ.LPEmHt5TQo3FMJO9ocIH9oryr-I83EmDWtqplClBYEyomSPfFtxyyqieLybfOLf9nrembPGqLJmhG9tuLgZAvg\")",
+      "Bash(if [ ! -f .gitignore ])",
+      "Bash(then echo \"# Environment variables\")",
+      "Bash(.gitignore)",
+      "Bash(fi)",
+      "WebSearch",
+      "WebFetch(domain:docs.tosspayments.com)",
+      "Bash(pnpm add:*)",
+      "Bash(node --version:*)",
+      "Bash(npm:*)",
+      "Bash(timeout 10 npx:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(./test-api.sh:*)",
+      "Bash(sudo dd:*)",
+      "Bash(sudo chmod:*)",
+      "Bash(sudo tee:*)",
+      "Bash(sudo apt update:*)",
+      "Bash(sudo apt install:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "jetbrains"
+  ]
 }

@@ -103,6 +103,10 @@ export default function CartPage() {
       })
 
       await fetchCart()
+
+      // 장바구니 업데이트 이벤트 발생 - 헤더의 장바구니 개수가 즉시 업데이트됨
+      console.log("[Cart Page] Dispatching cartUpdated event (update quantity)")
+      window.dispatchEvent(new Event("cartUpdated"))
     } catch (error) {
       console.error("Error updating quantity:", error)
       toast({
@@ -126,6 +130,11 @@ export default function CartPage() {
 
       await fetchCart()
       setSelectedItems(selectedItems.filter((id) => id !== itemId))
+
+      // 장바구니 업데이트 이벤트 발생 - 헤더의 장바구니 개수가 즉시 업데이트됨
+      console.log("[Cart Page] Dispatching cartUpdated event (remove item)")
+      window.dispatchEvent(new Event("cartUpdated"))
+
       toast({
         title: "삭제 완료",
         description: "상품이 장바구니에서 삭제되었습니다.",

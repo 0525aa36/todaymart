@@ -2,6 +2,7 @@ package com.agri.market.payment;
 
 import com.agri.market.order.Order;
 import com.agri.market.order.PaymentStatus;
+import com.agri.market.user.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,6 +24,10 @@ public class Payment {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user; // 결제한 사용자
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
@@ -30,7 +35,12 @@ public class Payment {
     @Column(nullable = false)
     private PaymentStatus status; // PENDING, PAID, FAILED
 
-    private String transactionId; // From mock payment gateway
+    private String transactionId; // From payment gateway (e.g., paymentKey from Toss Payments)
+
+    @Column(length = 50)
+    private String method; // 결제 수단 (TOSS_PAYMENTS, CARD, etc.)
+
+    private LocalDateTime approvedAt; // 결제 승인 시간
 
     @CreationTimestamp
     @Column(name = "payment_date", nullable = false, updatable = false)

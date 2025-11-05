@@ -1,6 +1,7 @@
 package com.agri.market.payment;
 
 import com.agri.market.dto.RefundRequest;
+import com.agri.market.dto.TossPaymentConfirmRequest;
 import com.agri.market.dto.WebhookRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -61,5 +63,27 @@ public class PaymentController {
 
         List<Payment> payments = paymentService.getPaymentHistory(userEmail);
         return ResponseEntity.ok(payments);
+    }
+
+    /**
+     * 토스페이먼츠 결제 승인
+     * @param request 결제 승인 요청 (paymentKey, orderId, amount)
+     * @return 결제 승인 결과
+     */
+    @PostMapping("/toss/confirm")
+    public ResponseEntity<?> confirmTossPayment(@Valid @RequestBody TossPaymentConfirmRequest request) {
+        try {
+            Map<String, Object> result = paymentService.confirmTossPayment(
+                    request.getPaymentKey(),
+                    request.getOrderId(),
+                    request.getAmount()
+            );
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Payment confirmation failed",
+                    "message", e.getMessage()
+            ));
+        }
     }
 }

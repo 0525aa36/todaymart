@@ -13,10 +13,16 @@ export function useNotifications(isAdmin?: boolean) {
   const eventSourceRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
+    // 관리자가 아니면 SSE 연결하지 않음
+    if (!isAdmin) {
+      console.log("일반 사용자: 알림 비활성화")
+      return
+    }
+
     const token = localStorage.getItem("token")
     if (!token) return
 
-    console.log("Setting up SSE connection, isAdmin:", isAdmin)
+    console.log("관리자 알림 설정 중...")
 
     // 백엔드 서버로 직접 연결
     const eventSource = new EventSource(`http://localhost:8081/api/notifications/stream?token=${encodeURIComponent(token)}`)
@@ -25,10 +31,11 @@ export function useNotifications(isAdmin?: boolean) {
 
     // 연결 성공
     eventSource.addEventListener("connected", (event) => {
-      console.log("SSE 연결됨:", event.data)
-      if (isAdmin) {
-        toast.success("관리자 알림이 활성화되었습니다")
-      }
+      console.log("관리자 SSE 연결됨:", event.data)
+      toast.success("관리자 알림 활성화", {
+        description: "새로운 주문이 오면 실시간으로 알려드립니다",
+        duration: 3000,
+      })
     })
 
     // 알림 수신

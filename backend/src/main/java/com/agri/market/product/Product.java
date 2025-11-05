@@ -50,9 +50,9 @@ public class Product {
     @com.fasterxml.jackson.annotation.JsonManagedReference("product-images")
     private List<ProductImage> images = new ArrayList<>();
 
-    // 정규화: 상품 옵션들을 별도 테이블로 관리
+    // 정규화: 옵션들을 별도 테이블로 관리
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    @com.fasterxml.jackson.annotation.JsonManagedReference("product-options")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<ProductOption> options = new ArrayList<>();
 
     @CreationTimestamp

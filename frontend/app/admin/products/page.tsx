@@ -30,6 +30,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, Edit, Trash2, ArrowLeft, Settings } from "lucide-react"
 import Link from "next/link"
+import { apiFetch, API_BASE_URL, getErrorMessage } from "@/lib/api-client"
 
 interface Product {
   id: number
@@ -109,16 +110,13 @@ export default function AdminProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch("http://localhost:8081/api/products?size=100&sort=createdAt,desc")
-      if (response.ok) {
-        const data = await response.json()
-        setProducts(data.content || [])
-      }
+      const data = await apiFetch<{ content?: Product[] }>("/api/products?size=100&sort=createdAt,desc")
+      setProducts(data.content || [])
     } catch (error) {
       console.error("Error fetching products:", error)
       toast({
         title: "오류",
-        description: "상품 목록을 불러오는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "상품 목록을 불러오는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -139,30 +137,23 @@ export default function AdminProductsPage() {
         formData.append("files", file)
       })
 
-      const response = await fetch("http://localhost:8081/api/files/upload-multiple", {
+      const data = await apiFetch<{ fileUrls: string[] }>("/api/files/upload-multiple", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
+        auth: true,
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        const fileUrls = data.fileUrls.map((url: string) => `http://localhost:8081${url}`)
-        setUploadedImages((prev) => [...prev, ...fileUrls])
-        toast({
-          title: "업로드 완료",
-          description: `${files.length}개의 이미지가 업로드되었습니다.`,
-        })
-      } else {
-        throw new Error("Upload failed")
-      }
+      const fileUrls = data.fileUrls.map((url: string) => `${API_BASE_URL}${url}`)
+      setUploadedImages((prev) => [...prev, ...fileUrls])
+      toast({
+        title: "업로드 완료",
+        description: `${files.length}개의 이미지가 업로드되었습니다.`,
+      })
     } catch (error) {
       console.error("Error uploading images:", error)
       toast({
         title: "오류",
-        description: "이미지 업로드 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "이미지 업로드 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -183,38 +174,30 @@ export default function AdminProductsPage() {
         formData.append("files", file)
       })
 
-      const response = await fetch("http://localhost:8081/api/files/upload-multiple", {
+      const data = await apiFetch<{ fileUrls: string[] }>("/api/files/upload-multiple", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
+        auth: true,
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        const fileUrls = data.fileUrls.map((url: string) => `http://localhost:8081${url}`)
-        setDescriptionImages((prev) => [...prev, ...fileUrls])
+      const fileUrls = data.fileUrls.map((url: string) => `${API_BASE_URL}${url}`)
+      setDescriptionImages((prev) => [...prev, ...fileUrls])
 
-        // 자동으로 description에 이미지 마크다운 추가
-        const imageMarkdown = fileUrls.map((url: string) => `![이미지](${url})`).join('\n')
-        setFormData((prev) => ({
-          ...prev,
-          description: prev.description + (prev.description ? '\n\n' : '') + imageMarkdown
-        }))
+      const imageMarkdown = fileUrls.map((url: string) => `![이미지](${url})`).join("\n")
+      setFormData((prev) => ({
+        ...prev,
+        description: prev.description + (prev.description ? "\n\n" : "") + imageMarkdown,
+      }))
 
-        toast({
-          title: "업로드 완료",
-          description: `${files.length}개의 이미지가 설명에 추가되었습니다.`,
-        })
-      } else {
-        throw new Error("Upload failed")
-      }
+      toast({
+        title: "업로드 완료",
+        description: `${files.length}개의 이미지가 설명에 추가되었습니다.`,
+      })
     } catch (error) {
       console.error("Error uploading images:", error)
       toast({
         title: "오류",
-        description: "이미지 업로드 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "이미지 업로드 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -240,35 +223,27 @@ export default function AdminProductsPage() {
     }
 
     try {
-      const url = editingProduct
-        ? `http://localhost:8081/api/admin/products/${editingProduct.id}`
-        : "http://localhost:8081/api/admin/products"
+      const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : "/api/admin/products"
 
-      const response = await fetch(url, {
+      await apiFetch(url, {
         method: editingProduct ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify(productData),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: editingProduct ? "수정 완료" : "등록 완료",
-          description: `상품이 성공적으로 ${editingProduct ? "수정" : "등록"}되었습니다.`,
-        })
-        setDialogOpen(false)
-        resetForm()
-        fetchProducts()
-      } else {
-        throw new Error("Failed to save product")
-      }
+      toast({
+        title: editingProduct ? "수정 완료" : "등록 완료",
+        description: `상품이 성공적으로 ${editingProduct ? "수정" : "등록"}되었습니다.`,
+      })
+      setDialogOpen(false)
+      resetForm()
+      fetchProducts()
     } catch (error) {
       console.error("Error saving product:", error)
       toast({
         title: "오류",
-        description: "상품 저장 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "상품 저장 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -304,27 +279,22 @@ export default function AdminProductsPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:8081/api/admin/products/${id}`, {
+      await apiFetch(`/api/admin/products/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
+        parseResponse: "none",
       })
 
-      if (response.ok || response.status === 204) {
-        toast({
-          title: "삭제 완료",
-          description: "상품이 삭제되었습니다.",
-        })
-        fetchProducts()
-      } else {
-        throw new Error("Failed to delete product")
-      }
+      toast({
+        title: "삭제 완료",
+        description: "상품이 삭제되었습니다.",
+      })
+      fetchProducts()
     } catch (error) {
       console.error("Error deleting product:", error)
       toast({
         title: "오류",
-        description: "상품 삭제 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "상품 삭제 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -375,21 +345,15 @@ export default function AdminProductsPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:8081/api/admin/products/${productId}/options`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const data = await apiFetch<ProductOption[]>(`/api/admin/products/${productId}/options`, {
+        auth: true,
       })
-
-      if (response.ok) {
-        const data = await response.json()
-        setProductOptions(data)
-      }
+      setProductOptions(data)
     } catch (error) {
       console.error("Error fetching options:", error)
       toast({
         title: "오류",
-        description: "옵션 목록을 불러오는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "옵션 목록을 불러오는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -436,33 +400,27 @@ export default function AdminProductsPage() {
 
     try {
       const url = editingOption
-        ? `http://localhost:8081/api/admin/products/options/${editingOption.id}`
-        : `http://localhost:8081/api/admin/products/${selectedProduct.id}/options`
+        ? `/api/admin/products/options/${editingOption.id}`
+        : `/api/admin/products/${selectedProduct.id}/options`
 
-      const response = await fetch(url, {
+      await apiFetch(url, {
         method: editingOption ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify(optionData),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: editingOption ? "수정 완료" : "추가 완료",
-          description: `옵션이 성공적으로 ${editingOption ? "수정" : "추가"}되었습니다.`,
-        })
-        setOptionFormOpen(false)
-        fetchProductOptions(selectedProduct.id)
-      } else {
-        throw new Error("Failed to save option")
-      }
+      toast({
+        title: editingOption ? "수정 완료" : "추가 완료",
+        description: `옵션이 성공적으로 ${editingOption ? "수정" : "추가"}되었습니다.`,
+      })
+      setOptionFormOpen(false)
+      fetchProductOptions(selectedProduct.id)
     } catch (error) {
       console.error("Error saving option:", error)
       toast({
         title: "오류",
-        description: "옵션 저장 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "옵션 저장 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -476,27 +434,22 @@ export default function AdminProductsPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:8081/api/admin/products/options/${optionId}`, {
+      await apiFetch(`/api/admin/products/options/${optionId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
+        parseResponse: "none",
       })
 
-      if (response.ok || response.status === 204) {
-        toast({
-          title: "삭제 완료",
-          description: "옵션이 삭제되었습니다.",
-        })
-        fetchProductOptions(selectedProduct.id)
-      } else {
-        throw new Error("Failed to delete option")
-      }
+      toast({
+        title: "삭제 완료",
+        description: "옵션이 삭제되었습니다.",
+      })
+      fetchProductOptions(selectedProduct.id)
     } catch (error) {
       console.error("Error deleting option:", error)
       toast({
         title: "오류",
-        description: "옵션 삭제 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "옵션 삭제 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }

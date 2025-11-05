@@ -1,5 +1,6 @@
 package com.agri.market.review;
 
+import com.agri.market.exception.ForbiddenException;
 import com.agri.market.product.Product;
 import com.agri.market.product.ProductRepository;
 import com.agri.market.user.User;
@@ -69,9 +70,14 @@ public class ReviewService {
 
     // 리뷰 수정
     @Transactional
-    public Review updateReview(Long id, Integer rating, String title, String content) {
+    public Review updateReview(Long id, String userEmail, Integer rating, String title, String content) {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Review not found with id: " + id));
+
+        // 권한 검증: 본인만 수정 가능
+        if (!review.getUser().getEmail().equals(userEmail)) {
+            throw new ForbiddenException("You are not authorized to update this review");
+        }
 
         if (rating != null) {
             review.setRating(rating);
@@ -88,9 +94,15 @@ public class ReviewService {
 
     // 리뷰 삭제
     @Transactional
-    public void deleteReview(Long id) {
+    public void deleteReview(Long id, String userEmail) {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Review not found with id: " + id));
+
+        // 권한 검증: 본인만 삭제 가능
+        if (!review.getUser().getEmail().equals(userEmail)) {
+            throw new ForbiddenException("You are not authorized to delete this review");
+        }
+
         reviewRepository.delete(review);
     }
 

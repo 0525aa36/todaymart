@@ -20,6 +20,13 @@ public class OrderRequest {
     private String shippingAddressLine2;
     @NotBlank(message = "우편번호는 필수입니다.")
     private String shippingPostcode;
+    
+    // 송하인 정보 (선택사항, 기본값은 주문자와 동일)
+    private String senderName;
+    private String senderPhone;
+    
+    // 배송 메시지
+    private String deliveryMessage;
 
     @NotNull(message = "주문 상품 목록은 필수입니다.")
     private List<OrderItemRequest> items;

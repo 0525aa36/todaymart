@@ -1,0 +1,280 @@
+"use client"
+
+import { useEffect, useRef, useState } from "react"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
+import { loadPaymentWidget, PaymentWidgetInstance } from "@tosspayments/payment-widget-sdk"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { apiFetch } from "@/lib/api-client"
+import { Loader2 } from "lucide-react"
+
+const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || ""
+
+interface Order {
+  id: number
+  orderNumber: string
+  totalAmount: number
+  recipientName: string
+  user: {
+    id: number
+    email: string
+  }
+}
+
+export default function PaymentPage() {
+  const params = useParams()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const { toast } = useToast()
+  const orderId = params.orderId as string
+  const paymentWidgetRef = useRef<PaymentWidgetInstance | null>(null)
+  const paymentMethodsWidgetRef = useRef<ReturnType<PaymentWidgetInstance["renderPaymentMethods"]> | null>(null)
+  const [order, setOrder] = useState<Order | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [widgetReady, setWidgetReady] = useState(false)
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      toast({
+        title: "로그인 필요",
+        description: "결제하려면 로그인이 필요합니다.",
+        variant: "destructive",
+      })
+      router.push("/login")
+      return
+    }
+
+    fetchOrder()
+  }, [orderId])
+
+  const fetchOrder = async () => {
+    try {
+      const data = await apiFetch<Order>(`/api/orders/${orderId}`, { auth: true })
+      setOrder(data)
+    } catch (error) {
+      console.error("Error fetching order:", error)
+      toast({
+        title: "오류",
+        description: "주문 정보를 불러올 수 없습니다.",
+        variant: "destructive",
+      })
+      router.push("/cart")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!order) return
+
+    const initializeWidget = async () => {
+      try {
+        // 디버깅: Client Key 확인 (보안을 위해 일부만 표시)
+        console.log("[Payment] Toss Client Key:", clientKey ? `${clientKey.substring(0, 10)}...` : "NOT SET")
+        console.log("[Payment] Order ID:", order.id)
+        console.log("[Payment] Total Amount:", order.totalAmount)
+
+        if (!clientKey || clientKey.includes("yZqmkKeP8g")) {
+          // 유효하지 않은 예시 키 감지
+          console.warn("[Payment] 유효하지 않은 API 키입니다. 토스페이먼츠 개발자 센터에서 실제 키를 발급받으세요.")
+          toast({
+            title: "결제 설정 필요",
+            description: "토스페이먼츠 API 키가 설정되지 않았습니다. 개발자에게 문의하세요.",
+            variant: "destructive",
+          })
+          setWidgetReady(false)
+          return
+        }
+
+        const customerKey = `customer_${order.user.id}_${Date.now()}`
+
+        console.log("[Payment] Loading payment widget...")
+        const paymentWidget = await loadPaymentWidget(clientKey, customerKey)
+        paymentWidgetRef.current = paymentWidget
+        console.log("[Payment] Payment widget loaded successfully")
+
+        // DOM 요소가 존재하는지 확인
+        const element = document.getElementById("payment-widget")
+        if (!element) {
+          console.error("[Payment] Payment widget container not found")
+          return
+        }
+
+        // 위젯 렌더링
+        console.log("[Payment] Rendering payment methods...")
+        await paymentWidget.renderPaymentMethods(
+          "#payment-widget",
+          { value: order.totalAmount },
+          { variantKey: "DEFAULT" }
+        )
+        console.log("[Payment] Payment methods rendered successfully")
+
+        setWidgetReady(true)
+      } catch (error) {
+        console.error("[Payment] Error initializing payment widget:", error)
+        setWidgetReady(false)
+        toast({
+          title: "결제 위젯 로드 실패",
+          description: error instanceof Error ? error.message : "결제 위젯을 불러오는 중 오류가 발생했습니다. 페이지를 새로고침해주세요.",
+          variant: "destructive",
+        })
+      }
+    }
+
+    // DOM이 완전히 로드된 후 초기화
+    const timer = setTimeout(initializeWidget, 500)
+    return () => clearTimeout(timer)
+  }, [order, clientKey, toast])
+
+  const handlePayment = async () => {
+    if (!paymentWidgetRef.current || !order || !widgetReady) {
+      toast({
+        title: "결제 준비 중",
+        description: "결제 위젯이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      await paymentWidgetRef.current.requestPayment({
+        orderId: order.orderNumber || `ORDER_${order.id}_${Date.now()}`,
+        orderName: `주문 ${order.id}`,
+        customerName: order.recipientName,
+        successUrl: `${window.location.origin}/payment/success?orderId=${order.id}`,
+        failUrl: `${window.location.origin}/payment/fail`,
+      })
+    } catch (error) {
+      console.error("Payment request error:", error)
+      toast({
+        title: "결제 요청 실패",
+        description: "결제 요청 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 bg-muted/30">
+          <div className="container mx-auto px-4 py-8">
+            <p className="text-center">로딩 중...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (!order) {
+    return null
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+
+      <main className="flex-1 py-8 bg-muted/30">
+        <div className="container mx-auto px-4 max-w-2xl">
+          <h1 className="text-3xl font-bold mb-8">결제</h1>
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>주문 정보</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">주문번호</span>
+                <span className="font-semibold">{order.orderNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">받는 사람</span>
+                <span>{order.recipientName}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold">
+                <span>결제 금액</span>
+                <span className="text-primary">{order.totalAmount.toLocaleString()}원</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>결제 수단 선택</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div id="payment-widget" className="min-h-[300px]">
+                {!widgetReady && (
+                  <div className="flex items-center justify-center h-[300px]">
+                    <div className="text-center space-y-4">
+                      <div className="text-yellow-600 dark:text-yellow-400">
+                        <p className="font-semibold mb-2">⚠️ 결제 기능 준비 중</p>
+                        <p className="text-sm text-muted-foreground">
+                          토스페이먼츠 API 키가 설정되지 않았습니다.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          개발 모드에서는 아래 버튼으로 테스트하실 수 있습니다.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {widgetReady ? (
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handlePayment}
+            >
+              {`${order.totalAmount.toLocaleString()}원 결제하기`}
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <Button
+                className="w-full"
+                size="lg"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await apiFetch(`/api/orders/${order.id}/complete`, {
+                      method: "POST",
+                      auth: true,
+                      parseResponse: "none",
+                    })
+                    toast({
+                      title: "테스트 결제 완료",
+                      description: "개발 모드에서 주문이 완료 처리되었습니다.",
+                    })
+                    router.push(`/mypage/orders/${order.id}`)
+                  } catch (error) {
+                    toast({
+                      title: "오류",
+                      description: "주문 완료 처리 중 오류가 발생했습니다.",
+                      variant: "destructive",
+                    })
+                  }
+                }}
+              >
+                🧪 개발 모드: 결제 없이 주문 완료
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                * 실제 결제를 위해서는 토스페이먼츠 API 키 설정이 필요합니다
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  )
+}

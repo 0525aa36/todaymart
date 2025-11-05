@@ -16,6 +16,7 @@ import { MapPin, Plus, Edit, Trash2, ChevronLeft } from "lucide-react"
 import { ApiError, apiFetch, getErrorMessage } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { AddressSearch } from "@/components/address-search"
+import { PhoneInput } from "@/components/phone-input"
 
 interface Address {
   id: number
@@ -273,11 +274,10 @@ export default function AddressManagementPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">휴대폰 번호 *</Label>
-                      <Input
+                      <PhoneInput
                         id="phone"
-                        placeholder="010-0000-0000"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(value) => setFormData({ ...formData, phone: value })}
                       />
                     </div>
                   </div>

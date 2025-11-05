@@ -16,12 +16,15 @@ interface Product {
   name: string
   category: string
   origin: string
-  description: string
   price: number
+  discountRate: number | null
+  discountedPrice: number
   stock: number
   imageUrl: string
   createdAt: string
-  updatedAt: string
+  averageRating: number
+  reviewCount: number
+  optionCount: number
 }
 
 interface ProductCardData {
@@ -95,11 +98,13 @@ export default function HomePage() {
   const convertToCardData = (product: Product, badge?: string): ProductCardData => ({
     id: product.id.toString(),
     name: product.name,
-    price: product.price,
+    price: product.discountedPrice,
+    originalPrice: product.discountRate && product.discountRate > 0 ? product.price : undefined,
     image: product.imageUrl || "/placeholder.svg",
     badge: badge || product.category,
-    rating: 4.5,
-    reviewCount: 0,
+    rating: product.averageRating || 0,
+    reviewCount: product.reviewCount || 0,
+    hasOptions: product.optionCount > 0,
   })
 
   // Get products by category
