@@ -4,12 +4,13 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { ProductCard } from "@/components/product-card"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
-import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Heart, ShoppingCart, X } from "lucide-react"
+import { ChevronLeft, Heart } from "lucide-react"
+import { apiFetch, getErrorMessage } from "@/lib/api-client"
 
 interface WishlistItem {
   id: number
@@ -17,9 +18,14 @@ interface WishlistItem {
     id: number
     name: string
     price: number
+    discountRate: number | null
+    discountedPrice: number
     stock: number
     imageUrl: string
     category: string
+    averageRating?: number
+    reviewCount?: number
+    options?: any[]
   }
   createdAt: string
 }
@@ -45,21 +51,13 @@ export default function WishlistPage() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8081/api/wishlist", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setWishlist(data)
-      } else {
-        throw new Error("Failed to fetch wishlist")
-      }
+      const data = await apiFetch<WishlistItem[]>("/api/wishlist", { auth: true })
+      setWishlist(data)
     } catch (error) {
       console.error("Error fetching wishlist:", error)
       toast({
         title: "오류",
-        description: "찜 목록을 불러오는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "찜 목록을 불러오는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -72,72 +70,25 @@ export default function WishlistPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:8081/api/wishlist/${productId}`, {
+      await apiFetch(`/api/wishlist/${productId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        auth: true,
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        setWishlist(wishlist.filter((item) => item.product.id !== productId))
-        toast({
-          title: "찜 취소",
-          description: "찜 목록에서 제거되었습니다.",
-        })
-      } else {
-        throw new Error("Failed to remove from wishlist")
-      }
+      setWishlist(wishlist.filter((item) => item.product.id !== productId))
+      toast({
+        title: "찜 취소",
+        description: "찜 목록에서 제거되었습니다.",
+      })
     } catch (error) {
       console.error("Error removing from wishlist:", error)
       toast({
         title: "오류",
-        description: "찜 목록에서 제거하는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "찜 목록에서 제거하는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
-  }
-
-  const addToCart = async (productId: number) => {
-    const token = localStorage.getItem("token")
-    if (!token) return
-
-    try {
-      const response = await fetch("http://localhost:8081/api/cart/items", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          productId: productId,
-          quantity: 1,
-        }),
-      })
-
-      if (response.ok) {
-        toast({
-          title: "장바구니 추가",
-          description: "상품이 장바구니에 추가되었습니다.",
-        })
-      } else {
-        throw new Error("Failed to add to cart")
-      }
-    } catch (error) {
-      console.error("Error adding to cart:", error)
-      toast({
-        title: "오류",
-        description: "장바구니에 추가하는 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
   }
 
   if (loading) {
@@ -184,57 +135,20 @@ export default function WishlistPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
               {wishlist.map((item) => (
-                <Card key={item.id} className="overflow-hidden group">
-                  <div className="relative aspect-square">
-                    <Link href={`/product/${item.product.id}`}>
-                      <Image
-                        src={item.product.imageUrl || "/placeholder.svg"}
-                        alt={item.product.name}
-                        fill
-                        className="object-cover transition-transform group-hover:scale-105"
-                      />
-                    </Link>
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      className="absolute top-2 right-2 h-8 w-8"
-                      onClick={() => removeFromWishlist(item.product.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <CardContent className="p-4">
-                    <Link href={`/product/${item.product.id}`}>
-                      <h3 className="font-semibold mb-2 line-clamp-2 hover:text-primary transition-colors">
-                        {item.product.name}
-                      </h3>
-                    </Link>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-lg font-bold text-primary">
-                        {item.product.price.toLocaleString()}원
-                      </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mb-3">
-                      찜한 날짜: {formatDate(item.createdAt)}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => addToCart(item.product.id)}
-                      >
-                        <ShoppingCart className="h-4 w-4 mr-1" />
-                        담기
-                      </Button>
-                      <Button size="sm" className="flex-1" asChild>
-                        <Link href={`/product/${item.product.id}`}>보기</Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                <ProductCard
+                  key={item.id}
+                  id={item.product.id.toString()}
+                  name={item.product.name}
+                  price={item.product.discountedPrice}
+                  originalPrice={item.product.discountRate && item.product.discountRate > 0 ? item.product.price : undefined}
+                  image={item.product.imageUrl || "/placeholder.svg"}
+                  badge={item.product.category}
+                  rating={item.product.averageRating || 0}
+                  reviewCount={item.product.reviewCount || 0}
+                  hasOptions={(item.product.options?.length || 0) > 0}
+                />
               ))}
             </div>
           )}

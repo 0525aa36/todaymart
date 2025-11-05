@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ChevronRight, Check } from "lucide-react"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
+import { PhoneInput } from "@/components/phone-input"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -309,11 +310,10 @@ export default function RegisterPage() {
                     {/* Phone */}
                     <div>
                       <Label htmlFor="phone">휴대폰 번호 *</Label>
-                      <Input
+                      <PhoneInput
                         id="phone"
-                        placeholder="010-1234-5678"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(value) => setFormData({ ...formData, phone: value })}
                         className={errors.phone ? "border-red-500" : ""}
                       />
                       {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}

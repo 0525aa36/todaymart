@@ -13,13 +13,39 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { ApiError, apiFetch } from "@/lib/api-client"
+import { useNotifications } from "@/hooks/use-notifications"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState("")
   const [user, setUser] = useState<{ name: string; email: string; roles?: string[] } | null>(null)
   const router = useRouter()
+  const [cartCount, setCartCount] = useState(0)
+  
+  // 관리자 여부 확인
+  const isAdmin = user?.roles?.some(role => role === "ADMIN" || role === "ROLE_ADMIN") || false
+
+  // 관리자만 알림 활성화
+  useNotifications(isAdmin)
+
+  const fetchCartCount = useCallback(async () => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      setCartCount(0)
+      return
+    }
+
+    try {
+      const cart = await apiFetch<{ cartItems: Array<{ id: number }> }>("/api/cart", { auth: true })
+      console.log("[Header] Cart count updated:", cart.cartItems.length)
+      setCartCount(cart.cartItems.length)
+    } catch (error) {
+      console.error("Failed to fetch cart count:", error)
+      setCartCount(0)
+    }
+  }, [])
 
   useEffect(() => {
     // Check if user is logged in
@@ -32,7 +58,21 @@ export function Header() {
         console.error("Failed to parse user data:", error)
       }
     }
-  }, [])
+
+    fetchCartCount()
+
+    // 장바구니 업데이트 이벤트 리스너 등록
+    const handleCartUpdate = () => {
+      console.log("[Header] cartUpdated event received, fetching cart count...")
+      fetchCartCount()
+    }
+    window.addEventListener("cartUpdated", handleCartUpdate)
+
+    // 클린업 함수
+    return () => {
+      window.removeEventListener("cartUpdated", handleCartUpdate)
+    }
+  }, [fetchCartCount])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,6 +85,7 @@ export function Header() {
     localStorage.removeItem("token")
     localStorage.removeItem("user")
     setUser(null)
+    setCartCount(0)
     router.push("/")
     window.location.href = "/"
   }
@@ -121,15 +162,24 @@ export function Header() {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="hidden md:flex">
-              <User className="h-5 w-5" />
-            </Button>
+            {/* 마이페이지 */}
+            {user && (
+              <Link href="/mypage">
+                <Button variant="ghost" size="icon" className="hidden md:flex" title="마이페이지">
+                  <User className="h-5 w-5" />
+                </Button>
+              </Link>
+            )}
+
+            {/* 장바구니 */}
             <Link href="/cart">
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon" className="relative" title="장바구니">
                 <ShoppingCart className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-accent text-accent-foreground text-xs flex items-center justify-center">
-                  3
-                </span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-h-5 min-w-5 rounded-full bg-accent text-accent-foreground text-xs flex items-center justify-center px-1">
+                    {cartCount}
+                  </span>
+                )}
               </Button>
             </Link>
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>

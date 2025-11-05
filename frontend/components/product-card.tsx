@@ -20,6 +20,7 @@ interface ProductCardProps {
   badge?: string
   rating?: number
   reviewCount?: number
+  hasOptions?: boolean
 }
 
 export function ProductCard({
@@ -31,6 +32,7 @@ export function ProductCard({
   badge,
   rating,
   reviewCount,
+  hasOptions = false,
 }: ProductCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const router = useRouter()
@@ -56,6 +58,9 @@ export function ProductCard({
       })
 
       toast.success("장바구니에 상품이 추가되었습니다!")
+
+      // 장바구니 업데이트 이벤트 발생
+      window.dispatchEvent(new Event("cartUpdated"))
     } catch (error) {
       console.error("Error adding to cart:", error)
       toast.error("장바구니 추가에 실패했습니다")
@@ -64,8 +69,8 @@ export function ProductCard({
 
   return (
     <>
-      <div className="group relative bg-card rounded-lg border overflow-hidden hover:shadow-lg transition-shadow">
-        <Link href={`/product/${id}`}>
+      <div className="relative bg-card rounded-lg overflow-hidden">
+        <Link href={`/product/${id}`} className="group block">
           <div className="relative aspect-square overflow-hidden bg-muted">
             <Image
               src={image || "/placeholder.svg"}
@@ -77,9 +82,23 @@ export function ProductCard({
           </div>
         </Link>
 
-        <div className="p-4">
+        <div className="pt-3">
+          <Button
+            className="w-full rounded-none"
+            size="sm"
+            onClick={(e) => {
+              e.preventDefault()
+              setIsModalOpen(true)
+            }}
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            담기
+          </Button>
+        </div>
+
+        <div className="py-3">
           <Link href={`/product/${id}`}>
-            <h3 className="font-medium text-sm mb-2 line-clamp-2 hover:text-primary transition-colors">{name}</h3>
+            <h3 className="font-medium text-base mb-2 line-clamp-2 hover:text-primary transition-colors">{name}</h3>
           </Link>
 
           {reviewCount > 0 && (
@@ -90,29 +109,17 @@ export function ProductCard({
             </div>
           )}
 
-          <div className="space-y-1 mb-3">
+          <div className="space-y-0.5">
             {originalPrice && (
-              <div className="text-xs text-muted-foreground line-through">{originalPrice.toLocaleString()}원</div>
+              <div className="text-sm text-muted-foreground line-through">{originalPrice.toLocaleString()}원</div>
             )}
             <div className="flex items-center gap-2">
               {originalPrice && (
                 <span className="text-lg font-bold text-orange-500">{discount}%</span>
               )}
-              <span className="text-lg font-bold">{price.toLocaleString()}원</span>
+              <span className="text-lg font-bold">{price.toLocaleString()}원{hasOptions ? '~' : ''}</span>
             </div>
           </div>
-
-          <Button 
-            className="w-full" 
-            size="sm"
-            onClick={(e) => {
-              e.preventDefault()
-              setIsModalOpen(true)
-            }}
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            담기
-          </Button>
         </div>
       </div>
 

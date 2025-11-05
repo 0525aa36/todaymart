@@ -86,8 +86,12 @@ public class ReviewController {
             @Valid @RequestBody ReviewRequest request,
             Authentication authentication) {
 
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String userEmail = userDetails.getUsername();
+
         Review review = reviewService.updateReview(
             id,
+            userEmail,
             request.getRating(),
             request.getTitle(),
             request.getContent()
@@ -102,7 +106,10 @@ public class ReviewController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        reviewService.deleteReview(id);
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String userEmail = userDetails.getUsername();
+
+        reviewService.deleteReview(id, userEmail);
         return ResponseEntity.ok("리뷰가 삭제되었습니다.");
     }
 }

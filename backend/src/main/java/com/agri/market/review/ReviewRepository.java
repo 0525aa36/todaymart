@@ -1,5 +1,6 @@
 package com.agri.market.review;
 
+import com.agri.market.product.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,4 +23,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     // 상품별 리뷰 개수
     Long countByProductId(Long productId);
+
+    // 상품별 리뷰 삭제
+    void deleteByProduct(Product product);
 }

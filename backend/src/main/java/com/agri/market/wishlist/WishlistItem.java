@@ -2,6 +2,7 @@ package com.agri.market.wishlist;
 
 import com.agri.market.product.Product;
 import com.agri.market.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -23,7 +24,7 @@ public class WishlistItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "wishlistItems"})
+    @JsonIgnore
     private User user;
 
     @ManyToOne(fetch = FetchType.EAGER)

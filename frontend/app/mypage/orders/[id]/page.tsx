@@ -12,6 +12,7 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { ChevronLeft, Package, MapPin, CreditCard } from "lucide-react"
+import { apiFetch, getErrorMessage } from "@/lib/api-client"
 
 interface OrderItem {
   id: number
@@ -62,23 +63,13 @@ export default function OrderDetailPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:8081/api/orders/${params.id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setOrder(data)
-      } else {
-        throw new Error("Failed to fetch order")
-      }
+      const data = await apiFetch<Order>(`/api/orders/${params.id}`, { auth: true })
+      setOrder(data)
     } catch (error) {
       console.error("Error fetching order:", error)
       toast({
         title: "오류",
-        description: "주문 정보를 불러오는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "주문 정보를 불러오는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -97,32 +88,25 @@ export default function OrderDetailPage() {
 
     setCancelling(true)
     try {
-      const response = await fetch(`http://localhost:8081/api/orders/${order.id}/cancel`, {
+      await apiFetch(`/api/orders/${order.id}/cancel`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify({
           cancellationReason: "고객 요청",
         }),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: "주문 취소 완료",
-          description: "주문이 성공적으로 취소되었습니다.",
-        })
-        fetchOrder() // Refresh order data
-      } else {
-        const errorData = await response.text()
-        throw new Error(errorData || "주문 취소에 실패했습니다.")
-      }
+      toast({
+        title: "주문 취소 완료",
+        description: "주문이 성공적으로 취소되었습니다.",
+      })
+      fetchOrder()
     } catch (error) {
       console.error("Error cancelling order:", error)
       toast({
         title: "주문 취소 실패",
-        description: error instanceof Error ? error.message : "주문 취소 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "주문 취소 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -140,28 +124,22 @@ export default function OrderDetailPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:8081/api/orders/${order.id}/confirm`, {
+      await apiFetch(`/api/orders/${order.id}/confirm`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: "배송 확인 완료",
-          description: "구매가 확정되었습니다.",
-        })
-        fetchOrder() // Refresh order data
-      } else {
-        const errorData = await response.text()
-        throw new Error(errorData || "배송 확인에 실패했습니다.")
-      }
+      toast({
+        title: "배송 확인 완료",
+        description: "구매가 확정되었습니다.",
+      })
+      fetchOrder()
     } catch (error) {
       console.error("Error confirming delivery:", error)
       toast({
         title: "배송 확인 실패",
-        description: error instanceof Error ? error.message : "배송 확인 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "배송 확인 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }

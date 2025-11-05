@@ -58,11 +58,20 @@ public class OrderService {
 
         Order order = new Order();
         order.setUser(user);
+        order.setOrderNumber("ORDER_" + System.currentTimeMillis());
         order.setRecipientName(orderRequest.getRecipientName());
         order.setRecipientPhone(orderRequest.getRecipientPhone());
         order.setShippingAddressLine1(orderRequest.getShippingAddressLine1());
         order.setShippingAddressLine2(orderRequest.getShippingAddressLine2());
         order.setShippingPostcode(orderRequest.getShippingPostcode());
+        
+        // 송하인 정보 설정 (기본값은 주문자와 동일)
+        order.setSenderName(orderRequest.getSenderName() != null ? orderRequest.getSenderName() : user.getName());
+        order.setSenderPhone(orderRequest.getSenderPhone() != null ? orderRequest.getSenderPhone() : user.getPhone());
+        
+        // 배송 메시지 설정
+        order.setDeliveryMessage(orderRequest.getDeliveryMessage());
+        
         order.setOrderStatus(OrderStatus.PENDING);
         order.setPaymentStatus(PaymentStatus.PENDING);
 
@@ -87,15 +96,15 @@ public class OrderService {
 
             totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
 
-            // Deduct stock
-            product.setStock(product.getStock() - itemRequest.getQuantity());
-            productRepository.save(product);
+            // 재고 차감은 결제 완료 후에 수행 (주문 생성 시에는 하지 않음)
         }
 
         order.setOrderItems(orderItems);
         order.setTotalAmount(totalAmount);
         Order savedOrder = orderRepository.save(order);
         orderItemRepository.saveAll(orderItems);
+
+        // 주문 생성 시에는 장바구니를 비우지 않음 (결제 완료 후에 비움)
 
         // 알림 발송
         // 사용자에게 주문 완료 알림
@@ -130,6 +139,7 @@ public class OrderService {
      * @param authentication 인증 정보
      * @return 주문 정보
      */
+    @Transactional(readOnly = true)
     public Optional<Order> getOrderByIdWithAuth(Long orderId, String userEmail, Authentication authentication) {
         Optional<Order> orderOpt = orderRepository.findById(orderId);
 
@@ -144,6 +154,11 @@ public class OrderService {
                 .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
 
         if (isAdmin) {
+            // Lazy loading 초기화
+            order.getUser().getName();
+            order.getOrderItems().forEach(item -> {
+                item.getProduct().getName();
+            });
             return Optional.of(order);
         }
 
@@ -152,13 +167,35 @@ public class OrderService {
             throw new ForbiddenException("You are not authorized to view this order");
         }
 
+        // Lazy loading 초기화
+        order.getUser().getName();
+        order.getOrderItems().forEach(item -> {
+            item.getProduct().getName();
+        });
+
         return Optional.of(order);
     }
 
+    @Transactional(readOnly = true)
     public List<Order> getOrdersByUser(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
-        return orderRepository.findByUser(user);
+
+        List<Order> orders = orderRepository.findByUser(user);
+
+        // Lazy loading 초기화
+        orders.forEach(order -> {
+            order.getUser().getName(); // User 초기화
+            order.getOrderItems().size(); // OrderItems 초기화
+            order.getOrderItems().forEach(item -> {
+                item.getProduct().getName(); // Product 초기화
+                if (item.getProduct().getImages() != null) {
+                    item.getProduct().getImages().size(); // Product images 초기화
+                }
+            });
+        });
+
+        return orders;
     }
 
     /**
@@ -283,6 +320,7 @@ public class OrderService {
      * @param pageable 페이징 정보
      * @return 주문 페이지
      */
+    @Transactional(readOnly = true)
     public Page<Order> getAllOrders(
             OrderStatus orderStatus,
             PaymentStatus paymentStatus,
@@ -290,13 +328,30 @@ public class OrderService {
             LocalDateTime endDate,
             Pageable pageable) {
 
+        Page<Order> orders;
+
         // 필터가 하나도 없으면 전체 조회
         if (orderStatus == null && paymentStatus == null && startDate == null && endDate == null) {
-            return orderRepository.findAllByOrderByCreatedAtDesc(pageable);
+            orders = orderRepository.findAllByOrderByCreatedAtDesc(pageable);
+        } else {
+            // 필터링 조회
+            orders = orderRepository.findOrdersWithFilters(orderStatus, paymentStatus, startDate, endDate, pageable);
         }
 
-        // 필터링 조회
-        return orderRepository.findOrdersWithFilters(orderStatus, paymentStatus, startDate, endDate, pageable);
+        // Manually initialize lazy-loaded collections to avoid LazyInitializationException
+        orders.forEach(order -> {
+            order.getUser().getName(); // Initialize user
+            order.getOrderItems().size(); // Initialize orderItems
+            // Initialize product for each order item
+            order.getOrderItems().forEach(item -> {
+                item.getProduct().getName(); // Initialize product
+                if (item.getProduct().getImages() != null) {
+                    item.getProduct().getImages().size(); // Initialize product images
+                }
+            });
+        });
+
+        return orders;
     }
 
     /**
@@ -343,5 +398,28 @@ public class OrderService {
         }
 
         return orderRepository.save(order);
+    }
+
+    @Transactional
+    public void completePayment(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+        
+        // 재고 차감
+        for (OrderItem item : order.getOrderItems()) {
+            Product product = item.getProduct();
+            product.setStock(product.getStock() - item.getQuantity());
+            productRepository.save(product);
+        }
+        
+        // 장바구니 비우기
+        cartRepository.findByUser(order.getUser()).ifPresent(cart -> {
+            cart.getCartItems().clear();
+            cartRepository.save(cart);
+        });
+        
+        // 주문 상태를 PAID로 변경
+        order.setOrderStatus(OrderStatus.PAID);
+        orderRepository.save(order);
     }
 }

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { apiFetch, getErrorMessage } from "@/lib/api-client"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -37,48 +38,42 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const response = await fetch("http://localhost:8081/api/auth/login", {
+      const data = await apiFetch<{
+        token: string
+        id: number
+        email: string
+        name: string
+        roles: string[]
+      }>("/api/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
         }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-
-        // Save user data and token to localStorage
-        localStorage.setItem("token", data.token)
-        localStorage.setItem("user", JSON.stringify({
+      localStorage.setItem("token", data.token)
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
           id: data.id,
           email: data.email,
           name: data.name,
           roles: data.roles,
-        }))
+        }),
+      )
 
-        toast({
-          title: "로그인 성공",
-          description: `${data.name}님, 환영합니다!`,
-        })
+      toast({
+        title: "로그인 성공",
+        description: `${data.name}님, 환영합니다!`,
+      })
 
-        // Redirect to home page
-        router.push("/")
-        // Refresh the page to update header
-        setTimeout(() => window.location.href = "/", 100)
-      } else {
-        const error = await response.text()
-        throw new Error(error || "로그인에 실패했습니다.")
-      }
-    } catch (error: any) {
+      router.push("/")
+      setTimeout(() => (window.location.href = "/"), 100)
+    } catch (error) {
       toast({
         title: "로그인 실패",
-        description: error.message === "Error: User not found."
-          ? "이메일 또는 비밀번호가 일치하지 않습니다."
-          : error.message || "로그인 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "로그인 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {

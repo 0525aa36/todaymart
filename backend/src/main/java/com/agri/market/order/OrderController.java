@@ -41,9 +41,19 @@ public class OrderController {
         return ResponseEntity.ok(orders);
     }
 
+    @PostMapping("/{orderId}/complete")
+    public ResponseEntity<String> completeOrder(@PathVariable Long orderId) {
+        orderService.completePayment(orderId);
+        return ResponseEntity.ok("Order completed successfully");
+    }
+
     @GetMapping("/{orderId}")
     public ResponseEntity<Order> getOrderById(@PathVariable Long orderId) {
-        return orderService.getOrderById(orderId)
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String userEmail = userDetails.getUsername();
+
+        return orderService.getOrderByIdWithAuth(orderId, userEmail, authentication)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

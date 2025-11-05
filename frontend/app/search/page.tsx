@@ -24,6 +24,7 @@ interface Product {
   imageUrl: string
   averageRating: number
   reviewCount: number
+  optionCount: number
 }
 
 interface SearchResponse {
@@ -205,6 +206,7 @@ export default function SearchPage() {
                     image={product.imageUrl || "/placeholder-product.jpg"}
                     rating={product.averageRating || 0}
                     reviewCount={product.reviewCount || 0}
+                    hasOptions={product.optionCount > 0}
                   />
                 ))}
               </div>

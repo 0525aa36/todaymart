@@ -24,6 +24,7 @@ interface Product {
   createdAt: string
   averageRating: number
   reviewCount: number
+  optionCount: number
 }
 
 interface ProductCardData {
@@ -103,6 +104,7 @@ export default function HomePage() {
     badge: badge || product.category,
     rating: product.averageRating || 0,
     reviewCount: product.reviewCount || 0,
+    hasOptions: product.optionCount > 0,
   })
 
   // Get products by category

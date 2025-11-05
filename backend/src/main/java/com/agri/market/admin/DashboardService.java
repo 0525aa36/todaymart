@@ -37,38 +37,21 @@ public class DashboardService {
         LocalDateTime monthEnd = LocalDateTime.now();
 
         // 매출 통계 (결제 완료된 주문만)
-        stats.setTotalSales(orderRepository.findAll().stream()
-                .filter(order -> order.getPaymentStatus() == PaymentStatus.PAID)
-                .map(order -> order.getTotalAmount())
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        stats.setTodaySales(orderRepository.findByCreatedAtBetween(todayStart, todayEnd, null)
-                .getContent().stream()
-                .filter(order -> order.getPaymentStatus() == PaymentStatus.PAID)
-                .map(order -> order.getTotalAmount())
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        stats.setMonthSales(orderRepository.findByCreatedAtBetween(monthStart, monthEnd, null)
-                .getContent().stream()
-                .filter(order -> order.getPaymentStatus() == PaymentStatus.PAID)
-                .map(order -> order.getTotalAmount())
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        stats.setTotalSales(safeSum(orderRepository.sumTotalAmountByPaymentStatus(PaymentStatus.PAID)));
+        stats.setTodaySales(safeSum(orderRepository
+                .sumTotalAmountByPaymentStatusAndCreatedAtBetween(PaymentStatus.PAID, todayStart, todayEnd)));
+        stats.setMonthSales(safeSum(orderRepository
+                .sumTotalAmountByPaymentStatusAndCreatedAtBetween(PaymentStatus.PAID, monthStart, monthEnd)));
 
         // 주문 통계
         stats.setTotalOrders(orderRepository.count());
-        stats.setTodayOrders((long) orderRepository.findByCreatedAtBetween(todayStart, todayEnd, null)
-                .getContent().size());
-        stats.setMonthOrders((long) orderRepository.findByCreatedAtBetween(monthStart, monthEnd, null)
-                .getContent().size());
-        stats.setPendingOrders(orderRepository.findByOrderStatusOrderByCreatedAtDesc(
-                OrderStatus.PENDING, null).getTotalElements());
+        stats.setTodayOrders(orderRepository.countByCreatedAtBetween(todayStart, todayEnd));
+        stats.setMonthOrders(orderRepository.countByCreatedAtBetween(monthStart, monthEnd));
+        stats.setPendingOrders(orderRepository.countByOrderStatus(OrderStatus.PENDING));
 
         // 사용자 통계
         stats.setTotalUsers(userRepository.count());
-        stats.setTodayNewUsers(userRepository.findAll().stream()
-                .filter(user -> user.getCreatedAt().isAfter(todayStart) &&
-                               user.getCreatedAt().isBefore(todayEnd))
-                .count());
+        stats.setTodayNewUsers(userRepository.countByCreatedAtBetween(todayStart, todayEnd));
 
         // 인기 상품 Top 5 (Mock 데이터 - 실제로는 OrderItem을 집계해야 함)
         List<Map<String, Object>> topProducts = new ArrayList<>();
@@ -76,5 +59,9 @@ public class DashboardService {
         stats.setTopProducts(topProducts);
 
         return stats;
+    }
+
+    private BigDecimal safeSum(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
     }
 }

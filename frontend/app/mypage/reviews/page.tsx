@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { apiFetch, getErrorMessage } from "@/lib/api-client"
 
 interface Review {
   id: number
@@ -64,21 +65,15 @@ export default function MyReviewsPage() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8081/api/reviews/my-reviews?size=100&sort=createdAt,desc", {
-        headers: { Authorization: `Bearer ${token}` },
+      const data = await apiFetch<{ content?: Review[] }>("/api/reviews/my-reviews?size=100&sort=createdAt,desc", {
+        auth: true,
       })
-
-      if (response.ok) {
-        const data = await response.json()
-        setReviews(data.content || [])
-      } else {
-        throw new Error("Failed to fetch reviews")
-      }
+      setReviews(data.content || [])
     } catch (error) {
       console.error("Error fetching reviews:", error)
       toast({
         title: "오류",
-        description: "리뷰 목록을 불러오는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "리뷰 목록을 불러오는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -103,35 +98,29 @@ export default function MyReviewsPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:8081/api/reviews/${selectedReview.id}`, {
+      await apiFetch(`/api/reviews/${selectedReview.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify({
           productId: selectedReview.productId,
           rating: editForm.rating,
           title: editForm.title,
           content: editForm.content,
         }),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: "리뷰 수정 완료",
-          description: "리뷰가 성공적으로 수정되었습니다.",
-        })
-        setEditDialogOpen(false)
-        fetchReviews()
-      } else {
-        throw new Error("Failed to update review")
-      }
+      toast({
+        title: "리뷰 수정 완료",
+        description: "리뷰가 성공적으로 수정되었습니다.",
+      })
+      setEditDialogOpen(false)
+      fetchReviews()
     } catch (error) {
       console.error("Error updating review:", error)
       toast({
         title: "오류",
-        description: "리뷰 수정 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "리뷰 수정 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -149,26 +138,23 @@ export default function MyReviewsPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:8081/api/reviews/${selectedReview.id}`, {
+      await apiFetch(`/api/reviews/${selectedReview.id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        auth: true,
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: "리뷰 삭제 완료",
-          description: "리뷰가 성공적으로 삭제되었습니다.",
-        })
-        setDeleteDialogOpen(false)
-        fetchReviews()
-      } else {
-        throw new Error("Failed to delete review")
-      }
+      toast({
+        title: "리뷰 삭제 완료",
+        description: "리뷰가 성공적으로 삭제되었습니다.",
+      })
+      setDeleteDialogOpen(false)
+      fetchReviews()
     } catch (error) {
       console.error("Error deleting review:", error)
       toast({
         title: "오류",
-        description: "리뷰 삭제 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "리뷰 삭제 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }

@@ -13,6 +13,7 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, Search } from "lucide-react"
+import { apiFetch, getErrorMessage } from "@/lib/api-client"
 
 interface OrderItem {
   id: number
@@ -62,23 +63,13 @@ export default function OrdersPage() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8081/api/orders", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setOrders(data)
-      } else {
-        throw new Error("Failed to fetch orders")
-      }
+      const data = await apiFetch<Order[]>("/api/orders", { auth: true })
+      setOrders(data)
     } catch (error) {
       console.error("Error fetching orders:", error)
       toast({
         title: "오류",
-        description: "주문 내역을 불러오는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "주문 내역을 불러오는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {

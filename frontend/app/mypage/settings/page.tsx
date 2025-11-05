@@ -19,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { apiFetch, getErrorMessage } from "@/lib/api-client"
+import { PhoneInput } from "@/components/phone-input"
 
 interface UserProfile {
   id: number
@@ -69,30 +71,22 @@ export default function SettingsPage() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8081/api/users/profile", {
-        headers: { Authorization: `Bearer ${token}` },
+      const data = await apiFetch<UserProfile>("/api/users/profile", { auth: true })
+      setProfile(data)
+      setProfileForm({
+        name: data.name || "",
+        phone: data.phone || "",
+        addressLine1: data.addressLine1 || "",
+        addressLine2: data.addressLine2 || "",
+        postcode: data.postcode || "",
+        birthDate: data.birthDate || "",
+        gender: data.gender || "",
       })
-
-      if (response.ok) {
-        const data = await response.json()
-        setProfile(data)
-        setProfileForm({
-          name: data.name || "",
-          phone: data.phone || "",
-          addressLine1: data.addressLine1 || "",
-          addressLine2: data.addressLine2 || "",
-          postcode: data.postcode || "",
-          birthDate: data.birthDate || "",
-          gender: data.gender || "",
-        })
-      } else {
-        throw new Error("Failed to fetch profile")
-      }
     } catch (error) {
       console.error("Error fetching profile:", error)
       toast({
         title: "오류",
-        description: "프로필 정보를 불러오는 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "프로필 정보를 불러오는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -107,30 +101,23 @@ export default function SettingsPage() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8081/api/users/profile", {
+      await apiFetch("/api/users/profile", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify(profileForm),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: "프로필 수정 완료",
-          description: "프로필 정보가 성공적으로 수정되었습니다.",
-        })
-        fetchProfile()
-      } else {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to update profile")
-      }
+      toast({
+        title: "프로필 수정 완료",
+        description: "프로필 정보가 성공적으로 수정되었습니다.",
+      })
+      fetchProfile()
     } catch (error) {
       console.error("Error updating profile:", error)
       toast({
         title: "오류",
-        description: "프로필 수정 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "프로필 수정 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -152,34 +139,27 @@ export default function SettingsPage() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8081/api/users/change-password", {
+      await apiFetch("/api/users/change-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        auth: true,
         body: JSON.stringify(passwordForm),
+        parseResponse: "none",
       })
 
-      if (response.ok) {
-        toast({
-          title: "비밀번호 변경 완료",
-          description: "비밀번호가 성공적으로 변경되었습니다.",
-        })
-        setPasswordForm({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        })
-      } else {
-        const errorText = await response.text()
-        throw new Error(errorText || "Failed to change password")
-      }
-    } catch (error: any) {
+      toast({
+        title: "비밀번호 변경 완료",
+        description: "비밀번호가 성공적으로 변경되었습니다.",
+      })
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      })
+    } catch (error) {
       console.error("Error changing password:", error)
       toast({
         title: "오류",
-        description: error.message || "비밀번호 변경 중 오류가 발생했습니다.",
+        description: getErrorMessage(error, "비밀번호 변경 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     }
@@ -275,12 +255,10 @@ export default function SettingsPage() {
 
                       <div>
                         <Label htmlFor="phone">전화번호</Label>
-                        <Input
+                        <PhoneInput
                           id="phone"
-                          type="tel"
                           value={profileForm.phone}
-                          onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                          placeholder="010-1234-5678"
+                          onChange={(value) => setProfileForm({ ...profileForm, phone: value })}
                           required
                         />
                       </div>

@@ -26,6 +26,9 @@ public class ProductListDto {
     private Double averageRating;
     private Long reviewCount;
 
+    // 옵션 개수
+    private Integer optionCount;
+
     public ProductListDto(Product product, Double averageRating, Long reviewCount) {
         this.id = product.getId();
         this.name = product.getName();
@@ -42,5 +45,8 @@ public class ProductListDto {
         this.averageRating = averageRating != null ?
             BigDecimal.valueOf(averageRating).setScale(1, RoundingMode.HALF_UP).doubleValue() : 0.0;
         this.reviewCount = reviewCount != null ? reviewCount : 0L;
+
+        // 옵션 개수
+        this.optionCount = product.getOptions() != null ? product.getOptions().size() : 0;
     }
 }

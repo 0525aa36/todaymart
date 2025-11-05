@@ -23,6 +23,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false)
+    private String orderNumber;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "orders", "cart"})
@@ -61,6 +64,13 @@ public class Order {
     private String shippingAddressLine2;
     @Column(nullable = false)
     private String shippingPostcode;
+    
+    // Sender information (기본값은 주문자와 동일)
+    private String senderName;
+    private String senderPhone;
+    
+    // Delivery message
+    private String deliveryMessage;
 
     // Cancellation information
     private String cancellationReason; // 취소 사유

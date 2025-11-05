@@ -34,9 +34,8 @@ public class CartController {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String userEmail = userDetails.getUsername();
 
-        return cartService.getCartByUserEmail(userEmail)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        Cart cart = cartService.getCartByUserEmail(userEmail);
+        return ResponseEntity.ok(cart);
     }
 
     @PutMapping("/items/{itemId}")

@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { ApiError, apiFetch, getErrorMessage } from "@/lib/api-client"
 import { AddressSearch } from "@/components/address-search"
+import { PhoneInput } from "@/components/phone-input"
 
 interface CartItem {
   id: number
@@ -267,11 +268,10 @@ export default function CheckoutPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="recipient-phone">휴대폰 번호 *</Label>
-                          <Input
+                          <PhoneInput
                             id="recipient-phone"
-                            placeholder="010-0000-0000"
                             value={formData.recipientPhone}
-                            onChange={(e) => setFormData({ ...formData, recipientPhone: e.target.value })}
+                            onChange={(value) => setFormData({ ...formData, recipientPhone: value })}
                           />
                         </div>
                       </div>
@@ -348,11 +348,11 @@ export default function CheckoutPage() {
                         </div>
                         <div>
                           <Label htmlFor="sender-phone">송하인 연락처</Label>
-                          <Input
+                          <PhoneInput
                             id="sender-phone"
                             placeholder="010-0000-0000 (선택사항)"
                             value={formData.senderPhone}
-                            onChange={(e) => setFormData({ ...formData, senderPhone: e.target.value })}
+                            onChange={(value) => setFormData({ ...formData, senderPhone: value })}
                           />
                         </div>
                       </div>

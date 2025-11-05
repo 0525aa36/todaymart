@@ -1,5 +1,6 @@
 package com.agri.market.wishlist;
 
+import com.agri.market.product.Product;
 import com.agri.market.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -13,4 +14,5 @@ public interface WishlistRepository extends JpaRepository<WishlistItem, Long> {
     Optional<WishlistItem> findByUserIdAndProductId(Long userId, Long productId);
     boolean existsByUserIdAndProductId(Long userId, Long productId);
     void deleteByUserIdAndProductId(Long userId, Long productId);
+    void deleteByProduct(Product product);
 }

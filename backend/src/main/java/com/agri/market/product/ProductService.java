@@ -45,11 +45,14 @@ public class ProductService {
     }
 
     // 리뷰 통계를 포함한 상품 목록 조회
+    @Transactional(readOnly = true)
     public Page<ProductListDto> getAllProductsWithReviewStats(Pageable pageable) {
         Page<Product> products = productRepository.findAllWithImages(pageable);
 
         List<ProductListDto> productDtos = products.getContent().stream()
                 .map(product -> {
+                    // 옵션을 미리 로드
+                    product.getOptions().size();
                     Double avgRating = reviewRepository.findAverageRatingByProductId(product.getId());
                     Long reviewCount = reviewRepository.countByProductId(product.getId());
                     return new ProductListDto(product, avgRating, reviewCount);
@@ -118,11 +121,14 @@ public class ProductService {
     }
 
     // 리뷰 통계를 포함한 검색 기능
+    @Transactional(readOnly = true)
     public Page<ProductListDto> searchProductsWithReviewStats(String keyword, String category, String origin, Pageable pageable) {
         Page<Product> products = productRepository.searchProducts(keyword, category, origin, pageable);
 
         List<ProductListDto> productDtos = products.getContent().stream()
                 .map(product -> {
+                    // 옵션을 미리 로드
+                    product.getOptions().size();
                     Double avgRating = reviewRepository.findAverageRatingByProductId(product.getId());
                     Long reviewCount = reviewRepository.countByProductId(product.getId());
                     return new ProductListDto(product, avgRating, reviewCount);
