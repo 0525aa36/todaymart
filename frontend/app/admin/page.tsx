@@ -302,6 +302,12 @@ export default function AdminDashboard() {
               <Link href="/admin/users">
                 <Button variant="outline">사용자 관리</Button>
               </Link>
+              <Link href="/admin/sellers">
+                <Button variant="outline">판매자 관리</Button>
+              </Link>
+              <Link href="/admin/settlements">
+                <Button variant="outline">정산 관리</Button>
+              </Link>
             </div>
           </div>
 
