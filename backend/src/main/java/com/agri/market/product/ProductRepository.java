@@ -25,7 +25,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> findByOriginContainingIgnoreCase(String origin, Pageable pageable);
 
     // 복합 검색: 상품명, 카테고리, 원산지
-    @Query("SELECT p FROM Product p WHERE " +
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.seller WHERE " +
            "(:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
            "(:category IS NULL OR p.category = :category) AND " +
            "(:origin IS NULL OR LOWER(p.origin) LIKE LOWER(CONCAT('%', :origin, '%')))")
@@ -44,24 +44,25 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // 중복 체크용
     boolean existsByName(String name);
 
-    // Lazy loading 문제 해결: images를 fetch join으로 미리 로드
-    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images")
+    // Lazy loading 문제 해결: images와 seller를 fetch join으로 미리 로드
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images LEFT JOIN FETCH p.seller")
     List<Product> findAllWithImages();
 
     // Pageable 지원 버전
-    @Query(value = "SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images",
+    @Query(value = "SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images LEFT JOIN FETCH p.seller",
            countQuery = "SELECT COUNT(DISTINCT p) FROM Product p")
     Page<Product> findAllWithImages(Pageable pageable);
 
-    // 개별 상품 조회 시 images를 fetch join으로 미리 로드
+    // 개별 상품 조회 시 images와 seller를 fetch join으로 미리 로드
     // Note: options는 별도 API로 조회하거나 필요시 LAZY로 로드
     @Query("SELECT p FROM Product p " +
            "LEFT JOIN FETCH p.images " +
+           "LEFT JOIN FETCH p.seller " +
            "WHERE p.id = :id")
     Optional<Product> findByIdWithImagesAndOptions(@Param("id") Long id);
 
     // 재고 부족 상품 조회 (재고가 threshold 이하인 상품)
-    @Query("SELECT p FROM Product p WHERE p.stock <= :threshold ORDER BY p.stock ASC")
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.seller WHERE p.stock <= :threshold ORDER BY p.stock ASC")
     List<Product> findLowStockProducts(@Param("threshold") Integer threshold);
 
     // 재고 부족 상품 수 조회
