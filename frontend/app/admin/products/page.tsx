@@ -555,12 +555,12 @@ export default function AdminProductsPage() {
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="seller">판매자</Label>
-                      <Select value={formData.sellerId} onValueChange={(value) => setFormData({ ...formData, sellerId: value })}>
+                      <Select value={formData.sellerId || "NONE"} onValueChange={(value) => setFormData({ ...formData, sellerId: value === "NONE" ? "" : value })}>
                         <SelectTrigger id="seller">
                           <SelectValue placeholder="판매자 선택 (선택사항)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">선택 안함</SelectItem>
+                          <SelectItem value="NONE">선택 안함 (직매)</SelectItem>
                           {sellers.map((seller) => (
                             <SelectItem key={seller.id} value={seller.id.toString()}>
                               {seller.name} ({seller.representative})
