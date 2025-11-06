@@ -136,6 +136,7 @@ public class ProductService {
         return saved;
     }
 
+    @Transactional
     public Product updateProduct(Long id, ProductRequest request) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found for this id :: " + id));

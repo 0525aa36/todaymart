@@ -57,7 +57,7 @@ public class Product {
     private List<ProductOption> options = new ArrayList<>();
 
     // 판매자 정보
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "seller_id")
     private Seller seller;
 
