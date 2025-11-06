@@ -107,6 +107,9 @@ public class ProductService {
     }
 
     public Product createProduct(ProductRequest request) {
+        System.out.println("=== Creating Product ===");
+        System.out.println("Request sellerId: " + request.getSellerId());
+
         Product product = new Product();
         product.setName(request.getName());
         product.setCategory(request.getCategory());
@@ -119,12 +122,18 @@ public class ProductService {
 
         // Seller 설정
         if (request.getSellerId() != null) {
+            System.out.println("Finding seller with ID: " + request.getSellerId());
             Seller seller = sellerRepository.findById(request.getSellerId())
                     .orElseThrow(() -> new RuntimeException("Seller not found for this id :: " + request.getSellerId()));
             product.setSeller(seller);
+            System.out.println("Seller set: " + seller.getName());
+        } else {
+            System.out.println("No sellerId provided - creating product without seller");
         }
 
-        return productRepository.save(product);
+        Product saved = productRepository.save(product);
+        System.out.println("Product saved with ID: " + saved.getId() + ", Seller: " + (saved.getSeller() != null ? saved.getSeller().getName() : "null"));
+        return saved;
     }
 
     public Product updateProduct(Long id, ProductRequest request) {

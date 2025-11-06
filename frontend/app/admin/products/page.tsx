@@ -248,8 +248,13 @@ export default function AdminProductsPage() {
       stock: parseInt(formData.stock),
       imageUrl: uploadedImages.length > 0 ? uploadedImages[0] : (formData.imageUrl || null),
       imageUrls: uploadedImages.length > 0 ? uploadedImages.join(',') : null,
-      sellerId: formData.sellerId ? parseInt(formData.sellerId) : null,
+      sellerId: formData.sellerId && formData.sellerId !== "" ? parseInt(formData.sellerId) : null,
     }
+
+    console.log("=== Submitting Product ===")
+    console.log("FormData sellerId:", formData.sellerId)
+    console.log("ProductData sellerId:", productData.sellerId)
+    console.log("Product data:", productData)
 
     try {
       const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : "/api/admin/products"
