@@ -4,6 +4,7 @@ import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -98,10 +99,13 @@ public class NotificationService {
         }
     }
 
+    /**
+     * 모든 관리자에게 알림 전송 (동기)
+     */
     public void sendToAllAdmins(String title, String message, NotificationType type) {
         logger.info("Sending notification to all admins: {} - {}", title, message);
         logger.info("Current admin emitters count: {}", adminEmitters.size());
-        
+
         // DB에 관리자 알림 저장
         Notification notification = new Notification(null, title, message, type);
         notificationRepository.save(notification);
@@ -120,8 +124,28 @@ public class NotificationService {
                 removeEmitter(email, true);
             }
         });
-        
+
         logger.info("Finished sending notifications to {} admins", adminEmitters.size());
+    }
+
+    /**
+     * 모든 관리자에게 알림 전송 (비동기)
+     * 트랜잭션과 분리하여 성능 향상
+     */
+    @Async
+    public void sendToAllAdminsAsync(String title, String message, NotificationType type) {
+        logger.info("[Async] Sending notification to all admins: {} - {}", title, message);
+        sendToAllAdmins(title, message, type);
+    }
+
+    /**
+     * 사용자에게 알림 전송 (비동기)
+     * 트랜잭션과 분리하여 성능 향상
+     */
+    @Async
+    public void sendToUserAsync(String userEmail, String title, String message, NotificationType type) {
+        logger.info("[Async] Sending notification to user: {} - {}", userEmail, title);
+        sendToUser(userEmail, title, message, type);
     }
 
     // DTO 클래스
