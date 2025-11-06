@@ -18,19 +18,28 @@ public class BusinessException extends RuntimeException {
     }
 }
 
-class ProductNotFoundException extends BusinessException {
+/**
+ * 상품을 찾을 수 없을 때 발생하는 예외
+ */
+public class ProductNotFoundException extends BusinessException {
     public ProductNotFoundException(Long productId) {
         super("상품을 찾을 수 없습니다: " + productId, "PRODUCT_NOT_FOUND");
     }
 }
 
-class InsufficientStockException extends BusinessException {
+/**
+ * 재고가 부족할 때 발생하는 예외
+ */
+public class InsufficientStockException extends BusinessException {
     public InsufficientStockException(String productName) {
         super("재고가 부족합니다: " + productName, "INSUFFICIENT_STOCK");
     }
 }
 
-class UserNotFoundException extends BusinessException {
+/**
+ * 사용자를 찾을 수 없을 때 발생하는 예외
+ */
+public class UserNotFoundException extends BusinessException {
     public UserNotFoundException(String email) {
         super("사용자를 찾을 수 없습니다: " + email, "USER_NOT_FOUND");
     }
