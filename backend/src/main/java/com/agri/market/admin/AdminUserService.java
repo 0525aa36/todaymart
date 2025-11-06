@@ -74,11 +74,9 @@ public class AdminUserService {
 
         // 통계 계산
         long orderCount = orders.size();
-        BigDecimal totalSpent = orders.stream()
-                .map(Order::getTotalAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalSpent = orderRepository.sumTotalAmountByUserId(userId);
 
-        return new UserDetailDto(user, orders, orderCount, totalSpent);
+        return new UserDetailDto(user, orders, orderCount, totalSpent != null ? totalSpent : BigDecimal.ZERO);
     }
 
     /**
