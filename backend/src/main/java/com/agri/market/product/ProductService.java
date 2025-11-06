@@ -227,4 +227,24 @@ public class ProductService {
     public List<ProductOption> getProductOptions(Long productId) {
         return productOptionRepository.findByProductId(productId);
     }
+
+    /**
+     * 재고 부족 상품 조회
+     * @param threshold 재고 기준값
+     * @return 재고가 threshold 이하인 상품 목록
+     */
+    @Transactional(readOnly = true)
+    public List<Product> getLowStockProducts(Integer threshold) {
+        return productRepository.findLowStockProducts(threshold);
+    }
+
+    /**
+     * 재고 부족 상품 수 조회
+     * @param threshold 재고 기준값
+     * @return 재고가 threshold 이하인 상품 수
+     */
+    @Transactional(readOnly = true)
+    public long countLowStockProducts(Integer threshold) {
+        return productRepository.countLowStockProducts(threshold);
+    }
 }

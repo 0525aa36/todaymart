@@ -4,6 +4,7 @@ import com.agri.market.dto.DashboardStats;
 import com.agri.market.order.OrderRepository;
 import com.agri.market.order.OrderStatus;
 import com.agri.market.order.PaymentStatus;
+import com.agri.market.product.ProductService;
 import com.agri.market.user.UserRepository;
 import org.springframework.stereotype.Service;
 
@@ -21,10 +22,12 @@ public class DashboardService {
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
+    private final ProductService productService;
 
-    public DashboardService(OrderRepository orderRepository, UserRepository userRepository) {
+    public DashboardService(OrderRepository orderRepository, UserRepository userRepository, ProductService productService) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
+        this.productService = productService;
     }
 
     public DashboardStats getDashboardStats() {
@@ -52,6 +55,9 @@ public class DashboardService {
         // 사용자 통계
         stats.setTotalUsers(userRepository.count());
         stats.setTodayNewUsers(userRepository.countByCreatedAtBetween(todayStart, todayEnd));
+
+        // 상품 통계
+        stats.setLowStockCount(productService.countLowStockProducts(10));
 
         // 인기 상품 Top 5 (Mock 데이터 - 실제로는 OrderItem을 집계해야 함)
         List<Map<String, Object>> topProducts = new ArrayList<>();

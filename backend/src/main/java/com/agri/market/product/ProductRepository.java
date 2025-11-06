@@ -59,4 +59,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "LEFT JOIN FETCH p.images " +
            "WHERE p.id = :id")
     Optional<Product> findByIdWithImagesAndOptions(@Param("id") Long id);
+
+    // 재고 부족 상품 조회 (재고가 threshold 이하인 상품)
+    @Query("SELECT p FROM Product p WHERE p.stock <= :threshold ORDER BY p.stock ASC")
+    List<Product> findLowStockProducts(@Param("threshold") Integer threshold);
+
+    // 재고 부족 상품 수 조회
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.stock <= :threshold")
+    long countLowStockProducts(@Param("threshold") Integer threshold);
 }
