@@ -24,7 +24,7 @@ public class Settlement {
     private Long id;
 
     // 판매자
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "seller_id", nullable = false)
     private Seller seller;
 
