@@ -48,7 +48,8 @@
       "Bash(sudo chmod:*)",
       "Bash(sudo tee:*)",
       "Bash(sudo apt update:*)",
-      "Bash(sudo apt install:*)"
+      "Bash(sudo apt install:*)",
+      "Bash(./gradlew test:*)"
     ],
     "deny": [],
     "ask": []

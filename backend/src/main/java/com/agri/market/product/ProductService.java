@@ -12,7 +12,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -44,17 +46,45 @@ public class ProductService {
         return productRepository.findAllWithImages(pageable);
     }
 
-    // 리뷰 통계를 포함한 상품 목록 조회
+    // 리뷰 통계를 포함한 상품 목록 조회 (N+1 쿼리 최적화)
     @Transactional(readOnly = true)
     public Page<ProductListDto> getAllProductsWithReviewStats(Pageable pageable) {
         Page<Product> products = productRepository.findAllWithImages(pageable);
 
+        // 모든 상품 ID 추출
+        List<Long> productIds = products.getContent().stream()
+                .map(Product::getId)
+                .collect(Collectors.toList());
+
+        // 배치로 평점과 리뷰 수를 한 번에 조회 (N+1 쿼리 해결!)
+        Map<Long, Double> ratingMap = new HashMap<>();
+        Map<Long, Long> countMap = new HashMap<>();
+
+        if (!productIds.isEmpty()) {
+            // 평균 평점 배치 조회
+            List<Map<String, Object>> ratings = reviewRepository.findAverageRatingsByProductIds(productIds);
+            ratings.forEach(row -> {
+                Long productId = ((Number) row.get("productId")).longValue();
+                Double avgRating = row.get("avgRating") != null ? ((Number) row.get("avgRating")).doubleValue() : null;
+                ratingMap.put(productId, avgRating);
+            });
+
+            // 리뷰 개수 배치 조회
+            List<Map<String, Object>> counts = reviewRepository.countReviewsByProductIds(productIds);
+            counts.forEach(row -> {
+                Long productId = ((Number) row.get("productId")).longValue();
+                Long reviewCount = ((Number) row.get("reviewCount")).longValue();
+                countMap.put(productId, reviewCount);
+            });
+        }
+
+        // DTO 생성 (이제 Map에서 조회하므로 추가 쿼리 없음)
         List<ProductListDto> productDtos = products.getContent().stream()
                 .map(product -> {
                     // 옵션을 미리 로드
                     product.getOptions().size();
-                    Double avgRating = reviewRepository.findAverageRatingByProductId(product.getId());
-                    Long reviewCount = reviewRepository.countByProductId(product.getId());
+                    Double avgRating = ratingMap.get(product.getId());
+                    Long reviewCount = countMap.getOrDefault(product.getId(), 0L);
                     return new ProductListDto(product, avgRating, reviewCount);
                 })
                 .collect(Collectors.toList());

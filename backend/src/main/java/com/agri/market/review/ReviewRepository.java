@@ -8,6 +8,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Map;
+
 @Repository
 public interface ReviewRepository extends JpaRepository<Review, Long> {
 
@@ -26,4 +29,26 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     // 상품별 리뷰 삭제
     void deleteByProduct(Product product);
+
+    /**
+     * 여러 상품의 평균 평점을 한 번에 조회 (N+1 쿼리 방지)
+     * @param productIds 상품 ID 리스트
+     * @return Map<productId, averageRating>
+     */
+    @Query("SELECT r.product.id as productId, AVG(r.rating) as avgRating " +
+           "FROM Review r " +
+           "WHERE r.product.id IN :productIds " +
+           "GROUP BY r.product.id")
+    List<Map<String, Object>> findAverageRatingsByProductIds(@Param("productIds") List<Long> productIds);
+
+    /**
+     * 여러 상품의 리뷰 개수를 한 번에 조회 (N+1 쿼리 방지)
+     * @param productIds 상품 ID 리스트
+     * @return Map<productId, reviewCount>
+     */
+    @Query("SELECT r.product.id as productId, COUNT(r) as reviewCount " +
+           "FROM Review r " +
+           "WHERE r.product.id IN :productIds " +
+           "GROUP BY r.product.id")
+    List<Map<String, Object>> countReviewsByProductIds(@Param("productIds") List<Long> productIds);
 }

@@ -106,9 +106,9 @@ public class OrderService {
 
         // 주문 생성 시에는 장바구니를 비우지 않음 (결제 완료 후에 비움)
 
-        // 알림 발송
+        // 알림 발송 (비동기 처리로 트랜잭션 성능 향상)
         // 사용자에게 주문 완료 알림
-        notificationService.sendToUser(
+        notificationService.sendToUserAsync(
             user.getEmail(),
             "주문이 완료되었습니다",
             "주문번호 " + savedOrder.getId() + "번 주문이 성공적으로 접수되었습니다.",
@@ -116,7 +116,7 @@ public class OrderService {
         );
 
         // 관리자에게 새 주문 알림
-        notificationService.sendToAllAdmins(
+        notificationService.sendToAllAdminsAsync(
             "새로운 주문이 접수되었습니다",
             "주문번호 " + savedOrder.getId() + "번 (" + user.getName() + "님)",
             NotificationType.NEW_ORDER
