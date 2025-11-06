@@ -70,4 +70,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate
     );
+
+    // 사용자별 주문 수 조회
+    long countByUserId(Long userId);
+
+    // 사용자별 총 결제 금액 조회
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.user.id = :userId AND o.paymentStatus = 'PAID'")
+    BigDecimal sumTotalAmountByUserId(@Param("userId") Long userId);
+
+    // 사용자별 주문 내역 조회
+    List<Order> findByUserIdOrderByCreatedAtDesc(Long userId);
 }

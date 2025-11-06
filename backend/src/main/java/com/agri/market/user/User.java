@@ -48,6 +48,9 @@ public class User {
     @Column(nullable = false, length = 20)
     private String role = "USER"; // Default role (ROLE_ prefix is added automatically by Spring Security)
 
+    @Column(nullable = false)
+    private Boolean enabled = true; // 사용자 활성화 상태
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

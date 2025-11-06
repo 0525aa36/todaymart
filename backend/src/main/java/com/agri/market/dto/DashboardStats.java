@@ -29,6 +29,9 @@ public class DashboardStats {
     private Long totalUsers; // 총 회원 수
     private Long todayNewUsers; // 오늘 신규 회원 수
 
+    // 상품 통계
+    private Long lowStockCount; // 재고 부족 상품 수 (재고 <= 10)
+
     // 인기 상품 (상품 ID와 판매 수량)
     private List<Map<String, Object>> topProducts;
 }

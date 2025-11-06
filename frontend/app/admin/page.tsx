@@ -148,6 +148,7 @@ export default function AdminDashboard() {
   const totalSales = orders.reduce((sum, order) => sum + order.totalAmount, 0)
   const totalOrders = orders.length
   const totalProducts = products.length
+  const lowStockProducts = products.filter(product => product.stock <= 10)
 
   // Get recent orders (last 10)
   const recentOrders = [...orders]
@@ -298,6 +299,9 @@ export default function AdminDashboard() {
               <Link href="/admin/orders">
                 <Button variant="outline">주문 관리</Button>
               </Link>
+              <Link href="/admin/users">
+                <Button variant="outline">사용자 관리</Button>
+              </Link>
             </div>
           </div>
 
@@ -406,6 +410,64 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Low Stock Alert */}
+          {lowStockProducts.length > 0 && (
+            <Card className="mb-8 border-orange-200 bg-orange-50">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-orange-800">재고 부족 알림</CardTitle>
+                    <CardDescription className="text-orange-600">
+                      재고가 10개 이하인 상품이 {lowStockProducts.length}개 있습니다.
+                    </CardDescription>
+                  </div>
+                  <Link href="/admin/products">
+                    <Button variant="outline" className="border-orange-300 text-orange-700 hover:bg-orange-100">
+                      상품 관리로 이동
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {lowStockProducts.slice(0, 5).map((product) => (
+                    <div
+                      key={product.id}
+                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Package className="h-5 w-5 text-orange-600" />
+                        <div>
+                          <p className="font-medium text-sm">{product.name}</p>
+                          <p className="text-xs text-muted-foreground">{product.category}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Badge variant={product.stock === 0 ? "destructive" : "secondary"}>
+                          재고 {product.stock}개
+                        </Badge>
+                        <Link href={`/admin/products?highlight=${product.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                  {lowStockProducts.length > 5 && (
+                    <div className="text-center pt-2">
+                      <Link href="/admin/products">
+                        <Button variant="link" className="text-orange-600">
+                          나머지 {lowStockProducts.length - 5}개 상품 보기
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Tabs */}
           <Tabs defaultValue="orders" className="space-y-4">
