@@ -1,5 +1,6 @@
 package com.agri.market.product;
 
+import com.agri.market.seller.Seller;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -54,6 +55,11 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<ProductOption> options = new ArrayList<>();
+
+    // 판매자 정보
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seller_id")
+    private Seller seller;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
