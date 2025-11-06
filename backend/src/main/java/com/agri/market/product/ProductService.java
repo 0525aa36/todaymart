@@ -3,8 +3,11 @@ package com.agri.market.product;
 import com.agri.market.cart.CartItemRepository;
 import com.agri.market.dto.ProductListDto;
 import com.agri.market.dto.ProductOptionRequest;
+import com.agri.market.dto.ProductRequest;
 import com.agri.market.order.OrderItemRepository;
 import com.agri.market.review.ReviewRepository;
+import com.agri.market.seller.Seller;
+import com.agri.market.seller.SellerRepository;
 import com.agri.market.wishlist.WishlistRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -27,19 +30,22 @@ public class ProductService {
     private final CartItemRepository cartItemRepository;
     private final WishlistRepository wishlistRepository;
     private final ReviewRepository reviewRepository;
+    private final SellerRepository sellerRepository;
 
     public ProductService(ProductRepository productRepository,
                           ProductOptionRepository productOptionRepository,
                           OrderItemRepository orderItemRepository,
                           CartItemRepository cartItemRepository,
                           WishlistRepository wishlistRepository,
-                          ReviewRepository reviewRepository) {
+                          ReviewRepository reviewRepository,
+                          SellerRepository sellerRepository) {
         this.productRepository = productRepository;
         this.productOptionRepository = productOptionRepository;
         this.orderItemRepository = orderItemRepository;
         this.cartItemRepository = cartItemRepository;
         this.wishlistRepository = wishlistRepository;
         this.reviewRepository = reviewRepository;
+        this.sellerRepository = sellerRepository;
     }
 
     public Page<Product> getAllProducts(Pageable pageable) {
@@ -100,21 +106,48 @@ public class ProductService {
         return productOpt;
     }
 
-    public Product createProduct(Product product) {
+    public Product createProduct(ProductRequest request) {
+        Product product = new Product();
+        product.setName(request.getName());
+        product.setCategory(request.getCategory());
+        product.setOrigin(request.getOrigin());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
+        product.setDiscountRate(request.getDiscountRate());
+        product.setStock(request.getStock());
+        product.setImageUrl(request.getImageUrl());
+
+        // Seller 설정
+        if (request.getSellerId() != null) {
+            Seller seller = sellerRepository.findById(request.getSellerId())
+                    .orElseThrow(() -> new RuntimeException("Seller not found for this id :: " + request.getSellerId()));
+            product.setSeller(seller);
+        }
+
         return productRepository.save(product);
     }
 
-    public Product updateProduct(Long id, Product productDetails) {
+    public Product updateProduct(Long id, ProductRequest request) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found for this id :: " + id));
 
-        product.setName(productDetails.getName());
-        product.setCategory(productDetails.getCategory());
-        product.setOrigin(productDetails.getOrigin());
-        product.setDescription(productDetails.getDescription());
-        product.setPrice(productDetails.getPrice());
-        product.setStock(productDetails.getStock());
-        product.setImageUrl(productDetails.getImageUrl());
+        product.setName(request.getName());
+        product.setCategory(request.getCategory());
+        product.setOrigin(request.getOrigin());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
+        product.setDiscountRate(request.getDiscountRate());
+        product.setStock(request.getStock());
+        product.setImageUrl(request.getImageUrl());
+
+        // Seller 설정
+        if (request.getSellerId() != null) {
+            Seller seller = sellerRepository.findById(request.getSellerId())
+                    .orElseThrow(() -> new RuntimeException("Seller not found for this id :: " + request.getSellerId()));
+            product.setSeller(seller);
+        } else {
+            product.setSeller(null);
+        }
 
         return productRepository.save(product);
     }

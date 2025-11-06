@@ -31,6 +31,21 @@ import { useRouter } from "next/navigation"
 import { Plus, Edit, Trash2, ArrowLeft, Settings } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, API_BASE_URL, getErrorMessage } from "@/lib/api-client"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+interface Seller {
+  id: number
+  name: string
+  businessNumber: string
+  representative: string
+  commissionRate: number
+}
 
 interface Product {
   id: number
@@ -43,6 +58,7 @@ interface Product {
   stock: number
   imageUrl: string
   imageUrls?: string
+  seller?: Seller
   createdAt: string
   updatedAt: string
 }
@@ -60,6 +76,7 @@ export default function AdminProductsPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
+  const [sellers, setSellers] = useState<Seller[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -74,6 +91,7 @@ export default function AdminProductsPage() {
     discountRate: "",
     stock: "",
     imageUrl: "",
+    sellerId: "",
   })
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
@@ -106,6 +124,7 @@ export default function AdminProductsPage() {
     }
 
     fetchProducts()
+    fetchSellers()
   }, [])
 
   const fetchProducts = async () => {
@@ -121,6 +140,15 @@ export default function AdminProductsPage() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchSellers = async () => {
+    try {
+      const data = await apiFetch<{ content?: Seller[] }>("/api/admin/sellers/active?size=1000", { auth: true })
+      setSellers(data.content || [])
+    } catch (error) {
+      console.error("Error fetching sellers:", error)
     }
   }
 
@@ -220,6 +248,7 @@ export default function AdminProductsPage() {
       stock: parseInt(formData.stock),
       imageUrl: uploadedImages.length > 0 ? uploadedImages[0] : (formData.imageUrl || null),
       imageUrls: uploadedImages.length > 0 ? uploadedImages.join(',') : null,
+      sellerId: formData.sellerId ? parseInt(formData.sellerId) : null,
     }
 
     try {
@@ -260,6 +289,7 @@ export default function AdminProductsPage() {
       discountRate: product.discountRate?.toString() || "",
       stock: product.stock.toString(),
       imageUrl: product.imageUrl || "",
+      sellerId: product.seller?.id.toString() || "",
     })
 
     // 기존 이미지 URL들을 uploadedImages에 설정
@@ -311,6 +341,7 @@ export default function AdminProductsPage() {
       discountRate: "",
       stock: "",
       imageUrl: "",
+      sellerId: "",
     })
     setUploadedImages([])
     setDescriptionImages([])
@@ -523,6 +554,25 @@ export default function AdminProductsPage() {
                       </div>
                     </div>
                     <div className="grid gap-2">
+                      <Label htmlFor="seller">판매자</Label>
+                      <Select value={formData.sellerId} onValueChange={(value) => setFormData({ ...formData, sellerId: value })}>
+                        <SelectTrigger id="seller">
+                          <SelectValue placeholder="판매자 선택 (선택사항)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">선택 안함</SelectItem>
+                          {sellers.map((seller) => (
+                            <SelectItem key={seller.id} value={seller.id.toString()}>
+                              {seller.name} ({seller.representative})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        위탁 판매 상품인 경우 판매자를 선택하세요.
+                      </p>
+                    </div>
+                    <div className="grid gap-2">
                       <Label htmlFor="description">상품 설명 *</Label>
                       <Textarea
                         id="description"
@@ -644,6 +694,7 @@ export default function AdminProductsPage() {
                       <TableHead>상품명</TableHead>
                       <TableHead>카테고리</TableHead>
                       <TableHead>원산지</TableHead>
+                      <TableHead>판매자</TableHead>
                       <TableHead>가격</TableHead>
                       <TableHead>할인</TableHead>
                       <TableHead>재고</TableHead>
@@ -660,6 +711,18 @@ export default function AdminProductsPage() {
                           <Badge variant="secondary">{product.category}</Badge>
                         </TableCell>
                         <TableCell>{product.origin}</TableCell>
+                        <TableCell>
+                          {product.seller ? (
+                            <div className="text-sm">
+                              <div className="font-medium">{product.seller.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {product.seller.representative}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           {product.discountRate ? (
                             <div className="flex flex-col">
