@@ -5,10 +5,11 @@ applications:
         preBuild:
           commands:
             - cd frontend
-            - npm ci
+            - npm install -g pnpm
+            - pnpm install
         build:
           commands:
-            - npm run build
+            - pnpm run build
       artifacts:
         baseDirectory: frontend/.next
         files:
@@ -16,4 +17,5 @@ applications:
       cache:
         paths:
           - frontend/node_modules/**/*
+          - frontend/.next/cache/**/*
     appRoot: frontend
