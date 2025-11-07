@@ -1,5 +1,6 @@
 package com.agri.market.settlement;
 
+import com.agri.market.seller.Seller;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,20 +15,51 @@ import java.util.Optional;
 @Repository
 public interface SettlementRepository extends JpaRepository<Settlement, Long> {
 
-    // 판매자별 정산 내역 조회
-    Page<Settlement> findBySellerIdOrderByCreatedAtDesc(Long sellerId, Pageable pageable);
+    /**
+     * 판매자별 정산 내역 조회
+     */
+    Page<Settlement> findBySeller(Seller seller, Pageable pageable);
 
-    // 정산 상태별 조회
-    Page<Settlement> findByStatusOrderByCreatedAtDesc(SettlementStatus status, Pageable pageable);
+    /**
+     * 판매자 ID로 정산 내역 조회
+     */
+    Page<Settlement> findBySellerId(Long sellerId, Pageable pageable);
 
-    // 판매자 + 정산 기간으로 조회 (중복 정산 방지)
-    Optional<Settlement> findBySellerIdAndStartDateAndEndDate(Long sellerId, LocalDate startDate, LocalDate endDate);
+    /**
+     * 상태별 정산 내역 조회
+     */
+    Page<Settlement> findByStatus(SettlementStatus status, Pageable pageable);
 
-    // 특정 기간의 정산 내역 조회
-    @Query("SELECT s FROM Settlement s WHERE s.startDate >= :startDate AND s.endDate <= :endDate ORDER BY s.createdAt DESC")
-    List<Settlement> findByPeriod(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    /**
+     * 판매자 + 상태별 정산 내역 조회
+     */
+    Page<Settlement> findBySellerIdAndStatus(Long sellerId, SettlementStatus status, Pageable pageable);
 
-    // 판매자별 정산 통계
-    @Query("SELECT COALESCE(SUM(s.settlementAmount), 0) FROM Settlement s WHERE s.seller.id = :sellerId AND s.status = 'COMPLETED'")
-    java.math.BigDecimal sumCompletedSettlementAmountBySeller(@Param("sellerId") Long sellerId);
+    /**
+     * 특정 기간의 정산 내역 조회
+     */
+    @Query("SELECT s FROM Settlement s WHERE s.startDate >= :startDate AND s.endDate <= :endDate")
+    Page<Settlement> findByPeriod(@Param("startDate") LocalDate startDate,
+                                   @Param("endDate") LocalDate endDate,
+                                   Pageable pageable);
+
+    /**
+     * 판매자의 특정 기간 정산 내역 조회 (중복 체크용)
+     */
+    @Query("SELECT s FROM Settlement s WHERE s.seller.id = :sellerId " +
+           "AND s.startDate = :startDate AND s.endDate = :endDate")
+    Optional<Settlement> findBySellerIdAndPeriod(@Param("sellerId") Long sellerId,
+                                                   @Param("startDate") LocalDate startDate,
+                                                   @Param("endDate") LocalDate endDate);
+
+    /**
+     * 판매자의 정산 대기 건수
+     */
+    long countBySellerIdAndStatus(Long sellerId, SettlementStatus status);
+
+    /**
+     * 전체 정산 내역을 최신순으로 조회
+     */
+    @Query("SELECT s FROM Settlement s LEFT JOIN FETCH s.seller ORDER BY s.createdAt DESC")
+    Page<Settlement> findAllWithSeller(Pageable pageable);
 }

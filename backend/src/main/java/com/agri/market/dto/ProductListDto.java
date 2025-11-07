@@ -1,6 +1,7 @@
 package com.agri.market.dto;
 
 import com.agri.market.product.Product;
+import com.agri.market.seller.Seller;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,6 +23,9 @@ public class ProductListDto {
     private String imageUrl;
     private LocalDateTime createdAt;
 
+    // 판매자 정보
+    private Seller seller;
+
     // 리뷰 통계
     private Double averageRating;
     private Long reviewCount;
@@ -40,6 +44,9 @@ public class ProductListDto {
         this.stock = product.getStock();
         this.imageUrl = product.getImageUrl();
         this.createdAt = product.getCreatedAt();
+
+        // 판매자 정보
+        this.seller = product.getSeller();
 
         // 리뷰 통계 (null 처리)
         this.averageRating = averageRating != null ?

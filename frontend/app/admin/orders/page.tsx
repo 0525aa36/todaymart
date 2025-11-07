@@ -1,7 +1,5 @@
 "use client"
 
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -233,8 +231,7 @@ export default function AdminOrdersPage() {
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      return (
-        order.id.toString().includes(query) ||
+      return (        order.id.toString().includes(query) ||
         order.user.name.toLowerCase().includes(query) ||
         order.recipientName.toLowerCase().includes(query) ||
         order.orderItems.some((item) => item.product.name.toLowerCase().includes(query))
@@ -246,26 +243,20 @@ export default function AdminOrdersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 bg-muted/30">
-          <div className="container mx-auto px-4 py-8">
-            <p className="text-center">로딩 중...</p>
-          </div>
-        </main>
-        <Footer />
+    <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-
-      <main className="flex-1 bg-muted/30">
-        <div className="container mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="mb-8">
+    <>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="mb-8">
             <Button variant="ghost" asChild className="mb-4">
               <Link href="/admin">
                 <ChevronLeft className="h-4 w-4 mr-2" />
@@ -273,11 +264,11 @@ export default function AdminOrdersPage() {
               </Link>
             </Button>
             <h1 className="text-3xl font-bold mb-2">주문 관리</h1>
-            <p className="text-muted-foreground">총 {orders.length}건의 주문</p>
-          </div>
+            <p className="text-gray-600 mt-2">총 {orders.length}건의 주문</p>
+        </div>
 
-          {/* Filters */}
-          <Card className="mb-6">
+        {/* Filters */}
+        <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="flex flex-col md:flex-row gap-4">
                 {/* Status Filter */}
@@ -313,11 +304,11 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
 
-          {/* Orders Table */}
-          <Card>
+        {/* Orders Table */}
+        <Card>
             <CardHeader>
               <CardTitle>주문 목록 ({filteredOrders.length}건)</CardTitle>
             </CardHeader>
@@ -395,12 +386,11 @@ export default function AdminOrdersPage() {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Status Update Dialog */}
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
@@ -470,8 +460,6 @@ export default function AdminOrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Footer />
-    </div>
+    </>
   )
 }

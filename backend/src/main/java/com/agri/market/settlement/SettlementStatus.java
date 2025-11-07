@@ -1,10 +1,23 @@
 package com.agri.market.settlement;
 
-/**
- * 정산 상태
- */
 public enum SettlementStatus {
-    PENDING,    // 정산 대기
-    COMPLETED,  // 정산 완료
-    CANCELLED   // 정산 취소
+    /**
+     * 정산 대기 중
+     */
+    PENDING,
+
+    /**
+     * 정산 승인됨
+     */
+    APPROVED,
+
+    /**
+     * 지급 완료
+     */
+    PAID,
+
+    /**
+     * 정산 취소
+     */
+    CANCELLED
 }

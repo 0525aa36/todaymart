@@ -11,67 +11,94 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * 정산 엔티티
- */
 @Entity
 @Table(name = "settlements")
 @Getter
 @Setter
 public class Settlement {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 판매자
+    /**
+     * 정산 대상 판매자
+     */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "seller_id", nullable = false)
     private Seller seller;
 
-    // 정산 기간
+    /**
+     * 정산 기간 시작일
+     */
     @Column(nullable = false)
     private LocalDate startDate;
 
+    /**
+     * 정산 기간 종료일
+     */
     @Column(nullable = false)
     private LocalDate endDate;
 
-    // 정산 금액
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal totalSalesAmount = BigDecimal.ZERO; // 총 매출액
+    /**
+     * 주문 건수 (정산 기간 내 해당 판매자의 주문 건수)
+     */
+    @Column(nullable = false)
+    private Integer orderCount = 0;
 
+    /**
+     * 총 매출액 (판매자의 상품 총 매출)
+     */
     @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal commissionAmount = BigDecimal.ZERO; // 수수료
+    private BigDecimal totalSales = BigDecimal.ZERO;
 
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal settlementAmount = BigDecimal.ZERO; // 정산 금액 (매출 - 수수료)
-
+    /**
+     * 수수료율 (정산 당시 판매자의 수수료율, %)
+     */
     @Column(nullable = false, precision = 5, scale = 2)
-    private BigDecimal commissionRate; // 적용된 수수료율
+    private BigDecimal commissionRate = BigDecimal.ZERO;
 
-    // 정산 상태
+    /**
+     * 수수료 금액 (매출 * 수수료율)
+     */
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal commissionAmount = BigDecimal.ZERO;
+
+    /**
+     * 정산 금액 (매출 - 수수료)
+     */
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal netAmount = BigDecimal.ZERO;
+
+    /**
+     * 정산 상태: PENDING(대기), APPROVED(승인), PAID(지급완료), CANCELLED(취소)
+     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private SettlementStatus status = SettlementStatus.PENDING;
 
-    // 정산 건수
-    @Column(nullable = false)
-    private Integer orderCount = 0; // 주문 건수
+    /**
+     * 지급일
+     */
+    private LocalDate paymentDate;
 
-    // 정산 완료 정보
-    @Column
-    private LocalDateTime settledAt; // 정산 완료 일시
+    /**
+     * 지급 방법
+     */
+    @Column(length = 50)
+    private String paymentMethod;
 
-    @Column(length = 100)
-    private String settledBy; // 정산 처리자
-
+    /**
+     * 비고
+     */
     @Column(columnDefinition = "TEXT")
-    private String memo; // 메모
+    private String memo;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
 }

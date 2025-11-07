@@ -1,108 +1,101 @@
 package com.agri.market.admin;
 
-import com.agri.market.dto.ApiResponse;
 import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * 관리자 사용자 관리 컨트롤러
- */
 @RestController
 @RequestMapping("/api/admin/users")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
 
     private final UserRepository userRepository;
-    private final AdminUserService adminUserService;
 
-    public AdminUserController(UserRepository userRepository, AdminUserService adminUserService) {
+    public AdminUserController(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.adminUserService = adminUserService;
     }
 
     /**
-     * 사용자 목록 조회 (페이징)
+     * 사용자 목록 조회 (페이지네이션, 검색, 역할 필터)
      */
     @GetMapping
-    public ResponseEntity<Page<UserDto>> getAllUsers(Pageable pageable) {
-        Page<UserDto> users = adminUserService.getAllUsers(pageable);
+    public ResponseEntity<Page<User>> getAllUsers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String role,
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        Page<User> users;
+
+        if (role != null && !role.trim().isEmpty()) {
+            users = userRepository.findByRole(role, pageable);
+        } else if (keyword != null && !keyword.trim().isEmpty()) {
+            users = userRepository.searchUsers(keyword, pageable);
+        } else {
+            users = userRepository.findAll(pageable);
+        }
+
         return ResponseEntity.ok(users);
     }
 
     /**
-     * 사용자 검색 (이름, 이메일)
+     * 사용자 상세 조회
      */
-    @GetMapping("/search")
-    public ResponseEntity<Page<UserDto>> searchUsers(
-            @RequestParam String query,
-            Pageable pageable) {
-        Page<UserDto> users = adminUserService.searchUsers(query, pageable);
-        return ResponseEntity.ok(users);
+    @GetMapping("/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + id));
+        return ResponseEntity.ok(user);
     }
 
     /**
-     * 사용자 상세 조회 (구매 이력 포함)
+     * 사용자 역할 변경
      */
-    @GetMapping("/{userId}")
-    public ResponseEntity<UserDetailDto> getUserDetail(@PathVariable Long userId) {
-        UserDetailDto userDetail = adminUserService.getUserDetail(userId);
-        return ResponseEntity.ok(userDetail);
-    }
-
-    /**
-     * 사용자 활성화/비활성화
-     */
-    @PutMapping("/{userId}/status")
-    public ResponseEntity<ApiResponse<Void>> updateUserStatus(
-            @PathVariable Long userId,
-            @RequestBody Map<String, Boolean> request) {
-        boolean enabled = request.get("enabled");
-        adminUserService.updateUserStatus(userId, enabled);
-        return ResponseEntity.ok(ApiResponse.success("사용자 상태가 변경되었습니다.", null));
-    }
-
-    /**
-     * 사용자 역할 변경 (일반 사용자 <-> 관리자)
-     */
-    @PutMapping("/{userId}/role")
-    public ResponseEntity<ApiResponse<Void>> updateUserRole(
-            @PathVariable Long userId,
+    @PutMapping("/{id}/role")
+    public ResponseEntity<User> updateUserRole(
+            @PathVariable Long id,
             @RequestBody Map<String, String> request) {
-        String role = request.get("role");
-        adminUserService.updateUserRole(userId, role);
-        return ResponseEntity.ok(ApiResponse.success("사용자 역할이 변경되었습니다.", null));
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + id));
+
+        String newRole = request.get("role");
+        if (newRole == null || newRole.trim().isEmpty()) {
+            throw new RuntimeException("역할 값이 필요합니다.");
+        }
+
+        // 유효한 역할인지 검증
+        if (!newRole.equals("USER") && !newRole.equals("ADMIN")) {
+            throw new RuntimeException("유효하지 않은 역할입니다. USER 또는 ADMIN만 가능합니다.");
+        }
+
+        user.setRole(newRole);
+        User updatedUser = userRepository.save(user);
+
+        return ResponseEntity.ok(updatedUser);
     }
 
     /**
-     * 사용자 통계 조회
+     * 사용자 통계
      */
-    @GetMapping("/statistics")
-    public ResponseEntity<Map<String, Object>> getUserStatistics() {
-        Map<String, Object> stats = new HashMap<>();
-
-        // 전체 사용자 수
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getUserStats() {
         long totalUsers = userRepository.count();
+        long adminUsers = userRepository.findByRole("ADMIN", Pageable.unpaged()).getTotalElements();
+        long normalUsers = userRepository.findByRole("USER", Pageable.unpaged()).getTotalElements();
 
-        // 오늘 가입한 사용자
-        LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
-        long todayNewUsers = userRepository.countByCreatedAtBetween(todayStart, LocalDateTime.now());
-
-        // 이번 달 가입한 사용자
-        LocalDateTime monthStart = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
-        long monthNewUsers = userRepository.countByCreatedAtBetween(monthStart, LocalDateTime.now());
-
+        Map<String, Object> stats = new HashMap<>();
         stats.put("totalUsers", totalUsers);
-        stats.put("todayNewUsers", todayNewUsers);
-        stats.put("monthNewUsers", monthNewUsers);
+        stats.put("adminUsers", adminUsers);
+        stats.put("normalUsers", normalUsers);
 
         return ResponseEntity.ok(stats);
     }

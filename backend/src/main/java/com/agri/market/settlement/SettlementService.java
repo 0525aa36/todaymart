@@ -15,9 +15,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class SettlementService {
@@ -35,104 +36,171 @@ public class SettlementService {
     }
 
     /**
-     * 정산 생성 (특정 기간)
+     * 특정 기간의 정산 생성 (모든 활성 판매자 대상)
      */
     @Transactional
-    public Settlement createSettlement(Long sellerId, LocalDate startDate, LocalDate endDate) {
-        Seller seller = sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new RuntimeException("판매자를 찾을 수 없습니다: " + sellerId));
+    public List<Settlement> generateSettlementsForPeriod(LocalDate startDate, LocalDate endDate) {
+        // 활성 판매자 목록 조회
+        List<Seller> activeSellers = sellerRepository.findByIsActiveTrue();
 
-        // 중복 정산 체크
-        if (settlementRepository.findBySellerIdAndStartDateAndEndDate(sellerId, startDate, endDate).isPresent()) {
-            throw new RuntimeException("해당 기간의 정산이 이미 존재합니다.");
-        }
+        return activeSellers.stream()
+                .map(seller -> generateSettlementForSeller(seller, startDate, endDate))
+                .toList();
+    }
 
-        // 해당 기간의 결제 완료된 주문 조회
+    /**
+     * 특정 판매자의 정산 생성
+     */
+    @Transactional
+    public Settlement generateSettlementForSeller(Seller seller, LocalDate startDate, LocalDate endDate) {
+        // 이미 존재하는 정산인지 확인
+        settlementRepository.findBySellerIdAndPeriod(seller.getId(), startDate, endDate)
+                .ifPresent(existing -> {
+                    throw new RuntimeException("이미 해당 기간의 정산이 존재합니다: " + existing.getId());
+                });
+
+        // 기간 내 결제 완료된 주문 조회
         LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
-        List<Order> orders = orderRepository.findAll()
-                .stream()
-                .filter(order -> order.getCreatedAt().isAfter(startDateTime) &&
-                               order.getCreatedAt().isBefore(endDateTime) &&
-                               order.getPaymentStatus() == PaymentStatus.PAID)
-                .collect(Collectors.toList());
+        List<Order> paidOrders = orderRepository.findOrdersForExport(startDateTime, endDateTime).stream()
+                .filter(order -> order.getPaymentStatus() == PaymentStatus.PAID)
+                .toList();
 
-        // 판매자별 주문 아이템 필터링 및 집계
-        BigDecimal totalSales = BigDecimal.ZERO;
-        int orderCount = 0;
+        // 해당 판매자의 상품 매출 및 주문 건수 계산
+        BigDecimal totalSales = calculateSalesForSeller(paidOrders, seller);
+        int orderCount = countOrdersForSeller(paidOrders, seller);
 
-        for (Order order : orders) {
-            for (OrderItem item : order.getOrderItems()) {
-                if (item.getProduct() != null &&
-                    item.getProduct().getSeller() != null &&
-                    item.getProduct().getSeller().getId().equals(sellerId)) {
-
-                    BigDecimal itemTotal = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-                    totalSales = totalSales.add(itemTotal);
-                    orderCount++;
-                }
-            }
-        }
-
-        // 수수료 및 정산 금액 계산
+        // 수수료 계산 (매출 * 수수료율 / 100)
+        BigDecimal commissionRate = seller.getCommissionRate();
         BigDecimal commissionAmount = totalSales
-                .multiply(seller.getCommissionRate())
+                .multiply(commissionRate)
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
-        BigDecimal settlementAmount = totalSales.subtract(commissionAmount);
+        // 정산 금액 (매출 - 수수료)
+        BigDecimal netAmount = totalSales.subtract(commissionAmount);
 
         // 정산 엔티티 생성
         Settlement settlement = new Settlement();
         settlement.setSeller(seller);
         settlement.setStartDate(startDate);
         settlement.setEndDate(endDate);
-        settlement.setTotalSalesAmount(totalSales);
-        settlement.setCommissionAmount(commissionAmount);
-        settlement.setSettlementAmount(settlementAmount);
-        settlement.setCommissionRate(seller.getCommissionRate());
         settlement.setOrderCount(orderCount);
+        settlement.setTotalSales(totalSales);
+        settlement.setCommissionRate(commissionRate);
+        settlement.setCommissionAmount(commissionAmount);
+        settlement.setNetAmount(netAmount);
         settlement.setStatus(SettlementStatus.PENDING);
 
         return settlementRepository.save(settlement);
     }
 
     /**
-     * 일괄 정산 생성 (모든 판매자)
+     * 특정 판매자의 매출 계산 (주문 목록에서)
      */
-    @Transactional
-    public List<Settlement> createSettlementsForAllSellers(LocalDate startDate, LocalDate endDate) {
-        List<Seller> activeSellers = sellerRepository.findByIsActiveTrue(null).getContent();
+    private BigDecimal calculateSalesForSeller(List<Order> orders, Seller seller) {
+        BigDecimal totalSales = BigDecimal.ZERO;
 
-        return activeSellers.stream()
-                .map(seller -> {
-                    try {
-                        return createSettlement(seller.getId(), startDate, endDate);
-                    } catch (RuntimeException e) {
-                        // 이미 정산이 존재하면 스킵
-                        return null;
-                    }
-                })
-                .filter(settlement -> settlement != null)
-                .collect(Collectors.toList());
+        for (Order order : orders) {
+            for (OrderItem item : order.getOrderItems()) {
+                // 상품의 판매자가 대상 판매자인 경우만 집계
+                if (item.getProduct().getSeller() != null &&
+                    item.getProduct().getSeller().getId().equals(seller.getId())) {
+                    BigDecimal itemTotal = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+                    totalSales = totalSales.add(itemTotal);
+                }
+            }
+        }
+
+        return totalSales;
     }
 
     /**
-     * 정산 완료 처리
+     * 특정 판매자의 주문 건수 계산 (주문 목록에서)
      */
-    @Transactional
-    public Settlement completeSettlement(Long id, String settledBy) {
-        Settlement settlement = settlementRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("정산을 찾을 수 없습니다: " + id));
+    private int countOrdersForSeller(List<Order> orders, Seller seller) {
+        int count = 0;
 
-        if (settlement.getStatus() == SettlementStatus.COMPLETED) {
-            throw new RuntimeException("이미 완료된 정산입니다.");
+        for (Order order : orders) {
+            boolean hasSellerProduct = false;
+            for (OrderItem item : order.getOrderItems()) {
+                // 상품의 판매자가 대상 판매자인 경우
+                if (item.getProduct().getSeller() != null &&
+                    item.getProduct().getSeller().getId().equals(seller.getId())) {
+                    hasSellerProduct = true;
+                    break;
+                }
+            }
+            if (hasSellerProduct) {
+                count++;
+            }
         }
 
-        settlement.setStatus(SettlementStatus.COMPLETED);
-        settlement.setSettledAt(LocalDateTime.now());
-        settlement.setSettledBy(settledBy);
+        return count;
+    }
 
+    /**
+     * 정산 상세 조회
+     */
+    @Transactional(readOnly = true)
+    public Settlement getSettlementById(Long id) {
+        return settlementRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("정산 내역을 찾을 수 없습니다: " + id));
+    }
+
+    /**
+     * 모든 정산 내역 조회 (페이징)
+     */
+    @Transactional(readOnly = true)
+    public Page<Settlement> getAllSettlements(Pageable pageable) {
+        return settlementRepository.findAllWithSeller(pageable);
+    }
+
+    /**
+     * 판매자별 정산 내역 조회
+     */
+    @Transactional(readOnly = true)
+    public Page<Settlement> getSettlementsBySeller(Long sellerId, Pageable pageable) {
+        return settlementRepository.findBySellerId(sellerId, pageable);
+    }
+
+    /**
+     * 상태별 정산 내역 조회
+     */
+    @Transactional(readOnly = true)
+    public Page<Settlement> getSettlementsByStatus(SettlementStatus status, Pageable pageable) {
+        return settlementRepository.findByStatus(status, pageable);
+    }
+
+    /**
+     * 정산 승인
+     */
+    @Transactional
+    public Settlement approveSettlement(Long id) {
+        Settlement settlement = getSettlementById(id);
+
+        if (settlement.getStatus() != SettlementStatus.PENDING) {
+            throw new RuntimeException("대기 중인 정산만 승인할 수 있습니다.");
+        }
+
+        settlement.setStatus(SettlementStatus.APPROVED);
+        return settlementRepository.save(settlement);
+    }
+
+    /**
+     * 정산 지급 완료 처리
+     */
+    @Transactional
+    public Settlement markAsPaid(Long id, String paymentMethod, LocalDate paymentDate) {
+        Settlement settlement = getSettlementById(id);
+
+        if (settlement.getStatus() != SettlementStatus.APPROVED) {
+            throw new RuntimeException("승인된 정산만 지급 처리할 수 있습니다.");
+        }
+
+        settlement.setStatus(SettlementStatus.PAID);
+        settlement.setPaymentMethod(paymentMethod);
+        settlement.setPaymentDate(paymentDate);
         return settlementRepository.save(settlement);
     }
 
@@ -140,44 +208,64 @@ public class SettlementService {
      * 정산 취소
      */
     @Transactional
-    public Settlement cancelSettlement(Long id) {
-        Settlement settlement = settlementRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("정산을 찾을 수 없습니다: " + id));
+    public Settlement cancelSettlement(Long id, String reason) {
+        Settlement settlement = getSettlementById(id);
+
+        if (settlement.getStatus() == SettlementStatus.PAID) {
+            throw new RuntimeException("지급 완료된 정산은 취소할 수 없습니다.");
+        }
 
         settlement.setStatus(SettlementStatus.CANCELLED);
+        settlement.setMemo(reason);
         return settlementRepository.save(settlement);
     }
 
     /**
-     * 정산 조회
+     * 정산 수정 (비고, 금액 조정 등)
      */
-    @Transactional(readOnly = true)
-    public Settlement getSettlement(Long id) {
-        return settlementRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("정산을 찾을 수 없습니다: " + id));
+    @Transactional
+    public Settlement updateSettlement(Long id, Settlement updates) {
+        Settlement settlement = getSettlementById(id);
+
+        if (settlement.getStatus() == SettlementStatus.PAID) {
+            throw new RuntimeException("지급 완료된 정산은 수정할 수 없습니다.");
+        }
+
+        // 수정 가능한 필드만 업데이트
+        if (updates.getMemo() != null) {
+            settlement.setMemo(updates.getMemo());
+        }
+
+        // 금액 수동 조정 (필요시)
+        if (updates.getTotalSales() != null) {
+            settlement.setTotalSales(updates.getTotalSales());
+            // 수수료 재계산 (정산 당시의 수수료율 사용)
+            BigDecimal commissionAmount = updates.getTotalSales()
+                    .multiply(settlement.getCommissionRate())
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            settlement.setCommissionAmount(commissionAmount);
+            settlement.setNetAmount(updates.getTotalSales().subtract(commissionAmount));
+        }
+
+        return settlementRepository.save(settlement);
     }
 
     /**
-     * 모든 정산 조회
+     * 정산 통계
      */
     @Transactional(readOnly = true)
-    public Page<Settlement> getAllSettlements(Pageable pageable) {
-        return settlementRepository.findAll(pageable);
-    }
+    public Map<String, Object> getSettlementStats() {
+        long totalSettlements = settlementRepository.count();
+        long pendingCount = settlementRepository.findByStatus(SettlementStatus.PENDING, Pageable.unpaged()).getTotalElements();
+        long approvedCount = settlementRepository.findByStatus(SettlementStatus.APPROVED, Pageable.unpaged()).getTotalElements();
+        long paidCount = settlementRepository.findByStatus(SettlementStatus.PAID, Pageable.unpaged()).getTotalElements();
 
-    /**
-     * 판매자별 정산 조회
-     */
-    @Transactional(readOnly = true)
-    public Page<Settlement> getSettlementsBySeller(Long sellerId, Pageable pageable) {
-        return settlementRepository.findBySellerIdOrderByCreatedAtDesc(sellerId, pageable);
-    }
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalSettlements", totalSettlements);
+        stats.put("pendingCount", pendingCount);
+        stats.put("approvedCount", approvedCount);
+        stats.put("paidCount", paidCount);
 
-    /**
-     * 정산 상태별 조회
-     */
-    @Transactional(readOnly = true)
-    public Page<Settlement> getSettlementsByStatus(SettlementStatus status, Pageable pageable) {
-        return settlementRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+        return stats;
     }
 }

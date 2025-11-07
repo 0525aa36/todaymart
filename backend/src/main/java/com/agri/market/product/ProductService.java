@@ -106,10 +106,8 @@ public class ProductService {
         return productOpt;
     }
 
+    @Transactional
     public Product createProduct(ProductRequest request) {
-        System.out.println("=== Creating Product ===");
-        System.out.println("Request sellerId: " + request.getSellerId());
-
         Product product = new Product();
         product.setName(request.getName());
         product.setCategory(request.getCategory());
@@ -122,17 +120,14 @@ public class ProductService {
 
         // Seller 설정
         if (request.getSellerId() != null) {
-            System.out.println("Finding seller with ID: " + request.getSellerId());
             Seller seller = sellerRepository.findById(request.getSellerId())
-                    .orElseThrow(() -> new RuntimeException("Seller not found for this id :: " + request.getSellerId()));
+                    .orElseThrow(() -> new RuntimeException("판매자를 찾을 수 없습니다: " + request.getSellerId()));
             product.setSeller(seller);
-            System.out.println("Seller set: " + seller.getName());
-        } else {
-            System.out.println("No sellerId provided - creating product without seller");
         }
 
         Product saved = productRepository.save(product);
-        System.out.println("Product saved with ID: " + saved.getId() + ", Seller: " + (saved.getSeller() != null ? saved.getSeller().getName() : "null"));
+        // LazyInitializationException 방지를 위해 images 컬렉션 초기화
+        saved.getImages().size();
         return saved;
     }
 
@@ -150,16 +145,19 @@ public class ProductService {
         product.setStock(request.getStock());
         product.setImageUrl(request.getImageUrl());
 
-        // Seller 설정
+        // Seller 설정 (null이면 판매자 제거 - 직매로 전환)
         if (request.getSellerId() != null) {
             Seller seller = sellerRepository.findById(request.getSellerId())
-                    .orElseThrow(() -> new RuntimeException("Seller not found for this id :: " + request.getSellerId()));
+                    .orElseThrow(() -> new RuntimeException("판매자를 찾을 수 없습니다: " + request.getSellerId()));
             product.setSeller(seller);
         } else {
             product.setSeller(null);
         }
 
-        return productRepository.save(product);
+        Product saved = productRepository.save(product);
+        // LazyInitializationException 방지를 위해 images 컬렉션 초기화
+        saved.getImages().size();
+        return saved;
     }
 
     @Transactional
@@ -269,25 +267,5 @@ public class ProductService {
 
     public List<ProductOption> getProductOptions(Long productId) {
         return productOptionRepository.findByProductId(productId);
-    }
-
-    /**
-     * 재고 부족 상품 조회
-     * @param threshold 재고 기준값
-     * @return 재고가 threshold 이하인 상품 목록
-     */
-    @Transactional(readOnly = true)
-    public List<Product> getLowStockProducts(Integer threshold) {
-        return productRepository.findLowStockProducts(threshold);
-    }
-
-    /**
-     * 재고 부족 상품 수 조회
-     * @param threshold 재고 기준값
-     * @return 재고가 threshold 이하인 상품 수
-     */
-    @Transactional(readOnly = true)
-    public long countLowStockProducts(Integer threshold) {
-        return productRepository.countLowStockProducts(threshold);
     }
 }

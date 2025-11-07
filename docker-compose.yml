@@ -1,0 +1,93 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: agrimarket-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: agrimarket
+      MYSQL_USER: agrimarket
+      MYSQL_PASSWORD: ${DB_PASSWORD:-agripass}
+      TZ: Asia/Seoul
+    ports:
+      - "3307:3306"  # Using 3307 to avoid conflict with local MySQL
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - agrimarket-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+      start_period: 40s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agrimarket-backend
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      # Spring profiles
+      SPRING_PROFILES_ACTIVE: docker
+
+      # Database configuration
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/agrimarket?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: agrimarket
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-agripass}
+
+      # JWT and Security
+      JWT_SECRET: ${JWT_SECRET:-defaultJwtSecretKey123456789012345678901234567890123456789012345678901234567890}
+
+      # Payment configurations
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-defaultWebhookSecret}
+      TOSS_PAYMENTS_CLIENT_KEY: ${TOSS_PAYMENTS_CLIENT_KEY:-test_ck_yZqmkKeP8gBK9y9X4lGOrbQRxB9l}
+      TOSS_PAYMENTS_SECRET_KEY: ${TOSS_PAYMENTS_SECRET_KEY:-test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R}
+
+      # File upload
+      FILE_UPLOAD_DIR: /app/uploads
+
+      # CORS (for development)
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:3001
+
+      # Server configuration
+      SERVER_PORT: 8081
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - agrimarket-network
+
+  # Optional: Frontend service for development
+  # Uncomment if you want to run frontend in Docker as well
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: agrimarket-frontend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     NEXT_PUBLIC_API_URL: http://localhost:8081
+  #     NEXT_PUBLIC_TOSS_CLIENT_KEY: ${TOSS_PAYMENTS_CLIENT_KEY:-test_ck_yZqmkKeP8gBK9y9X4lGOrbQRxB9l}
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - agrimarket-network
+
+networks:
+  agrimarket-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  backend_uploads:
+    driver: local

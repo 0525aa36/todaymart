@@ -1,9 +1,7 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { apiFetch } from '@/lib/api-client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -11,19 +9,26 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Switch } from '@/components/ui/switch'
-import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
-import { Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Plus, Edit, Trash2, ArrowLeft, Power } from "lucide-react"
+import Link from "next/link"
+import { apiFetch, getErrorMessage } from "@/lib/api-client"
 
 interface Seller {
   id: number
@@ -43,481 +48,501 @@ interface Seller {
   updatedAt: string
 }
 
-interface PageResponse {
-  content: Seller[]
-  totalPages: number
-  totalElements: number
-  number: number
-  size: number
-}
-
 export default function AdminSellersPage() {
+  const router = useRouter()
+  const { toast } = useToast()
   const [sellers, setSellers] = useState<Seller[]>([])
-  const [currentPage, setCurrentPage] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
-  const [totalElements, setTotalElements] = useState(0)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingSeller, setEditingSeller] = useState<Seller | null>(null)
 
   // Form state
   const [formData, setFormData] = useState({
-    name: '',
-    businessNumber: '',
-    representative: '',
-    phone: '',
-    email: '',
-    address: '',
-    bankName: '',
-    accountNumber: '',
-    accountHolder: '',
-    commissionRate: 10,
+    name: "",
+    businessNumber: "",
+    representative: "",
+    phone: "",
+    email: "",
+    address: "",
+    bankName: "",
+    accountNumber: "",
+    accountHolder: "",
+    commissionRate: "10.00",
     isActive: true,
-    memo: '',
+    memo: "",
   })
 
   useEffect(() => {
-    loadSellers()
-  }, [currentPage])
-
-  const loadSellers = async () => {
-    try {
-      setLoading(true)
-      const response: PageResponse = await apiFetch(
-        `/api/admin/sellers?page=${currentPage}&size=10&sort=createdAt,desc`,
-        { auth: true }
-      )
-      setSellers(response.content)
-      setTotalPages(response.totalPages)
-      setTotalElements(response.totalElements)
-    } catch (error) {
-      console.error('판매자 목록 조회 실패:', error)
-      alert('판매자 목록을 불러오는데 실패했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      loadSellers()
+    const token = localStorage.getItem("token")
+    if (!token) {
+      toast({
+        title: "접근 권한 없음",
+        description: "관리자 로그인이 필요합니다.",
+        variant: "destructive",
+      })
+      router.push("/login")
       return
     }
 
+    fetchSellers()
+  }, [])
+
+  const fetchSellers = async () => {
     try {
-      setLoading(true)
-      const response: PageResponse = await apiFetch(
-        `/api/admin/sellers/search?query=${encodeURIComponent(searchQuery)}&page=${currentPage}&size=10`,
-        { auth: true }
-      )
-      setSellers(response.content)
-      setTotalPages(response.totalPages)
-      setTotalElements(response.totalElements)
+      const data = await apiFetch<{ content?: Seller[] }>("/api/admin/sellers?size=100&sort=createdAt,desc", {
+        auth: true,
+      })
+      setSellers(data.content || [])
     } catch (error) {
-      console.error('판매자 검색 실패:', error)
-      alert('판매자 검색에 실패했습니다.')
+      console.error("Error fetching sellers:", error)
+      toast({
+        title: "오류",
+        description: getErrorMessage(error, "판매자 목록을 불러오는 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleOpenCreateModal = () => {
-    setIsEditing(false)
-    setFormData({
-      name: '',
-      businessNumber: '',
-      representative: '',
-      phone: '',
-      email: '',
-      address: '',
-      bankName: '',
-      accountNumber: '',
-      accountHolder: '',
-      commissionRate: 10,
-      isActive: true,
-      memo: '',
-    })
-    setIsModalOpen(true)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    // 사업자등록번호 중복 체크 (신규 등록 또는 사업자등록번호 변경 시)
+    if (!editingSeller || formData.businessNumber !== editingSeller.businessNumber) {
+      try {
+        const isDuplicate = await apiFetch<boolean>(
+          `/api/admin/sellers/check-business-number?businessNumber=${encodeURIComponent(formData.businessNumber)}`,
+          { auth: true }
+        )
+        if (isDuplicate) {
+          toast({
+            title: "중복된 사업자등록번호",
+            description: "이미 등록된 사업자등록번호입니다.",
+            variant: "destructive",
+          })
+          return
+        }
+      } catch (error) {
+        console.error("Error checking business number:", error)
+        toast({
+          title: "오류",
+          description: "사업자등록번호 중복 확인 중 오류가 발생했습니다.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
+    const sellerData = {
+      name: formData.name,
+      businessNumber: formData.businessNumber,
+      representative: formData.representative,
+      phone: formData.phone,
+      email: formData.email,
+      address: formData.address,
+      bankName: formData.bankName,
+      accountNumber: formData.accountNumber,
+      accountHolder: formData.accountHolder,
+      commissionRate: parseFloat(formData.commissionRate),
+      isActive: formData.isActive,
+      memo: formData.memo,
+    }
+
+    try {
+      const url = editingSeller ? `/api/admin/sellers/${editingSeller.id}` : "/api/admin/sellers"
+
+      await apiFetch(url, {
+        method: editingSeller ? "PUT" : "POST",
+        auth: true,
+        body: JSON.stringify(sellerData),
+        parseResponse: "none",
+      })
+
+      toast({
+        title: editingSeller ? "수정 완료" : "등록 완료",
+        description: `판매자가 성공적으로 ${editingSeller ? "수정" : "등록"}되었습니다.`,
+      })
+      setDialogOpen(false)
+      resetForm()
+      fetchSellers()
+    } catch (error) {
+      console.error("Error saving seller:", error)
+      toast({
+        title: "오류",
+        description: getErrorMessage(error, "판매자 저장 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleOpenEditModal = (seller: Seller) => {
-    setIsEditing(true)
-    setSelectedSeller(seller)
+  const handleEdit = (seller: Seller) => {
+    setEditingSeller(seller)
     setFormData({
       name: seller.name,
       businessNumber: seller.businessNumber,
       representative: seller.representative,
       phone: seller.phone,
-      email: seller.email || '',
-      address: seller.address || '',
+      email: seller.email,
+      address: seller.address,
       bankName: seller.bankName,
       accountNumber: seller.accountNumber,
       accountHolder: seller.accountHolder,
-      commissionRate: seller.commissionRate,
+      commissionRate: seller.commissionRate.toString(),
       isActive: seller.isActive,
-      memo: seller.memo || '',
+      memo: seller.memo || "",
     })
-    setIsModalOpen(true)
-  }
-
-  const handleSubmit = async () => {
-    try {
-      if (isEditing && selectedSeller) {
-        await apiFetch(`/api/admin/sellers/${selectedSeller.id}`, {
-          auth: true,
-          method: 'PUT',
-          body: JSON.stringify(formData),
-        })
-        alert('판매자 정보가 수정되었습니다.')
-      } else {
-        await apiFetch('/api/admin/sellers', {
-          auth: true,
-          method: 'POST',
-          body: JSON.stringify(formData),
-        })
-        alert('판매자가 등록되었습니다.')
-      }
-      setIsModalOpen(false)
-      loadSellers()
-    } catch (error) {
-      console.error('판매자 저장 실패:', error)
-      alert('판매자 저장에 실패했습니다.')
-    }
-  }
-
-  const handleToggleStatus = async (id: number, currentStatus: boolean) => {
-    if (!confirm(`판매자를 ${currentStatus ? '비활성화' : '활성화'}하시겠습니까?`)) {
-      return
-    }
-
-    try {
-      await apiFetch(`/api/admin/sellers/${id}/status`, {
-        auth: true,
-        method: 'PUT',
-        body: JSON.stringify({ isActive: !currentStatus }),
-      })
-      alert('판매자 상태가 변경되었습니다.')
-      loadSellers()
-    } catch (error) {
-      console.error('판매자 상태 변경 실패:', error)
-      alert('판매자 상태 변경에 실패했습니다.')
-    }
+    setDialogOpen(true)
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('정말로 이 판매자를 삭제하시겠습니까?')) {
-      return
-    }
+    if (!confirm("정말 삭제하시겠습니까? 이 판매자와 연결된 상품이 있을 경우 삭제되지 않습니다.")) return
+
+    const token = localStorage.getItem("token")
+    if (!token) return
 
     try {
       await apiFetch(`/api/admin/sellers/${id}`, {
+        method: "DELETE",
         auth: true,
-        method: 'DELETE',
+        parseResponse: "none",
       })
-      alert('판매자가 삭제되었습니다.')
-      loadSellers()
+
+      toast({
+        title: "삭제 완료",
+        description: "판매자가 삭제되었습니다.",
+      })
+      fetchSellers()
     } catch (error) {
-      console.error('판매자 삭제 실패:', error)
-      alert('판매자 삭제에 실패했습니다.')
+      console.error("Error deleting seller:", error)
+      toast({
+        title: "오류",
+        description: getErrorMessage(error, "판매자 삭제 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleToggleStatus = async (id: number) => {
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    try {
+      await apiFetch(`/api/admin/sellers/${id}/toggle-status`, {
+        method: "PUT",
+        auth: true,
+        parseResponse: "none",
+      })
+
+      toast({
+        title: "상태 변경 완료",
+        description: "판매자 활성 상태가 변경되었습니다.",
+      })
+      fetchSellers()
+    } catch (error) {
+      console.error("Error toggling seller status:", error)
+      toast({
+        title: "오류",
+        description: getErrorMessage(error, "상태 변경 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    }
+  }
+
+  const resetForm = () => {
+    setEditingSeller(null)
+    setFormData({
+      name: "",
+      businessNumber: "",
+      representative: "",
+      phone: "",
+      email: "",
+      address: "",
+      bankName: "",
+      accountNumber: "",
+      accountHolder: "",
+      commissionRate: "10.00",
+      isActive: true,
+      memo: "",
+    })
+  }
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open)
+    if (!open) {
+      resetForm()
     }
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
+    const date = new Date(dateString)
+    return date.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     })
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">판매자 관리</h1>
-        <p className="text-gray-600">전체 판매자: {totalElements}명</p>
-      </div>
+    <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">판매자 관리</h1>
+              <p className="text-gray-600 mt-2">등록된 판매자를 관리하고 새 판매자를 추가하세요</p>
+            </div>
 
-      {/* Search & Actions */}
-      <div className="flex gap-2 mb-6">
-        <Input
-          type="text"
-          placeholder="판매자명으로 검색"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-          className="max-w-md"
-        />
-        <Button onClick={handleSearch}>
-          <Search className="w-4 h-4 mr-2" />
-          검색
-        </Button>
-        {searchQuery && (
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSearchQuery('')
-              setCurrentPage(0)
-              loadSellers()
-            }}
-          >
-            초기화
-          </Button>
-        )}
-        <div className="flex-1" />
-        <Button onClick={handleOpenCreateModal}>
-          <Plus className="w-4 h-4 mr-2" />
-          판매자 등록
-        </Button>
-      </div>
-
-      {/* Table */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>판매자명</TableHead>
-              <TableHead>사업자번호</TableHead>
-              <TableHead>대표자</TableHead>
-              <TableHead>연락처</TableHead>
-              <TableHead>수수료율</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead>등록일</TableHead>
-              <TableHead>작업</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">
-                  로딩 중...
-                </TableCell>
-              </TableRow>
-            ) : sellers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">
-                  판매자가 없습니다.
-                </TableCell>
-              </TableRow>
-            ) : (
-              sellers.map((seller) => (
-                <TableRow key={seller.id}>
-                  <TableCell>{seller.id}</TableCell>
-                  <TableCell className="font-medium">{seller.name}</TableCell>
-                  <TableCell>{seller.businessNumber}</TableCell>
-                  <TableCell>{seller.representative}</TableCell>
-                  <TableCell>{seller.phone}</TableCell>
-                  <TableCell>{seller.commissionRate}%</TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={seller.isActive}
-                      onCheckedChange={() => handleToggleStatus(seller.id, seller.isActive)}
-                    />
-                  </TableCell>
-                  <TableCell>{formatDate(seller.createdAt)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenEditModal(seller)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(seller.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+            <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setEditingSeller(null)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  판매자 등록
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle>{editingSeller ? "판매자 수정" : "새 판매자 등록"}</DialogTitle>
+                    <DialogDescription>
+                      {editingSeller ? "판매자 정보를 수정하세요" : "새로운 판매자 정보를 입력하세요"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    {/* 기본 정보 */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">사업자명 *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                        placeholder="예: (주)온농농산"
+                      />
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="businessNumber">사업자등록번호 *</Label>
+                        <Input
+                          id="businessNumber"
+                          value={formData.businessNumber}
+                          onChange={(e) => setFormData({ ...formData, businessNumber: e.target.value })}
+                          required
+                          placeholder="123-45-67890"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="representative">대표자명 *</Label>
+                        <Input
+                          id="representative"
+                          value={formData.representative}
+                          onChange={(e) => setFormData({ ...formData, representative: e.target.value })}
+                          required
+                          placeholder="홍길동"
+                        />
+                      </div>
+                    </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between mt-4">
-        <div className="text-sm text-gray-600">
-          {totalElements > 0 && (
-            <>
-              {currentPage * 10 + 1}-{Math.min((currentPage + 1) * 10, totalElements)} / {totalElements}
-            </>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
-            disabled={currentPage === 0}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <div className="flex items-center px-3">
-            {currentPage + 1} / {totalPages || 1}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1))}
-            disabled={currentPage >= totalPages - 1}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+                    {/* 연락처 정보 */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="phone">전화번호</Label>
+                        <Input
+                          id="phone"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          placeholder="010-1234-5678"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="email">이메일</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          placeholder="seller@example.com"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="address">주소</Label>
+                      <Input
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        placeholder="서울시 강남구..."
+                      />
+                    </div>
 
-      {/* Create/Edit Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{isEditing ? '판매자 수정' : '판매자 등록'}</DialogTitle>
-            <DialogDescription>
-              판매자 정보를 입력하세요. * 는 필수 항목입니다.
-            </DialogDescription>
-          </DialogHeader>
+                    {/* 계좌 정보 */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="bankName">은행명</Label>
+                        <Input
+                          id="bankName"
+                          value={formData.bankName}
+                          onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                          placeholder="국민은행"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="accountNumber">계좌번호</Label>
+                        <Input
+                          id="accountNumber"
+                          value={formData.accountNumber}
+                          onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                          placeholder="123456-78-901234"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="accountHolder">예금주</Label>
+                        <Input
+                          id="accountHolder"
+                          value={formData.accountHolder}
+                          onChange={(e) => setFormData({ ...formData, accountHolder: e.target.value })}
+                          placeholder="홍길동"
+                        />
+                      </div>
+                    </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label htmlFor="name">판매자명 *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="예: 청정농장"
-              />
-            </div>
+                    {/* 수수료율 및 활성 상태 */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="commissionRate">수수료율 (%) *</Label>
+                        <Input
+                          id="commissionRate"
+                          type="number"
+                          value={formData.commissionRate}
+                          onChange={(e) => setFormData({ ...formData, commissionRate: e.target.value })}
+                          required
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          placeholder="10.00"
+                        />
+                        <p className="text-xs text-muted-foreground">판매 금액에서 차감할 수수료율</p>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="isActive">활성 상태</Label>
+                        <div className="flex items-center space-x-2 h-10">
+                          <input
+                            type="checkbox"
+                            id="isActive"
+                            checked={formData.isActive}
+                            onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                            className="h-4 w-4"
+                          />
+                          <Label htmlFor="isActive" className="cursor-pointer">
+                            활성화
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
 
-            <div>
-              <Label htmlFor="businessNumber">사업자등록번호 *</Label>
-              <Input
-                id="businessNumber"
-                value={formData.businessNumber}
-                onChange={(e) => setFormData({ ...formData, businessNumber: e.target.value })}
-                placeholder="예: 123-45-67890"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="representative">대표자명 *</Label>
-              <Input
-                id="representative"
-                value={formData.representative}
-                onChange={(e) => setFormData({ ...formData, representative: e.target.value })}
-                placeholder="예: 홍길동"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="phone">연락처 *</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="예: 010-1234-5678"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="email">이메일</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="예: seller@example.com"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="address">주소</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="예: 서울시 강남구 ..."
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="bankName">은행명 *</Label>
-              <Input
-                id="bankName"
-                value={formData.bankName}
-                onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                placeholder="예: 국민은행"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="accountNumber">계좌번호 *</Label>
-              <Input
-                id="accountNumber"
-                value={formData.accountNumber}
-                onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
-                placeholder="예: 123456-78-901234"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="accountHolder">예금주 *</Label>
-              <Input
-                id="accountHolder"
-                value={formData.accountHolder}
-                onChange={(e) => setFormData({ ...formData, accountHolder: e.target.value })}
-                placeholder="예: 홍길동"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="commissionRate">수수료율 (%) *</Label>
-              <Input
-                id="commissionRate"
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={formData.commissionRate}
-                onChange={(e) => setFormData({ ...formData, commissionRate: parseFloat(e.target.value) })}
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="memo">메모</Label>
-              <Input
-                id="memo"
-                value={formData.memo}
-                onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
-                placeholder="메모 사항"
-              />
-            </div>
-
-            <div className="col-span-2 flex items-center gap-2">
-              <Switch
-                checked={formData.isActive}
-                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-              />
-              <Label>활성화</Label>
-            </div>
+                    {/* 메모 */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="memo">메모</Label>
+                      <Textarea
+                        id="memo"
+                        value={formData.memo}
+                        onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+                        rows={3}
+                        placeholder="판매자에 대한 추가 정보나 메모를 입력하세요"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => handleDialogClose(false)}>
+                      취소
+                    </Button>
+                    <Button type="submit">{editingSeller ? "수정" : "등록"}</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-              취소
-            </Button>
-            <Button onClick={handleSubmit}>
-              {isEditing ? '수정' : '등록'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          {/* Sellers Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>등록된 판매자 ({sellers.length}개)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="text-center py-12 text-muted-foreground">로딩 중...</div>
+              ) : sellers.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  등록된 판매자가 없습니다. 새 판매자를 등록해보세요!
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[60px]">ID</TableHead>
+                      <TableHead>사업자명</TableHead>
+                      <TableHead>사업자번호</TableHead>
+                      <TableHead>대표자</TableHead>
+                      <TableHead>전화번호</TableHead>
+                      <TableHead>수수료율</TableHead>
+                      <TableHead>상태</TableHead>
+                      <TableHead>등록일</TableHead>
+                      <TableHead className="text-right">작업</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sellers.map((seller) => (
+                      <TableRow key={seller.id}>
+                        <TableCell className="font-medium">{seller.id}</TableCell>
+                        <TableCell className="font-medium">{seller.name}</TableCell>
+                        <TableCell>{seller.businessNumber}</TableCell>
+                        <TableCell>{seller.representative}</TableCell>
+                        <TableCell>{seller.phone || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{seller.commissionRate}%</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={seller.isActive ? "default" : "destructive"}>
+                            {seller.isActive ? "활성" : "비활성"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatDate(seller.createdAt)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleToggleStatus(seller.id)}
+                            className="mr-2"
+                            title={seller.isActive ? "비활성화" : "활성화"}
+                          >
+                            <Power className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(seller)}
+                            className="mr-2"
+                            title="수정"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(seller.id)}
+                            title="삭제"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
   )
 }

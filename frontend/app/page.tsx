@@ -4,12 +4,12 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ProductCard } from "@/components/product-card"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
 import { useState, useEffect } from "react"
 import { apiFetch } from "@/lib/api-client"
 import { LoadingSpinner } from "@/components/loading-spinner"
+import BannerCarousel from "@/components/banner-carousel"
 
 interface Product {
   id: number
@@ -38,22 +38,8 @@ interface ProductCardData {
   reviewCount?: number
 }
 
-interface Banner {
-  id: number
-  title: string
-  description: string
-  imageUrl: string
-  linkUrl: string
-  displayOrder: number
-  isActive: boolean
-  backgroundColor: string
-  textColor: string
-}
-
 export default function HomePage() {
   const [allProducts, setAllProducts] = useState<Product[]>([])
-  const [banners, setBanners] = useState<Banner[]>([])
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -62,36 +48,13 @@ export default function HomePage() {
 
   const fetchData = async () => {
     try {
-      const [productsData, bannersData] = await Promise.all([
-        apiFetch<{ content?: Product[] }>("/api/products?size=50&sort=createdAt,desc"),
-        apiFetch<Banner[]>("/api/banners")
-      ])
+      const productsData = await apiFetch<{ content?: Product[] }>("/api/products?size=50&sort=createdAt,desc")
       setAllProducts(productsData.content || [])
-      setBanners(bannersData || [])
     } catch (error) {
       console.error("Error fetching data:", error)
     } finally {
       setLoading(false)
     }
-  }
-
-  // Auto-rotate banners
-  useEffect(() => {
-    if (banners.length === 0) return
-
-    const interval = setInterval(() => {
-      setCurrentBannerIndex((prev) => (prev + 1) % banners.length)
-    }, 5000)
-
-    return () => clearInterval(interval)
-  }, [banners.length])
-
-  const nextBanner = () => {
-    setCurrentBannerIndex((prev) => (prev + 1) % banners.length)
-  }
-
-  const prevBanner = () => {
-    setCurrentBannerIndex((prev) => (prev - 1 + banners.length) % banners.length)
   }
 
   // Convert backend Product to ProductCard props
@@ -124,74 +87,7 @@ export default function HomePage() {
 
       <main className="flex-1">
         {/* Hero Banner Carousel */}
-        {banners.length > 0 && (
-          <section className="relative h-[280px] md:h-[360px] overflow-hidden">
-            <div className="relative h-full">
-              {banners.map((banner, index) => (
-                <div
-                  key={banner.id}
-                  className={`absolute inset-0 transition-opacity duration-500 ${
-                    index === currentBannerIndex ? "opacity-100" : "opacity-0"
-                  }`}
-                >
-                  {banner.linkUrl ? (
-                    <Link href={banner.linkUrl} className="block w-full h-full">
-                      {banner.imageUrl && (
-                        <img
-                          src={banner.imageUrl.startsWith('http') ? banner.imageUrl : `http://localhost:8081${banner.imageUrl}`}
-                          alt={banner.title}
-                          className="w-full h-full object-cover cursor-pointer"
-                        />
-                      )}
-                    </Link>
-                  ) : (
-                    banner.imageUrl && (
-                      <img
-                        src={banner.imageUrl.startsWith('http') ? banner.imageUrl : `http://localhost:8081${banner.imageUrl}`}
-                        alt={banner.title}
-                        className="w-full h-full object-cover"
-                      />
-                    )
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Banner Navigation */}
-            {banners.length > 1 && (
-              <>
-                <button
-                  onClick={prevBanner}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg transition-colors"
-                  aria-label="Previous banner"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-                <button
-                  onClick={nextBanner}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg transition-colors"
-                  aria-label="Next banner"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </button>
-
-                {/* Banner Indicators */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                  {banners.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentBannerIndex(index)}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        index === currentBannerIndex ? "bg-white w-8" : "bg-white/50"
-                      }`}
-                      aria-label={`Go to banner ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </section>
-        )}
+        <BannerCarousel />
 
         {loading ? (
           <div className="flex justify-center items-center py-20">
