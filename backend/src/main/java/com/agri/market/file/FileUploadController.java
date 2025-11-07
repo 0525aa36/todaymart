@@ -31,10 +31,11 @@ public class FileUploadController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
         String fileName = fileStorageService.storeFile(file);
+        String fileUrl = fileStorageService.getFileUrl(fileName);
 
         Map<String, String> response = new HashMap<>();
         response.put("fileName", fileName);
-        response.put("fileUrl", "/api/files/" + fileName);
+        response.put("fileUrl", fileUrl);
 
         return ResponseEntity.ok(response);
     }
@@ -47,8 +48,9 @@ public class FileUploadController {
 
         for (MultipartFile file : files) {
             String fileName = fileStorageService.storeFile(file);
+            String fileUrl = fileStorageService.getFileUrl(fileName);
             fileNames.add(fileName);
-            fileUrls.add("/api/files/" + fileName);
+            fileUrls.add(fileUrl);
         }
 
         Map<String, List<String>> response = new HashMap<>();
