@@ -268,4 +268,21 @@ public class ProductService {
     public List<ProductOption> getProductOptions(Long productId) {
         return productOptionRepository.findByProductId(productId);
     }
+
+    /**
+     * 재고 부족 상품 개수 조회
+     */
+    public long countLowStockProducts(int threshold) {
+        return productRepository.countByStockLessThan(threshold);
+    }
+
+    /**
+     * 재고 부족 상품 목록 조회
+     */
+    public List<Product> getLowStockProducts(Integer threshold) {
+        if (threshold == null) {
+            threshold = 10; // 기본값
+        }
+        return productRepository.findByStockLessThan(threshold);
+    }
 }

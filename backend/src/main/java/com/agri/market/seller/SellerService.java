@@ -31,6 +31,30 @@ public class SellerService {
     }
 
     /**
+     * 활성 판매자만 조회 (페이지네이션)
+     */
+    public Page<Seller> getActiveSellers(Pageable pageable) {
+        return sellerRepository.findByIsActiveTrue(pageable);
+    }
+
+    /**
+     * ID로 판매자 조회 (getSeller 메서드)
+     */
+    public Seller getSeller(Long id) {
+        return getSellerById(id);
+    }
+
+    /**
+     * 판매자 상태 업데이트
+     */
+    @Transactional
+    public void updateSellerStatus(Long id, boolean isActive) {
+        Seller seller = getSellerById(id);
+        seller.setIsActive(isActive);
+        sellerRepository.save(seller);
+    }
+
+    /**
      * ID로 판매자 조회
      */
     public Seller getSellerById(Long id) {

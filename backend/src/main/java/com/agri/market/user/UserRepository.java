@@ -24,4 +24,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // 관리자용: 역할별 조회
     Page<User> findByRole(String role, Pageable pageable);
+
+    // 이름 또는 이메일로 검색 (findByNameContainingOrEmailContaining 메서드)
+    Page<User> findByNameContainingOrEmailContaining(String name, String email, Pageable pageable);
 }

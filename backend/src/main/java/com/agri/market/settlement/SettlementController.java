@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/admin/settlements")
+@RequestMapping("/api/settlements-legacy")
 @PreAuthorize("hasRole('ADMIN')")
 public class SettlementController {
 
@@ -106,7 +106,7 @@ public class SettlementController {
      */
     @PutMapping("/{id}/cancel")
     public ResponseEntity<Settlement> cancelSettlement(@PathVariable Long id) {
-        Settlement settlement = settlementService.cancelSettlement(id);
+        Settlement settlement = settlementService.cancelSettlement(id, "관리자에 의한 취소");
         return ResponseEntity.ok(settlement);
     }
 }

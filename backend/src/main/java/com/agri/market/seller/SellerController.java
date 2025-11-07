@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/admin/sellers")
+@RequestMapping("/api/sellers-legacy")
 @PreAuthorize("hasRole('ADMIN')")
 public class SellerController {
 

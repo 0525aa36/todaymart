@@ -23,6 +23,9 @@ public interface SellerRepository extends JpaRepository<Seller, Long> {
     // 활성 상태 판매자 조회
     List<Seller> findByIsActiveTrue();
 
+    // 활성 상태 판매자 페이지 조회 (페이지네이션)
+    Page<Seller> findByIsActiveTrue(Pageable pageable);
+
     // 활성 상태 판매자 페이지 조회
     Page<Seller> findByIsActive(Boolean isActive, Pageable pageable);
 }

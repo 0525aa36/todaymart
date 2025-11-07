@@ -10,7 +10,17 @@
       "Bash(sudo usermod:*)",
       "Bash(git add:*)",
       "Bash(git checkout:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(aws:*)",
+      "Bash(terraform show:*)",
+      "Bash(terraform output:*)",
+      "Bash(curl:*)",
+      "Bash(docker login:*)",
+      "Bash(docker build:*)",
+      "Bash(sudo docker build:*)",
+      "Bash(TASK_ID=\"9d54628e9b264cf2b3d37d2851996a0c\")",
+      "Bash(docker tag:*)",
+      "Bash(docker push:*)"
     ],
     "deny": [],
     "ask": []

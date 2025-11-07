@@ -68,4 +68,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // 재고 부족 상품 수 조회
     @Query("SELECT COUNT(p) FROM Product p WHERE p.stock <= :threshold")
     long countLowStockProducts(@Param("threshold") Integer threshold);
+
+    // 재고 부족 상품 수 조회 (countByStockLessThan 메서드)
+    long countByStockLessThan(int threshold);
+
+    // 재고 부족 상품 목록 조회 (findByStockLessThan 메서드)
+    List<Product> findByStockLessThan(int threshold);
 }

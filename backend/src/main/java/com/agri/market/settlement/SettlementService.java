@@ -149,6 +149,49 @@ public class SettlementService {
     }
 
     /**
+     * 정산 상세 조회 (getSettlement 메서드)
+     */
+    @Transactional(readOnly = true)
+    public Settlement getSettlement(Long id) {
+        return getSettlementById(id);
+    }
+
+    /**
+     * 특정 판매자의 정산 생성 (createSettlement 메서드)
+     */
+    @Transactional
+    public Settlement createSettlement(Long sellerId, LocalDate startDate, LocalDate endDate) {
+        Seller seller = sellerRepository.findById(sellerId)
+                .orElseThrow(() -> new RuntimeException("판매자를 찾을 수 없습니다: " + sellerId));
+        return generateSettlementForSeller(seller, startDate, endDate);
+    }
+
+    /**
+     * 모든 판매자의 정산 생성 (createSettlementsForAllSellers 메서드)
+     */
+    @Transactional
+    public List<Settlement> createSettlementsForAllSellers(LocalDate startDate, LocalDate endDate) {
+        return generateSettlementsForPeriod(startDate, endDate);
+    }
+
+    /**
+     * 정산 완료 처리 (completeSettlement 메서드)
+     */
+    @Transactional
+    public Settlement completeSettlement(Long id, String settledBy) {
+        Settlement settlement = getSettlementById(id);
+        
+        if (settlement.getStatus() != SettlementStatus.APPROVED) {
+            throw new RuntimeException("승인된 정산만 완료 처리할 수 있습니다.");
+        }
+
+        settlement.setStatus(SettlementStatus.PAID);
+        settlement.setPaymentDate(LocalDate.now());
+        settlement.setMemo("정산 완료 - 처리자: " + settledBy);
+        return settlementRepository.save(settlement);
+    }
+
+    /**
      * 모든 정산 내역 조회 (페이징)
      */
     @Transactional(readOnly = true)
