@@ -1,0 +1,17 @@
+# Copy this file to terraform.tfvars and fill in your values
+
+aws_region  = "ap-northeast-2"
+environment = "production"
+
+# Database Configuration
+db_password = "YOUR_SECURE_DB_PASSWORD_HERE"
+
+# Application Secrets
+jwt_secret                  = "YOUR_512_BIT_JWT_SECRET_HERE"
+toss_payments_client_key    = "YOUR_TOSS_CLIENT_KEY"
+toss_payments_secret_key    = "YOUR_TOSS_SECRET_KEY"
+webhook_secret              = "YOUR_WEBHOOK_SECRET"
+
+# Optional: Custom Domain
+# domain_name     = "yourdomain.com"
+# certificate_arn = "arn:aws:acm:ap-northeast-2:ACCOUNT_ID:certificate/CERT_ID"
