@@ -1,7 +1,5 @@
 "use client"
 
-export const dynamic = 'force-dynamic'
-
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ProductCard } from "@/components/product-card"
@@ -10,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { useSearchParams, useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Search, SlidersHorizontal } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 
@@ -37,7 +35,7 @@ interface SearchResponse {
   number: number
 }
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [searchKeyword, setSearchKeyword] = useState(searchParams.get("keyword") || "")
@@ -105,11 +103,7 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-
-      <main className="flex-1">
-        <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8">
           {/* Search Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-4">상품 검색</h1>
@@ -250,9 +244,28 @@ export default function SearchPage() {
               <Button onClick={() => router.push("/")}>홈으로 돌아가기</Button>
             </div>
           )}
-        </div>
-      </main>
+    </div>
+  )
+}
 
+export default function SearchPage() {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-1">
+        <Suspense fallback={
+          <div className="container mx-auto px-4 py-8">
+            <div className="flex items-center justify-center py-20">
+              <div className="text-center">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite] mb-4" />
+                <p className="text-muted-foreground">로딩 중...</p>
+              </div>
+            </div>
+          </div>
+        }>
+          <SearchContent />
+        </Suspense>
+      </main>
       <Footer />
     </div>
   )
