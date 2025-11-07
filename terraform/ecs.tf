@@ -236,7 +236,7 @@ resource "aws_ecs_task_definition" "backend" {
         },
         {
           name  = "CORS_ALLOWED_ORIGINS"
-          value = var.domain_name != "" ? "https://${var.domain_name}" : aws_lb.main.dns_name
+          value = "https://main.d3o2xbkegs5wzg.amplifyapp.com,http://localhost:3000,https://d1cd1v57a71ky2.cloudfront.net"
         }
       ]
 
