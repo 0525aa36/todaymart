@@ -15,6 +15,7 @@ import {
   X,
   Image
 } from 'lucide-react'
+import { API_BASE_URL } from '@/lib/api-client'
 
 export default function AdminLayout({
   children,
@@ -34,7 +35,7 @@ export default function AdminLayout({
     }
 
     // 사용자 정보 확인
-    fetch('http://localhost:8081/api/auth/me', {
+    fetch(`${API_BASE_URL}/api/auth/me`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }

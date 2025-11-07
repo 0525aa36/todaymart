@@ -3,6 +3,7 @@ package com.agri.market.config;
 import com.agri.market.security.AuthEntryPointJwt;
 import com.agri.market.security.JwtAuthenticationFilter;
 import com.agri.market.security.CustomUserDetailsService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -31,6 +32,9 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final AuthEntryPointJwt unauthorizedHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:3001}")
+    private String allowedOrigins;
 
     public SecurityConfig(CustomUserDetailsService userDetailsService, AuthEntryPointJwt unauthorizedHandler, JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.userDetailsService = userDetailsService;
@@ -69,6 +73,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/files/**").permitAll() // Public file access (images)
                         .requestMatchers("/api/banners").permitAll() // Public banner endpoints
                         .requestMatchers("/api/notifications/stream").permitAll() // SSE endpoint with token auth
+                        .requestMatchers("/actuator/health/**").permitAll() // Health check for ECS/Docker
                         .requestMatchers("/api/admin/**").hasRole("ADMIN") // Admin roles for admin endpoints
                         .anyRequest().authenticated()
                 );
@@ -82,15 +87,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:3002",
-            "http://localhost:3003",
-            "http://localhost:3004",
-            "http://localhost:3005",
-            "http://localhost:3006"
-        )); // Frontend URLs
+        // 환경변수에서 CORS allowed origins 가져오기 (쉼표로 구분)
+        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

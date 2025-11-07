@@ -5,6 +5,7 @@ import useEmblaCarousel from "embla-carousel-react"
 import Autoplay from "embla-carousel-autoplay"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { API_BASE_URL } from "@/lib/api-client"
 
 interface Banner {
   id: number
@@ -30,7 +31,7 @@ export default function BannerCarousel() {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        const response = await fetch("http://localhost:8081/api/banners")
+        const response = await fetch(`${API_BASE_URL}/api/banners`)
         const data = await response.json()
         setBanners(data)
       } catch (error) {
@@ -89,7 +90,7 @@ export default function BannerCarousel() {
                   className="block h-[280px] md:h-[360px]"
                 >
                   <img
-                    src={banner.imageUrl.startsWith('http') ? banner.imageUrl : `http://localhost:8081${banner.imageUrl}`}
+                    src={banner.imageUrl.startsWith('http') ? banner.imageUrl : `${API_BASE_URL}${banner.imageUrl}`}
                     alt={banner.title}
                     className="w-full h-full object-cover"
                   />
@@ -97,7 +98,7 @@ export default function BannerCarousel() {
               ) : (
                 <div className="h-[280px] md:h-[360px]">
                   <img
-                    src={banner.imageUrl.startsWith('http') ? banner.imageUrl : `http://localhost:8081${banner.imageUrl}`}
+                    src={banner.imageUrl.startsWith('http') ? banner.imageUrl : `${API_BASE_URL}${banner.imageUrl}`}
                     alt={banner.title}
                     className="w-full h-full object-cover"
                   />

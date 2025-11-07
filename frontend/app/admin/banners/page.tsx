@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react"
-import { apiFetch } from "@/lib/api-client"
+import { apiFetch, API_BASE_URL } from "@/lib/api-client"
 import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/loading-spinner"
 
@@ -127,7 +127,7 @@ export default function BannersAdminPage() {
       const formData = new FormData()
       formData.append("file", file)
 
-      const response = await fetch("http://localhost:8081/api/files/upload", {
+      const response = await fetch(`${API_BASE_URL}/api/files/upload`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -332,7 +332,7 @@ export default function BannersAdminPage() {
                   <div className="space-y-2">
                     <p className="text-sm text-green-600">✓ 이미지가 업로드되었습니다</p>
                     <img
-                      src={formData.imageUrl.startsWith('http') ? formData.imageUrl : `http://localhost:8081${formData.imageUrl}`}
+                      src={formData.imageUrl.startsWith('http') ? formData.imageUrl : `${API_BASE_URL}${formData.imageUrl}`}
                       alt="Preview"
                       className="max-w-xs h-32 object-contain border rounded"
                     />

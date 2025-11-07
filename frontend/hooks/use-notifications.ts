@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { toast } from "sonner"
+import { API_BASE_URL } from "@/lib/api-client"
 
 interface Notification {
   title: string
@@ -25,7 +26,7 @@ export function useNotifications(isAdmin?: boolean) {
     console.log("관리자 알림 설정 중...")
 
     // 백엔드 서버로 직접 연결
-    const eventSource = new EventSource(`http://localhost:8081/api/notifications/stream?token=${encodeURIComponent(token)}`)
+    const eventSource = new EventSource(`${API_BASE_URL}/api/notifications/stream?token=${encodeURIComponent(token)}`)
 
     eventSourceRef.current = eventSource
 
@@ -110,7 +111,7 @@ export function useNotifications(isAdmin?: boolean) {
       const token = localStorage.getItem("token")
       if (!token) return
 
-      await fetch("http://localhost:8081/api/notifications/test", {
+      await fetch(`${API_BASE_URL}/api/notifications/test`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
