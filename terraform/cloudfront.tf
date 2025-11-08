@@ -46,8 +46,14 @@ resource "aws_cloudfront_distribution" "backend_api" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn      = aws_acm_certificate.cloudfront.arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
   }
+
+  aliases = ["api.todaymart.co.kr"]
+
+  depends_on = [aws_acm_certificate_validation.cloudfront]
 
   tags = {
     Name = "${var.project_name}-backend-cloudfront"
