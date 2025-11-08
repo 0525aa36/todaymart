@@ -44,6 +44,13 @@ interface Product {
   imageUrl: string
   createdAt: string
   updatedAt: string
+  // 새로 추가된 필드
+  shippingFee?: number
+  minOrderQuantity?: number
+  maxOrderQuantity?: number
+  courierCompany?: string
+  canCombineShipping?: boolean
+  combineShippingUnit?: number
 }
 
 interface Review {
@@ -105,6 +112,13 @@ export default function ProductDetailPage() {
       checkWishlistStatus()
     }
   }, [productId])
+
+  // 상품 로드 후 최소 주문 수량 설정
+  useEffect(() => {
+    if (product && product.minOrderQuantity) {
+      setQuantity(product.minOrderQuantity)
+    }
+  }, [product])
 
   const fetchProduct = async () => {
     try {
@@ -518,13 +532,25 @@ export default function ProductDetailPage() {
               {/* Quantity */}
               <div className="space-y-4 mb-6">
                 <div>
-                  <Label className="mb-3 block">수량</Label>
+                  <Label className="mb-3 block">
+                    수량
+                    {product?.minOrderQuantity && product.minOrderQuantity > 1 && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        (최소 {product.minOrderQuantity}개)
+                      </span>
+                    )}
+                    {product?.maxOrderQuantity && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        (최대 {product.maxOrderQuantity}개)
+                      </span>
+                    )}
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      disabled={quantity <= 1}
+                      onClick={() => setQuantity(Math.max(product?.minOrderQuantity || 1, quantity - 1))}
+                      disabled={quantity <= (product?.minOrderQuantity || 1)}
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
@@ -532,8 +558,15 @@ export default function ProductDetailPage() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setQuantity(Math.min((selectedOption?.stock || product.stock), quantity + 1))}
-                      disabled={quantity >= (selectedOption?.stock || product.stock)}
+                      onClick={() => {
+                        const maxStock = selectedOption?.stock || product.stock
+                        const maxOrder = product?.maxOrderQuantity || maxStock
+                        setQuantity(Math.min(maxStock, maxOrder, quantity + 1))
+                      }}
+                      disabled={
+                        quantity >= (selectedOption?.stock || product.stock) ||
+                        (product?.maxOrderQuantity && quantity >= product.maxOrderQuantity)
+                      }
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -585,7 +618,15 @@ export default function ProductDetailPage() {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Truck className="h-4 w-4" />
-                  <span>배송비 3,000원 (3만원 이상 무료배송)</span>
+                  <div>
+                    <div>배송비 {product?.shippingFee?.toLocaleString() || '3,000'}원</div>
+                    {product?.courierCompany && (
+                      <div className="text-xs text-gray-500">택배사: {product.courierCompany}</div>
+                    )}
+                    {product?.canCombineShipping && product.combineShippingUnit && (
+                      <div className="text-xs text-gray-500">합포장 가능 ({product.combineShippingUnit}개 단위)</div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Shield className="h-4 w-4" />

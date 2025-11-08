@@ -42,6 +42,34 @@ public class Product {
     @Column(nullable = false)
     private Integer stock;
 
+    // 공급가 (도매가)
+    @Column(precision = 10, scale = 2)
+    private BigDecimal supplyPrice;
+
+    // 상품별 배송비
+    @Column(precision = 10, scale = 2, nullable = false)
+    private BigDecimal shippingFee = new BigDecimal("3000"); // 기본 배송비 3000원
+
+    // 합포장 가능 여부
+    @Column(nullable = false)
+    private Boolean canCombineShipping = false;
+
+    // 합포장 단위 (예: 5개씩 묶음, null이면 합포장 불가)
+    @Column
+    private Integer combineShippingUnit;
+
+    // 택배사 (CJ대한통운, 로젠택배, 한진택배 등)
+    @Column(length = 50)
+    private String courierCompany;
+
+    // 최소 주문 수량
+    @Column(nullable = false)
+    private Integer minOrderQuantity = 1;
+
+    // 최대 주문 수량 (null이면 제한 없음, 재고 수량까지만)
+    @Column
+    private Integer maxOrderQuantity;
+
     // 하위 호환성과 성능을 위해 메인 이미지 URL 유지
     private String imageUrl;
 

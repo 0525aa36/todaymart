@@ -22,9 +22,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // 관리자용: 주문 상태별 조회
     Page<Order> findByOrderStatusOrderByCreatedAtDesc(OrderStatus orderStatus, Pageable pageable);
 
-    // 관리자용: 결제 상태별 조회
-    Page<Order> findByPaymentStatusOrderByCreatedAtDesc(PaymentStatus paymentStatus, Pageable pageable);
-
     // 관리자용: 날짜 범위별 조회
     @Query("SELECT o FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate ORDER BY o.createdAt DESC")
     Page<Order> findByCreatedAtBetween(
@@ -36,24 +33,22 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // 관리자용: 복합 필터링 (상태 + 날짜)
     @Query("SELECT o FROM Order o WHERE " +
            "(:orderStatus IS NULL OR o.orderStatus = :orderStatus) AND " +
-           "(:paymentStatus IS NULL OR o.paymentStatus = :paymentStatus) AND " +
            "(:startDate IS NULL OR o.createdAt >= :startDate) AND " +
            "(:endDate IS NULL OR o.createdAt <= :endDate) " +
            "ORDER BY o.createdAt DESC")
     Page<Order> findOrdersWithFilters(
         @Param("orderStatus") OrderStatus orderStatus,
-        @Param("paymentStatus") PaymentStatus paymentStatus,
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate,
         Pageable pageable
     );
 
-    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.paymentStatus = :paymentStatus")
-    BigDecimal sumTotalAmountByPaymentStatus(@Param("paymentStatus") PaymentStatus paymentStatus);
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.orderStatus = :orderStatus")
+    BigDecimal sumTotalAmountByOrderStatus(@Param("orderStatus") OrderStatus orderStatus);
 
-    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.paymentStatus = :paymentStatus AND o.createdAt BETWEEN :startDate AND :endDate")
-    BigDecimal sumTotalAmountByPaymentStatusAndCreatedAtBetween(
-        @Param("paymentStatus") PaymentStatus paymentStatus,
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.orderStatus = :orderStatus AND o.createdAt BETWEEN :startDate AND :endDate")
+    BigDecimal sumTotalAmountByOrderStatusAndCreatedAtBetween(
+        @Param("orderStatus") OrderStatus orderStatus,
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate
     );
@@ -74,8 +69,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // 사용자별 주문 수 조회
     long countByUserId(Long userId);
 
-    // 사용자별 총 결제 금액 조회
-    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.user.id = :userId AND o.paymentStatus = 'PAID'")
+    // 사용자별 총 결제 금액 조회 (결제 완료 상태만)
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.user.id = :userId AND (o.orderStatus = 'PAID' OR o.orderStatus = 'PREPARING' OR o.orderStatus = 'SHIPPED' OR o.orderStatus = 'DELIVERED')")
     BigDecimal sumTotalAmountByUserId(@Param("userId") Long userId);
 
     // 사용자별 주문 내역 조회

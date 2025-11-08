@@ -118,6 +118,15 @@ public class ProductService {
         product.setStock(request.getStock());
         product.setImageUrl(request.getImageUrl());
 
+        // 새로운 필드 설정
+        product.setSupplyPrice(request.getSupplyPrice());
+        product.setShippingFee(request.getShippingFee());
+        product.setCanCombineShipping(request.getCanCombineShipping());
+        product.setCombineShippingUnit(request.getCombineShippingUnit());
+        product.setCourierCompany(request.getCourierCompany());
+        product.setMinOrderQuantity(request.getMinOrderQuantity());
+        product.setMaxOrderQuantity(request.getMaxOrderQuantity());
+
         // Seller 설정
         if (request.getSellerId() != null) {
             Seller seller = sellerRepository.findById(request.getSellerId())
@@ -144,6 +153,15 @@ public class ProductService {
         product.setDiscountRate(request.getDiscountRate());
         product.setStock(request.getStock());
         product.setImageUrl(request.getImageUrl());
+
+        // 새로운 필드 설정
+        product.setSupplyPrice(request.getSupplyPrice());
+        product.setShippingFee(request.getShippingFee());
+        product.setCanCombineShipping(request.getCanCombineShipping());
+        product.setCombineShippingUnit(request.getCombineShippingUnit());
+        product.setCourierCompany(request.getCourierCompany());
+        product.setMinOrderQuantity(request.getMinOrderQuantity());
+        product.setMaxOrderQuantity(request.getMaxOrderQuantity());
 
         // Seller 설정 (null이면 판매자 제거 - 직매로 전환)
         if (request.getSellerId() != null) {
