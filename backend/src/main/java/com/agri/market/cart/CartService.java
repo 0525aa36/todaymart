@@ -161,7 +161,12 @@ public class CartService {
         }
 
         cartItem.setQuantity(newQuantity);
-        return cartItemRepository.save(cartItem);
+        CartItem savedItem = cartItemRepository.save(cartItem);
+
+        // Manually initialize product images to avoid LazyInitializationException
+        savedItem.getProduct().getImages().size();
+
+        return savedItem;
     }
 
     @Transactional
