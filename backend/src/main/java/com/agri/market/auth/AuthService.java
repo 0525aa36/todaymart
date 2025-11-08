@@ -64,6 +64,7 @@ public class AuthService {
         user.setBirthDate(request.getBirthDate());
         user.setGender(request.getGender());
         user.setRole("USER"); // Default role
+        user.setMarketingConsent(request.getMarketingConsent() != null ? request.getMarketingConsent() : false);
 
         User savedUser = userRepository.save(user);
 

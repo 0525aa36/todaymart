@@ -16,7 +16,7 @@ import { useState } from "react"
 import { ChevronRight, Check } from "lucide-react"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { PhoneInput } from "@/components/phone-input"
-import { TERMS_OF_SERVICE, PRIVACY_POLICY } from "@/lib/terms"
+import { TERMS_OF_SERVICE, PRIVACY_POLICY, MARKETING_CONSENT } from "@/lib/terms"
 import { formatBirthDate } from "@/lib/format-phone"
 
 export function RegisterPage() {
@@ -26,6 +26,7 @@ export function RegisterPage() {
   const [allTermsAgreed, setAllTermsAgreed] = useState(false)
   const [termsService, setTermsService] = useState(false)
   const [termsPrivacy, setTermsPrivacy] = useState(false)
+  const [termsMarketing, setTermsMarketing] = useState(false)
 
   // Form data
   const [formData, setFormData] = useState({
@@ -48,6 +49,7 @@ export function RegisterPage() {
     setAllTermsAgreed(checked)
     setTermsService(checked)
     setTermsPrivacy(checked)
+    setTermsMarketing(checked)
   }
 
   const handleStep1Next = () => {
@@ -216,6 +218,7 @@ export function RegisterPage() {
           postcode: formData.postcode,
           addressLine1: formData.addressLine1,
           addressLine2: formData.addressLine2,
+          marketingConsent: termsMarketing,
         }),
         parseResponse: "none",
       })
@@ -354,6 +357,33 @@ export function RegisterPage() {
                               <DialogTitle>개인정보 수집 및 이용 동의</DialogTitle>
                             </DialogHeader>
                             <div className="whitespace-pre-wrap text-sm">{PRIVACY_POLICY}</div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start space-x-3">
+                          <Checkbox
+                            id="terms-marketing"
+                            checked={termsMarketing}
+                            onCheckedChange={(checked) => setTermsMarketing(checked as boolean)}
+                            className="mt-1"
+                          />
+                          <label htmlFor="terms-marketing" className="text-sm cursor-pointer">
+                            [선택] 마케팅 정보 수신 동의
+                          </label>
+                        </div>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-xs">
+                              자세히 보기
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>마케팅 정보 수신 동의</DialogTitle>
+                            </DialogHeader>
+                            <div className="whitespace-pre-wrap text-sm">{MARKETING_CONSENT}</div>
                           </DialogContent>
                         </Dialog>
                       </div>

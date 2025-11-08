@@ -35,4 +35,6 @@ public class RegisterRequest {
     private LocalDate birthDate;
 
     private String gender; // 성별: "male" 또는 "female"
+
+    private Boolean marketingConsent = false; // 마케팅 정보 수신 동의 (선택)
 }

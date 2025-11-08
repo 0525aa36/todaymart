@@ -17,6 +17,9 @@ interface Order {
   id: number
   orderNumber: string
   totalAmount: number
+  couponDiscountAmount?: number
+  shippingFee?: number
+  finalAmount?: number
   recipientName: string
   user: {
     id: number
@@ -104,11 +107,15 @@ export default function PaymentPage() {
           return
         }
 
+        // Calculate final payment amount
+        const paymentAmount = order.finalAmount || (order.totalAmount - (order.couponDiscountAmount || 0) + (order.shippingFee || 0))
+
         // 위젯 렌더링
         console.log("[Payment] Rendering payment methods...")
+        console.log("[Payment] Payment amount:", paymentAmount)
         await paymentWidget.renderPaymentMethods(
           "#payment-widget",
-          { value: order.totalAmount },
+          { value: paymentAmount },
           { variantKey: "DEFAULT" }
         )
         console.log("[Payment] Payment methods rendered successfully")
@@ -176,6 +183,9 @@ export default function PaymentPage() {
     return null
   }
 
+  // Calculate final payment amount
+  const paymentAmount = order.finalAmount || (order.totalAmount - (order.couponDiscountAmount || 0) + (order.shippingFee || 0))
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -197,9 +207,25 @@ export default function PaymentPage() {
                 <span className="text-muted-foreground">받는 사람</span>
                 <span>{order.recipientName}</span>
               </div>
-              <div className="flex justify-between text-lg font-bold">
-                <span>결제 금액</span>
-                <span className="text-primary">{order.totalAmount.toLocaleString()}원</span>
+              <div className="flex justify-between border-t pt-2 mt-2">
+                <span className="text-muted-foreground">상품 금액</span>
+                <span>{order.totalAmount.toLocaleString()}원</span>
+              </div>
+              {(order.couponDiscountAmount ?? 0) > 0 && (
+                <div className="flex justify-between text-red-600">
+                  <span>쿠폰 할인</span>
+                  <span>-{order.couponDiscountAmount.toLocaleString()}원</span>
+                </div>
+              )}
+              {(order.shippingFee ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">배송비</span>
+                  <span>+{order.shippingFee.toLocaleString()}원</span>
+                </div>
+              )}
+              <div className="flex justify-between text-lg font-bold border-t pt-2">
+                <span>최종 결제 금액</span>
+                <span className="text-primary">{paymentAmount.toLocaleString()}원</span>
               </div>
             </CardContent>
           </Card>
@@ -235,7 +261,7 @@ export default function PaymentPage() {
               size="lg"
               onClick={handlePayment}
             >
-              {`${order.totalAmount.toLocaleString()}원 결제하기`}
+              {`${paymentAmount.toLocaleString()}원 결제하기`}
             </Button>
           ) : (
             <div className="space-y-3">

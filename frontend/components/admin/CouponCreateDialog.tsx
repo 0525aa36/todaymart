@@ -341,16 +341,15 @@ export function CouponCreateDialog({
             <div className="grid gap-2">
               <Label htmlFor="applicableCategory">적용 카테고리</Label>
               <Select
-                value={formData.applicableCategory}
+                value={formData.applicableCategory || undefined}
                 onValueChange={(value) =>
                   setFormData({ ...formData, applicableCategory: value })
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="전체 카테고리" />
+                  <SelectValue placeholder="전체 카테고리 (선택 안함)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">전체 카테고리</SelectItem>
                   <SelectItem value="채소">채소</SelectItem>
                   <SelectItem value="과일">과일</SelectItem>
                   <SelectItem value="수산물">수산물</SelectItem>
@@ -358,7 +357,7 @@ export function CouponCreateDialog({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                비워두면 모든 상품에 적용
+                선택하지 않으면 모든 상품에 적용
               </p>
             </div>
           </div>

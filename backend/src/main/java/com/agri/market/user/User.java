@@ -51,6 +51,9 @@ public class User {
     @Column(nullable = false)
     private Boolean enabled = true; // 사용자 활성화 상태
 
+    @Column(name = "marketing_consent", nullable = false)
+    private Boolean marketingConsent = false; // 마케팅 정보 수신 동의 여부
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

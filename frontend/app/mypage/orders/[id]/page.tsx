@@ -30,6 +30,9 @@ interface Order {
   id: number
   createdAt: string
   totalAmount: number
+  couponDiscountAmount?: number
+  shippingFee?: number
+  finalAmount?: number
   orderStatus: string  // 통합된 상태
   orderItems: OrderItem[]
   recipientName: string
@@ -326,20 +329,32 @@ export default function OrderDetailPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">상품금액</span>
                 <span className="font-medium">
-                  {order.orderItems
-                    .reduce((sum, item) => sum + item.price * item.quantity, 0)
-                    .toLocaleString()}
-                  원
+                  {order.totalAmount.toLocaleString()}원
                 </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">배송비</span>
-                <span className="font-medium">무료</span>
-              </div>
+              {(order.couponDiscountAmount ?? 0) > 0 && (
+                <div className="flex justify-between text-sm text-red-600">
+                  <span>쿠폰 할인</span>
+                  <span className="font-medium">-{order.couponDiscountAmount!.toLocaleString()}원</span>
+                </div>
+              )}
+              {(order.shippingFee ?? 0) > 0 ? (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">배송비</span>
+                  <span className="font-medium">+{order.shippingFee!.toLocaleString()}원</span>
+                </div>
+              ) : (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">배송비</span>
+                  <span className="font-medium">무료</span>
+                </div>
+              )}
               <Separator />
               <div className="flex justify-between items-center">
                 <span className="font-semibold">총 결제금액</span>
-                <span className="text-2xl font-bold text-primary">{order.totalAmount.toLocaleString()}원</span>
+                <span className="text-2xl font-bold text-primary">
+                  {(order.finalAmount || (order.totalAmount - (order.couponDiscountAmount || 0) + (order.shippingFee || 0))).toLocaleString()}원
+                </span>
               </div>
             </CardContent>
           </Card>

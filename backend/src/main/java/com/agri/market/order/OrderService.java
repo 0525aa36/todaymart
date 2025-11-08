@@ -421,6 +421,10 @@ public class OrderService {
                     item.getProduct().getImages().size(); // Initialize product images
                 }
             });
+            // Initialize appliedCoupon if present
+            if (order.getAppliedCoupon() != null) {
+                order.getAppliedCoupon().getName();
+            }
         });
 
         return orders;
