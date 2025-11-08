@@ -82,6 +82,7 @@ public class Order {
     // Coupon and discount information
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "coupon_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "couponProducts"})
     private Coupon appliedCoupon; // 적용된 쿠폰
 
     @Column(precision = 10, scale = 2)
