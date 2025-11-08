@@ -74,11 +74,24 @@ jobs:
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:v4
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-    - name: Force new deployment
+    - name: Register new task definition
+      id: task-def
+      run: |
+        # Register new task definition with Secrets Manager integration
+        TASK_DEF_ARN=$(aws ecs register-task-definition \
+          --cli-input-json file://.aws/task-definition.json \
+          --region ${{ env.AWS_REGION }} \
+          --query 'taskDefinition.taskDefinitionArn' \
+          --output text)
+        echo "task-def-arn=$TASK_DEF_ARN" >> $GITHUB_OUTPUT
+        echo "✅ Registered task definition: $TASK_DEF_ARN"
+
+    - name: Update ECS service with new task definition
       run: |
         aws ecs update-service \
           --cluster ${{ env.ECS_CLUSTER }} \
           --service ${{ env.ECS_SERVICE }} \
+          --task-definition ${{ steps.task-def.outputs.task-def-arn }} \
           --force-new-deployment \
           --region ${{ env.AWS_REGION }}
 

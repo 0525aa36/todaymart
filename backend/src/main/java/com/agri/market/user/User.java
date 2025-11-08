@@ -21,8 +21,14 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
-    private String passwordHash;
+    @Column
+    private String passwordHash; // 소셜 로그인 사용자는 null 가능
+
+    @Column(length = 20)
+    private String provider = "LOCAL"; // LOCAL, NAVER, KAKAO
+
+    @Column(name = "provider_id")
+    private String providerId; // 소셜 로그인 제공자의 고유 ID
 
     @Column(nullable = false, length = 100)
     private String name;

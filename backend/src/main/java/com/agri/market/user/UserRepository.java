@@ -14,6 +14,11 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     Boolean existsByEmail(String email);
+
+    // 소셜 로그인용: provider와 providerId로 사용자 조회
+    Optional<User> findByProviderAndProviderId(String provider, String providerId);
+    Boolean existsByProviderAndProviderId(String provider, String providerId);
+
     long countByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
 
     // 관리자용: 이름 또는 이메일로 검색

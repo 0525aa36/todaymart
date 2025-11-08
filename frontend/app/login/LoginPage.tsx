@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { apiFetch, getErrorMessage } from "@/lib/api-client"
+import { apiFetch, getErrorMessage, API_BASE_URL } from "@/lib/api-client"
 
 export function LoginPage() {
   const router = useRouter()
@@ -22,6 +22,11 @@ export function LoginPage() {
     rememberMe: false,
   })
   const [loading, setLoading] = useState(false)
+
+  const handleSocialLogin = (provider: "naver" | "kakao") => {
+    // OAuth2 로그인 엔드포인트로 리다이렉트
+    window.location.href = `${API_BASE_URL}/oauth2/authorization/${provider}`
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -146,30 +151,28 @@ export function LoginPage() {
 
               <div className="space-y-3">
                 <p className="text-sm text-center text-muted-foreground">또는 다른 방법으로 로그인</p>
-                <div className="grid grid-cols-3 gap-3">
-                  <Button variant="outline" className="w-full" disabled>
-                    <svg className="h-5 w-5" viewBox="0 0 24 24">
-                      <path
-                        fill="currentColor"
-                        d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"
-                      />
+                <div className="grid grid-cols-2 gap-3">
+                  {/* 네이버 로그인 */}
+                  <Button
+                    variant="outline"
+                    className="w-full bg-[#03C75A] hover:bg-[#02B350] text-white border-[#03C75A] hover:border-[#02B350]"
+                    onClick={() => handleSocialLogin("naver")}
+                  >
+                    <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M16.273 12.845L7.376 0H0v24h7.726V11.156L16.624 24H24V0h-7.727v12.845z" />
                     </svg>
+                    네이버
                   </Button>
-                  <Button variant="outline" className="w-full" disabled>
-                    <svg className="h-5 w-5" viewBox="0 0 24 24">
-                      <path
-                        fill="currentColor"
-                        d="M12 2C6.477 2 2 6.477 2 12c0 5.523 4.477 10 10 10s10-4.477 10-10c0-5.523-4.477-10-10-10zm3.5 12.5h-7v-1h7v1z"
-                      />
+                  {/* 카카오 로그인 */}
+                  <Button
+                    variant="outline"
+                    className="w-full bg-[#FEE500] hover:bg-[#FDD835] text-[#000000] border-[#FEE500] hover:border-[#FDD835]"
+                    onClick={() => handleSocialLogin("kakao")}
+                  >
+                    <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 3c5.799 0 10.5 3.664 10.5 8.185 0 4.52-4.701 8.184-10.5 8.184a13.5 13.5 0 0 1-1.727-.11l-4.408 2.883c-.501.265-.678.236-.472-.413l.892-3.678c-2.88-1.46-4.785-3.99-4.785-6.866C1.5 6.665 6.201 3 12 3zm5.907 8.06l1.47-1.424a.472.472 0 0 0-.656-.678l-1.928 1.866V9.282a.472.472 0 0 0-.944 0v2.557a.471.471 0 0 0 0 .222V13.5a.472.472 0 0 0 .944 0v-1.363l.427-.413 1.428 2.033a.472.472 0 1 0 .773-.543l-1.514-2.155zm-2.958 1.924h-1.46V9.297a.472.472 0 0 0-.943 0v4.159c0 .26.21.472.471.472h1.932a.472.472 0 1 0 0-.944zm-5.857-1.092l.696-1.707.638 1.707H9.092zm2.523.488l.002-.016a.469.469 0 0 0-.127-.32l-1.046-2.8a.69.69 0 0 0-.627-.474.696.696 0 0 0-.653.447l-1.661 4.075a.472.472 0 0 0 .874.357l.33-.813h2.07l.299.8a.472.472 0 1 0 .884-.33l-.345-.926zM8.293 9.302a.472.472 0 0 0-.471-.472H4.577a.472.472 0 1 0 0 .944h1.16v3.736a.472.472 0 0 0 .944 0V9.774h1.14c.261 0 .472-.212.472-.472z" />
                     </svg>
-                  </Button>
-                  <Button variant="outline" className="w-full" disabled>
-                    <svg className="h-5 w-5" viewBox="0 0 24 24">
-                      <path
-                        fill="currentColor"
-                        d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972a6.033 6.033 0 110-12.064c1.498 0 2.866.549 3.921 1.453l2.814-2.814A9.969 9.969 0 0012.545 2C7.021 2 2.543 6.477 2.543 12s4.478 10 10.002 10c8.396 0 10.249-7.85 9.426-11.748l-9.426-.013z"
-                      />
-                    </svg>
+                    카카오
                   </Button>
                 </div>
               </div>
