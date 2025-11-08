@@ -36,7 +36,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // OAuth2 경로는 필터 제외
         return path.startsWith("/oauth2/") ||
                path.startsWith("/login/oauth2/code/") ||
-               path.startsWith("/api/auth/") ||
+               path.equals("/api/auth/login") ||
+               path.equals("/api/auth/register") ||
                path.startsWith("/api/products") ||
                path.startsWith("/api/reviews/product/") ||
                path.startsWith("/api/files/") ||
