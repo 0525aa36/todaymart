@@ -1,5 +1,6 @@
 package com.agri.market.coupon;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -123,6 +124,7 @@ public class Coupon {
     /**
      * 쿠폰 적용 가능 상품 목록 (null이면 전체 상품)
      */
+    @JsonIgnore
     @OneToMany(mappedBy = "coupon", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CouponProduct> couponProducts = new ArrayList<>();
 
