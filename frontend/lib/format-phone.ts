@@ -39,3 +39,25 @@ export function isValidPhoneNumber(phone: string): boolean {
   // 한국 휴대폰: 010, 011, 016, 017, 018, 019로 시작하는 10-11자리
   return /^01[0-9]{8,9}$/.test(numbers)
 }
+
+/**
+ * 생년월일을 포맷팅합니다 (YYYY-MM-DD 형식)
+ * @param value 입력된 생년월일 (숫자만 또는 하이픈 포함)
+ * @returns 포맷팅된 생년월일
+ */
+export function formatBirthDate(value: string): string {
+  // 숫자만 추출
+  const numbers = value.replace(/[^\d]/g, '')
+
+  // 길이에 따라 포맷팅
+  if (numbers.length <= 4) {
+    return numbers // YYYY
+  } else if (numbers.length <= 6) {
+    return `${numbers.slice(0, 4)}-${numbers.slice(4)}` // YYYY-MM
+  } else if (numbers.length <= 8) {
+    return `${numbers.slice(0, 4)}-${numbers.slice(4, 6)}-${numbers.slice(6)}` // YYYY-MM-DD
+  }
+
+  // 8자리를 초과하면 8자리까지만
+  return `${numbers.slice(0, 4)}-${numbers.slice(4, 6)}-${numbers.slice(6, 8)}`
+}

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AddressSearch } from "@/components/address-search"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
@@ -15,6 +16,8 @@ import { useState } from "react"
 import { ChevronRight, Check } from "lucide-react"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { PhoneInput } from "@/components/phone-input"
+import { TERMS_OF_SERVICE, PRIVACY_POLICY } from "@/lib/terms"
+import { formatBirthDate } from "@/lib/format-phone"
 
 export function RegisterPage() {
   const router = useRouter()
@@ -39,6 +42,7 @@ export function RegisterPage() {
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isAddressSearched, setIsAddressSearched] = useState(false)
 
   const handleAllTermsChange = (checked: boolean) => {
     setAllTermsAgreed(checked)
@@ -58,47 +62,135 @@ export function RegisterPage() {
     setStep(2)
   }
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "올바른 이메일 형식이 아닙니다."
-    }
-
-    if (!formData.password || formData.password.length < 8) {
-      newErrors.password = "비밀번호는 최소 8자 이상이어야 합니다."
-    }
-
-    if (formData.password !== formData.passwordConfirm) {
-      newErrors.passwordConfirm = "비밀번호가 일치하지 않습니다."
-    }
-
+  // 개별 필드 검증 함수들
+  const validateName = () => {
     if (!formData.name) {
-      newErrors.name = "이름을 입력해주세요."
+      setErrors(prev => ({ ...prev, name: "이름을 입력해주세요." }))
+      return false
     }
+    setErrors(prev => ({ ...prev, name: "" }))
+    return true
+  }
 
+  const validateEmail = () => {
+    if (!formData.email) {
+      setErrors(prev => ({ ...prev, email: "이메일을 입력해주세요." }))
+      return false
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setErrors(prev => ({ ...prev, email: "올바른 이메일 형식이 아닙니다." }))
+      return false
+    }
+    setErrors(prev => ({ ...prev, email: "" }))
+    return true
+  }
+
+  const validatePassword = () => {
+    if (!formData.password) {
+      setErrors(prev => ({ ...prev, password: "비밀번호를 입력해주세요." }))
+      return false
+    }
+    if (formData.password.length < 8) {
+      setErrors(prev => ({ ...prev, password: "비밀번호는 최소 8자 이상이어야 합니다." }))
+      return false
+    }
+    setErrors(prev => ({ ...prev, password: "" }))
+    return true
+  }
+
+  const validatePasswordConfirm = () => {
+    if (!formData.passwordConfirm) {
+      setErrors(prev => ({ ...prev, passwordConfirm: "비밀번호 확인을 입력해주세요." }))
+      return false
+    }
+    if (formData.password !== formData.passwordConfirm) {
+      setErrors(prev => ({ ...prev, passwordConfirm: "비밀번호가 일치하지 않습니다." }))
+      return false
+    }
+    setErrors(prev => ({ ...prev, passwordConfirm: "" }))
+    return true
+  }
+
+  const validatePhone = () => {
     if (!formData.phone) {
-      newErrors.phone = "휴대폰 번호를 입력해주세요."
+      setErrors(prev => ({ ...prev, phone: "휴대폰 번호를 입력해주세요." }))
+      return false
     }
+    // 하이픈 제거 후 숫자만 추출
+    const phoneNumbers = formData.phone.replace(/[^\d]/g, "")
+    if (phoneNumbers.length !== 11) {
+      setErrors(prev => ({ ...prev, phone: "휴대폰 번호는 11자리 숫자여야 합니다." }))
+      return false
+    }
+    setErrors(prev => ({ ...prev, phone: "" }))
+    return true
+  }
 
+  const validateBirthDate = () => {
     if (!formData.birthDate) {
-      newErrors.birthDate = "생년월일을 입력해주세요."
+      setErrors(prev => ({ ...prev, birthDate: "생년월일을 입력해주세요." }))
+      return false
     }
+    // 하이픈 제거 후 숫자만 추출
+    const birthNumbers = formData.birthDate.replace(/[^\d]/g, "")
+    if (birthNumbers.length !== 8) {
+      setErrors(prev => ({ ...prev, birthDate: "생년월일은 8자리 숫자로 입력해주세요. (예: 1999-01-01)" }))
+      return false
+    }
+    setErrors(prev => ({ ...prev, birthDate: "" }))
+    return true
+  }
 
+  const validateGender = () => {
     if (!formData.gender) {
-      newErrors.gender = "성별을 선택해주세요."
+      setErrors(prev => ({ ...prev, gender: "성별을 선택해주세요." }))
+      return false
     }
+    setErrors(prev => ({ ...prev, gender: "" }))
+    return true
+  }
 
+  const validatePostcode = () => {
     if (!formData.postcode) {
-      newErrors.postcode = "우편번호를 입력해주세요."
+      setErrors(prev => ({ ...prev, postcode: "우편번호를 입력해주세요." }))
+      return false
     }
+    setErrors(prev => ({ ...prev, postcode: "" }))
+    return true
+  }
 
+  const validateAddressLine1 = () => {
     if (!formData.addressLine1) {
-      newErrors.addressLine1 = "주소를 입력해주세요."
+      setErrors(prev => ({ ...prev, addressLine1: "주소를 입력해주세요." }))
+      return false
     }
+    setErrors(prev => ({ ...prev, addressLine1: "" }))
+    return true
+  }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+  // 전체 폼 검증 (회원가입 버튼 클릭 시)
+  const validateForm = () => {
+    const isNameValid = validateName()
+    const isEmailValid = validateEmail()
+    const isPasswordValid = validatePassword()
+    const isPasswordConfirmValid = validatePasswordConfirm()
+    const isPhoneValid = validatePhone()
+    const isBirthDateValid = validateBirthDate()
+    const isGenderValid = validateGender()
+    const isPostcodeValid = validatePostcode()
+    const isAddressLine1Valid = validateAddressLine1()
+
+    return (
+      isNameValid &&
+      isEmailValid &&
+      isPasswordValid &&
+      isPasswordConfirmValid &&
+      isPhoneValid &&
+      isBirthDateValid &&
+      isGenderValid &&
+      isPostcodeValid &&
+      isAddressLine1Valid
+    )
   }
 
   const handleRegister = async () => {
@@ -212,32 +304,58 @@ export function RegisterPage() {
                     </div>
 
                     <div className="space-y-3 pl-4">
-                      <div className="flex items-start space-x-3">
-                        <Checkbox
-                          id="terms-service"
-                          checked={termsService}
-                          onCheckedChange={(checked) => setTermsService(checked as boolean)}
-                          className="mt-1"
-                        />
-                        <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start space-x-3">
+                          <Checkbox
+                            id="terms-service"
+                            checked={termsService}
+                            onCheckedChange={(checked) => setTermsService(checked as boolean)}
+                            className="mt-1"
+                          />
                           <label htmlFor="terms-service" className="text-sm cursor-pointer">
                             [필수] 이용약관 동의
                           </label>
                         </div>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-xs">
+                              자세히 보기
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>이용약관</DialogTitle>
+                            </DialogHeader>
+                            <div className="whitespace-pre-wrap text-sm">{TERMS_OF_SERVICE}</div>
+                          </DialogContent>
+                        </Dialog>
                       </div>
 
-                      <div className="flex items-start space-x-3">
-                        <Checkbox
-                          id="terms-privacy"
-                          checked={termsPrivacy}
-                          onCheckedChange={(checked) => setTermsPrivacy(checked as boolean)}
-                          className="mt-1"
-                        />
-                        <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start space-x-3">
+                          <Checkbox
+                            id="terms-privacy"
+                            checked={termsPrivacy}
+                            onCheckedChange={(checked) => setTermsPrivacy(checked as boolean)}
+                            className="mt-1"
+                          />
                           <label htmlFor="terms-privacy" className="text-sm cursor-pointer">
                             [필수] 개인정보 수집 및 이용 동의
                           </label>
                         </div>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-xs">
+                              자세히 보기
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>개인정보 수집 및 이용 동의</DialogTitle>
+                            </DialogHeader>
+                            <div className="whitespace-pre-wrap text-sm">{PRIVACY_POLICY}</div>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </div>
                   </div>
@@ -252,15 +370,30 @@ export function RegisterPage() {
               {step === 2 && (
                 <div className="space-y-6">
                   <div className="space-y-4">
+                    {/* Name */}
+                    <div>
+                      <Label htmlFor="name" className="mb-2 block">이름 *</Label>
+                      <Input
+                        id="name"
+                        placeholder="홍길동"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        onBlur={validateName}
+                        className={errors.name ? "border-red-500" : ""}
+                      />
+                      {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
+                    </div>
+
                     {/* Email */}
                     <div>
-                      <Label htmlFor="email">이메일 (아이디) *</Label>
+                      <Label htmlFor="email" className="mb-2 block">이메일 (아이디) *</Label>
                       <Input
                         id="email"
                         type="email"
                         placeholder="example@email.com"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        onBlur={validateEmail}
                         className={errors.email ? "border-red-500" : ""}
                       />
                       {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
@@ -268,13 +401,14 @@ export function RegisterPage() {
 
                     {/* Password */}
                     <div>
-                      <Label htmlFor="password">비밀번호 *</Label>
+                      <Label htmlFor="password" className="mb-2 block">비밀번호 *</Label>
                       <Input
                         id="password"
                         type="password"
                         placeholder="8자 이상 입력"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        onBlur={validatePassword}
                         className={errors.password ? "border-red-500" : ""}
                       />
                       {errors.password && <p className="text-sm text-red-500 mt-1">{errors.password}</p>}
@@ -282,38 +416,27 @@ export function RegisterPage() {
 
                     {/* Password Confirm */}
                     <div>
-                      <Label htmlFor="passwordConfirm">비밀번호 확인 *</Label>
+                      <Label htmlFor="passwordConfirm" className="mb-2 block">비밀번호 확인 *</Label>
                       <Input
                         id="passwordConfirm"
                         type="password"
                         placeholder="비밀번호 재입력"
                         value={formData.passwordConfirm}
                         onChange={(e) => setFormData({ ...formData, passwordConfirm: e.target.value })}
+                        onBlur={validatePasswordConfirm}
                         className={errors.passwordConfirm ? "border-red-500" : ""}
                       />
                       {errors.passwordConfirm && <p className="text-sm text-red-500 mt-1">{errors.passwordConfirm}</p>}
                     </div>
 
-                    {/* Name */}
-                    <div>
-                      <Label htmlFor="name">이름 *</Label>
-                      <Input
-                        id="name"
-                        placeholder="홍길동"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className={errors.name ? "border-red-500" : ""}
-                      />
-                      {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
-                    </div>
-
                     {/* Phone */}
                     <div>
-                      <Label htmlFor="phone">휴대폰 번호 *</Label>
+                      <Label htmlFor="phone" className="mb-2 block">휴대폰 번호 *</Label>
                       <PhoneInput
                         id="phone"
                         value={formData.phone}
                         onChange={(value) => setFormData({ ...formData, phone: value })}
+                        onBlur={validatePhone}
                         className={errors.phone ? "border-red-500" : ""}
                       />
                       {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
@@ -321,12 +444,18 @@ export function RegisterPage() {
 
                     {/* Birth Date */}
                     <div>
-                      <Label htmlFor="birthDate">생년월일 *</Label>
+                      <Label htmlFor="birthDate" className="mb-2 block">생년월일 *</Label>
                       <Input
                         id="birthDate"
-                        type="date"
+                        type="text"
+                        placeholder="1999-01-01"
+                        maxLength={10}
                         value={formData.birthDate}
-                        onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                        onChange={(e) => {
+                          const formatted = formatBirthDate(e.target.value)
+                          setFormData({ ...formData, birthDate: formatted })
+                        }}
+                        onBlur={validateBirthDate}
                         className={errors.birthDate ? "border-red-500" : ""}
                       />
                       {errors.birthDate && <p className="text-sm text-red-500 mt-1">{errors.birthDate}</p>}
@@ -334,11 +463,14 @@ export function RegisterPage() {
 
                     {/* Gender */}
                     <div>
-                      <Label>성별 *</Label>
+                      <Label className="mb-2 block">성별 *</Label>
                       <RadioGroup
                         value={formData.gender}
-                        onValueChange={(value) => setFormData({ ...formData, gender: value })}
-                        className="flex gap-4 mt-2"
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, gender: value })
+                          validateGender()
+                        }}
+                        className="flex gap-4"
                       >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="male" id="male" />
@@ -353,17 +485,9 @@ export function RegisterPage() {
                     </div>
 
                     {/* Address */}
-                    <div>
-                      <Label htmlFor="postcode">우편번호 *</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="postcode"
-                          placeholder="12345"
-                          value={formData.postcode}
-                          onChange={(e) => setFormData({ ...formData, postcode: e.target.value })}
-                          className={errors.postcode ? "border-red-500" : ""}
-                          readOnly
-                        />
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="mb-2 block">주소 *</Label>
                         <AddressSearch
                           onComplete={(data) => {
                             setFormData({
@@ -371,35 +495,54 @@ export function RegisterPage() {
                               postcode: data.zonecode,
                               addressLine1: data.address,
                             })
+                            setIsAddressSearched(true)
+                            // 주소 선택 시 에러 클리어
                             setErrors({ ...errors, postcode: "", addressLine1: "" })
                           }}
-                          buttonText="우편번호 찾기"
+                          buttonText="주소 검색"
+                          variant="outline"
+                          size="default"
+                          className="w-full"
                         />
+                        {(errors.postcode || errors.addressLine1) && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {errors.postcode || errors.addressLine1}
+                          </p>
+                        )}
                       </div>
-                      {errors.postcode && <p className="text-sm text-red-500 mt-1">{errors.postcode}</p>}
-                    </div>
 
-                    <div>
-                      <Label htmlFor="addressLine1">주소 *</Label>
-                      <Input
-                        id="addressLine1"
-                        placeholder="서울시 강남구 테헤란로"
-                        value={formData.addressLine1}
-                        onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
-                        className={errors.addressLine1 ? "border-red-500" : ""}
-                        readOnly
-                      />
-                      {errors.addressLine1 && <p className="text-sm text-red-500 mt-1">{errors.addressLine1}</p>}
-                    </div>
+                      {isAddressSearched && (
+                        <>
+                          <div>
+                            <Input
+                              id="postcode"
+                              placeholder="우편번호"
+                              value={formData.postcode}
+                              className="bg-muted"
+                              readOnly
+                            />
+                          </div>
 
-                    <div>
-                      <Label htmlFor="addressLine2">상세주소</Label>
-                      <Input
-                        id="addressLine2"
-                        placeholder="101동 101호"
-                        value={formData.addressLine2}
-                        onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-                      />
+                          <div>
+                            <Input
+                              id="addressLine1"
+                              placeholder="기본 주소"
+                              value={formData.addressLine1}
+                              className="bg-muted"
+                              readOnly
+                            />
+                          </div>
+
+                          <div>
+                            <Input
+                              id="addressLine2"
+                              placeholder="상세주소를 입력하세요 (예: 101동 101호)"
+                              value={formData.addressLine2}
+                              onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 

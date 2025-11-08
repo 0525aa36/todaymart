@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from 'next/link';
 
 export function Footer() {
   return (
@@ -20,17 +20,26 @@ export function Footer() {
             <h4 className="font-semibold mb-4">고객센터</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link href="/help" className="hover:text-foreground transition-colors">
+                <Link
+                  href="/help"
+                  className="hover:text-foreground transition-colors"
+                >
                   자주 묻는 질문
                 </Link>
               </li>
               <li>
-                <Link href="/notice" className="hover:text-foreground transition-colors">
+                <Link
+                  href="/notice"
+                  className="hover:text-foreground transition-colors"
+                >
                   공지사항
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-foreground transition-colors">
+                <Link
+                  href="/contact"
+                  className="hover:text-foreground transition-colors"
+                >
                   1:1 문의
                 </Link>
               </li>
@@ -46,22 +55,34 @@ export function Footer() {
             <h4 className="font-semibold mb-4">쇼핑 정보</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link href="/guide/order" className="hover:text-foreground transition-colors">
+                <Link
+                  href="/guide/order"
+                  className="hover:text-foreground transition-colors"
+                >
                   주문/결제 안내
                 </Link>
               </li>
               <li>
-                <Link href="/guide/shipping" className="hover:text-foreground transition-colors">
+                <Link
+                  href="/guide/shipping"
+                  className="hover:text-foreground transition-colors"
+                >
                   배송 안내
                 </Link>
               </li>
               <li>
-                <Link href="/guide/return" className="hover:text-foreground transition-colors">
+                <Link
+                  href="/guide/return"
+                  className="hover:text-foreground transition-colors"
+                >
                   교환/반품 안내
                 </Link>
               </li>
               <li>
-                <Link href="/guide/refund" className="hover:text-foreground transition-colors">
+                <Link
+                  href="/guide/refund"
+                  className="hover:text-foreground transition-colors"
+                >
                   환불 안내
                 </Link>
               </li>
@@ -73,17 +94,26 @@ export function Footer() {
             <h4 className="font-semibold mb-4">약관 및 정책</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link href="/terms" className="hover:text-foreground transition-colors">
+                <Link
+                  href="/terms"
+                  className="hover:text-foreground transition-colors"
+                >
                   이용약관
                 </Link>
               </li>
               <li>
-                <Link href="/privacy" className="hover:text-foreground transition-colors font-semibold">
+                <Link
+                  href="/privacy"
+                  className="hover:text-foreground transition-colors font-semibold"
+                >
                   개인정보처리방침
                 </Link>
               </li>
               <li>
-                <Link href="/business" className="hover:text-foreground transition-colors">
+                <Link
+                  href="/business"
+                  className="hover:text-foreground transition-colors"
+                >
                   사업자 정보
                 </Link>
               </li>
@@ -104,5 +134,5 @@ export function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }
