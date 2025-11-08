@@ -24,6 +24,7 @@ import {
   ShoppingBag,
   Truck,
   CheckCircle,
+  Ticket,
 } from "lucide-react"
 
 interface User {
@@ -52,11 +53,18 @@ interface Order {
   orderItems: OrderItem[]
 }
 
+interface UserCoupon {
+  id: number
+  isUsed: boolean
+  expiresAt: string
+}
+
 export function MyPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [user, setUser] = useState<User | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
+  const [couponCount, setCouponCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -78,6 +86,7 @@ export function MyPage() {
     }
 
     fetchOrders()
+    fetchCouponCount()
   }, [])
 
   const fetchOrders = async () => {
@@ -96,6 +105,19 @@ export function MyPage() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCouponCount = async () => {
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    try {
+      const data = await apiFetch<UserCoupon[]>("/api/user/coupons/available", { auth: true })
+      setCouponCount(data.length)
+    } catch (error) {
+      console.error("Error fetching coupons:", error)
+      // Don't show error toast for coupons as it's not critical
     }
   }
 
@@ -205,7 +227,7 @@ export function MyPage() {
                       <div className="text-xs text-muted-foreground">적립금</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-primary mb-1">0</div>
+                      <div className="text-2xl font-bold text-primary mb-1">{couponCount}</div>
                       <div className="text-xs text-muted-foreground">쿠폰</div>
                     </div>
                   </div>
@@ -231,6 +253,17 @@ export function MyPage() {
                       <div className="flex items-center gap-3">
                         <Heart className="h-5 w-5 text-muted-foreground" />
                         <span className="text-sm font-medium">찜한상품</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </Link>
+
+                    <Link
+                      href="/mypage/coupons"
+                      className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Ticket className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm font-medium">쿠폰</span>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </Link>

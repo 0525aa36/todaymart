@@ -17,12 +17,14 @@ import { Badge } from "@/components/ui/badge";
 import { Ticket, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { CouponCreateDialog } from "@/components/admin/CouponCreateDialog";
 
 export default function AdminCouponsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchCoupons();
@@ -82,9 +84,9 @@ export default function AdminCouponsPage() {
           <Ticket className="h-8 w-8" />
           쿠폰 관리
         </h1>
-        <Button>
+        <Button onClick={() => setCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          쿠폰 생성 (준비중)
+          쿠폰 생성
         </Button>
       </div>
 
@@ -159,11 +161,16 @@ export default function AdminCouponsPage() {
       <div className="mt-6 p-4 border rounded-lg bg-muted/50">
         <h3 className="font-semibold mb-2">관리 기능 안내</h3>
         <p className="text-sm text-muted-foreground">
-          쿠폰 생성, 수정, 삭제 기능은 추후 구현 예정입니다.
-          현재는 데이터베이스에서 직접 WELCOME 쿠폰을 관리하거나,
-          AdminCouponController API를 통해 프로그래밍 방식으로 관리할 수 있습니다.
+          쿠폰 생성 기능을 통해 새로운 쿠폰을 등록할 수 있습니다.
+          쿠폰 수정 및 삭제 기능은 추후 구현 예정입니다.
         </p>
       </div>
+
+      <CouponCreateDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={fetchCoupons}
+      />
     </div>
   );
 }

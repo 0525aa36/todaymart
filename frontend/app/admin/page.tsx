@@ -38,6 +38,7 @@ import {
   Eye,
   Edit,
   Trash2,
+  Ticket,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -329,6 +330,19 @@ export default function AdminDashboard() {
                 <CardContent>
                   <div className="text-2xl font-bold">{totalProducts}개</div>
                   <p className="text-xs text-muted-foreground mt-1">등록된 상품 수 (클릭하여 관리)</p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/admin/coupons">
+              <Card className="cursor-pointer hover:border-primary transition-colors">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">쿠폰 관리</CardTitle>
+                  <Ticket className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">관리</div>
+                  <p className="text-xs text-muted-foreground mt-1">쿠폰 목록 및 생성 (클릭하여 관리)</p>
                 </CardContent>
               </Card>
             </Link>
