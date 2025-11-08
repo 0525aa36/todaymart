@@ -9,7 +9,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Mr.nongsu - 농수산물 직송 쇼핑몰',
+  title: '오늘마트 - 농수산물 직송 쇼핑몰',
   description: '신선한 농수산물을 농가에서 직접 배송받으세요',
   generator: 'v0.app',
 }

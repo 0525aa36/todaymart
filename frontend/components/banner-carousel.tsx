@@ -5,7 +5,7 @@ import useEmblaCarousel from "embla-carousel-react"
 import Autoplay from "embla-carousel-autoplay"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { API_BASE_URL } from "@/lib/api-client"
+import { apiFetch, API_BASE_URL } from "@/lib/api-client"
 
 interface Banner {
   id: number
@@ -31,11 +31,11 @@ export default function BannerCarousel() {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/banners`)
-        const data = await response.json()
-        setBanners(data)
+        const data = await apiFetch<Banner[]>("/api/banners")
+        setBanners(data || [])
       } catch (error) {
         console.error("Failed to fetch banners:", error)
+        setBanners([])
       }
     }
 

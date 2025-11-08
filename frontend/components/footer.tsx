@@ -7,7 +7,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div>
-            <h3 className="font-bold text-lg mb-4">신선마켓</h3>
+            <h3 className="font-bold text-lg mb-4">오늘마트</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               농가와 소비자를 직접 연결하는
               <br />
@@ -35,8 +35,8 @@ export function Footer() {
                 </Link>
               </li>
               <li className="pt-2">
-                <div className="font-semibold text-foreground">1588-0000</div>
-                <div className="text-xs">평일 09:00 - 18:00</div>
+                {/* <div className="font-semibold text-foreground">1588-0000</div>
+                <div className="text-xs">평일 09:00 - 18:00</div> */}
               </li>
             </ul>
           </div>
@@ -94,13 +94,13 @@ export function Footer() {
         {/* Bottom */}
         <div className="border-t mt-8 pt-8 text-sm text-muted-foreground">
           <p className="leading-relaxed">
-            (주)신선마켓 | 대표이사: 홍길동 | 사업자등록번호: 123-45-67890
+            (주)오늘마트 | 대표이사: 고현진 | 사업자등록번호: 380-11-03350
             <br />
-            통신판매업신고: 2024-서울강남-00000 | 주소: 서울특별시 강남구 테헤란로 123
+            {/* 통신판매업신고: 2024-서울강남-00000 | 주소: 서울특별시 강남구 테헤란로 123 */}
             <br />
-            이메일: contact@sinsunmarket.com | 전화: 1588-0000
+            이메일: help.todaymart@gmail.com
           </p>
-          <p className="mt-4">© 2025 신선마켓. All rights reserved.</p>
+          <p className="mt-4">© 2025 오늘마트. All rights reserved.</p>
         </div>
       </div>
     </footer>

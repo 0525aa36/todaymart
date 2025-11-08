@@ -8,13 +8,13 @@
   --font-mono: "Geist Mono", "Geist Mono Fallback";
 
   /* Color System - Fresh & Natural */
-  --color-primary: #2d7a3e;
+  --color-primary: #F6313A;
   --color-primary-foreground: #ffffff;
 
-  --color-secondary: #4a9d5f;
+  --color-secondary: #ff6b6b;
   --color-secondary-foreground: #ffffff;
 
-  --color-accent: #ff6b35;
+  --color-accent: #ff4757;
   --color-accent-foreground: #ffffff;
 
   --color-background: #ffffff;
@@ -28,7 +28,7 @@
 
   --color-border: #e5e7eb;
   --color-input: #e5e7eb;
-  --color-ring: #2d7a3e;
+  --color-ring: #F6313A;
 
   --radius: 0.5rem;
   --sidebar: oklch(1 0 0);
