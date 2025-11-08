@@ -28,6 +28,9 @@ public class OrderRequest {
     // 배송 메시지
     private String deliveryMessage;
 
+    // 쿠폰 ID (선택사항)
+    private Long couponId;
+
     @NotNull(message = "주문 상품 목록은 필수입니다.")
     private List<OrderItemRequest> items;
 

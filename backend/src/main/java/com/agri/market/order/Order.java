@@ -1,5 +1,6 @@
 package com.agri.market.order;
 
+import com.agri.market.coupon.Coupon;
 import com.agri.market.user.User;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -77,4 +78,21 @@ public class Order {
     private LocalDateTime shippedAt; // 배송 시작 시간
     private LocalDateTime deliveredAt; // 배송 완료 시간
     private LocalDateTime confirmedAt; // 구매 확정 시간
+
+    // Coupon and discount information
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id")
+    private Coupon appliedCoupon; // 적용된 쿠폰
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal couponDiscountAmount = BigDecimal.ZERO; // 쿠폰 할인 금액
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal productDiscountAmount = BigDecimal.ZERO; // 상품 할인 금액
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal shippingFee = BigDecimal.ZERO; // 배송비
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal finalAmount; // 최종 결제 금액 (totalAmount - couponDiscount + shippingFee)
 }
