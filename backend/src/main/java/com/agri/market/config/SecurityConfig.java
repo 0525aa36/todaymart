@@ -73,6 +73,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/reviews/product/**").permitAll() // Public review endpoints
                         .requestMatchers("/api/files/**").permitAll() // Public file access (images)
                         .requestMatchers("/api/banners").permitAll() // Public banner endpoints
+                        .requestMatchers("/api/coupons/**").permitAll() // Public coupon endpoints (active, validate, code)
                         .requestMatchers("/api/notifications/stream").permitAll() // SSE endpoint with token auth
                         .requestMatchers("/actuator/health/**").permitAll() // Health check for ECS/Docker
                         .requestMatchers("/api/admin/**").hasRole("ADMIN") // Admin roles for admin endpoints

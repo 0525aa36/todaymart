@@ -37,7 +37,8 @@
       "Bash(ssh:*)",
       "Bash(xargs:*)",
       "Bash(rm:*)",
-      "Bash(mysql:*)"
+      "Bash(mysql:*)",
+      "Bash(./gradlew clean build:*)"
     ],
     "deny": [],
     "ask": []
