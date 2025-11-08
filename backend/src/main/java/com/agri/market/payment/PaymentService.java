@@ -60,7 +60,7 @@ public class PaymentService {
             throw new ForbiddenException("You are not authorized to request payment for this order");
         }
 
-        if (order.getPaymentStatus() != PaymentStatus.PENDING) {
+        if (order.getOrderStatus() != OrderStatus.PENDING_PAYMENT) {
             throw new RuntimeException("Payment already processed for order: " + orderId);
         }
 
