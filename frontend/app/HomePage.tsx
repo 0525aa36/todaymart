@@ -11,6 +11,7 @@ import { apiFetch } from '@/lib/api-client';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { COLORS } from '@/lib/colors';
 import BannerCarousel from '@/components/banner-carousel';
+import SignupPromotionModal from '@/components/signup-promotion-modal';
 
 interface Product {
   id: number;
@@ -128,6 +129,7 @@ export function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
+      <SignupPromotionModal />
       <Header />
 
       <main className="flex-1">
