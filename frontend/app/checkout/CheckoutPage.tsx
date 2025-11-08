@@ -18,6 +18,8 @@ import { useToast } from "@/hooks/use-toast"
 import { ApiError, apiFetch, getErrorMessage } from "@/lib/api-client"
 import { AddressSearch } from "@/components/address-search"
 import { PhoneInput } from "@/components/phone-input"
+import CouponSelector from "@/components/coupon/CouponSelector"
+import { UserCoupon } from "@/types/coupon"
 
 interface CartItem {
   id: number
@@ -55,6 +57,7 @@ export function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false)
   const [cart, setCart] = useState<Cart | null>(null)
   const [addressPrefilled, setAddressPrefilled] = useState(false)
+  const [selectedCoupon, setSelectedCoupon] = useState<UserCoupon | null>(null)
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -143,7 +146,28 @@ export function CheckoutPage() {
   const orderItems = cart?.cartItems || []
   const totalProductPrice = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const shippingFee = totalProductPrice >= 30000 ? 0 : 3000
-  const finalTotal = totalProductPrice + shippingFee
+
+  // 쿠폰 할인 계산
+  const calculateCouponDiscount = () => {
+    if (!selectedCoupon) return 0;
+
+    const coupon = selectedCoupon.coupon;
+    let discount = 0;
+
+    if (coupon.discountType === 'FIXED_AMOUNT') {
+      discount = coupon.discountValue;
+    } else {
+      discount = totalProductPrice * (coupon.discountValue / 100);
+      if (coupon.maxDiscountAmount && discount > coupon.maxDiscountAmount) {
+        discount = coupon.maxDiscountAmount;
+      }
+    }
+
+    return Math.min(discount, totalProductPrice);
+  };
+
+  const couponDiscount = calculateCouponDiscount();
+  const finalTotal = totalProductPrice - couponDiscount + shippingFee
 
   const handleCreateOrder = async () => {
     const token = localStorage.getItem("token")
@@ -173,6 +197,7 @@ export function CheckoutPage() {
           senderName: formData.senderName || undefined,
           senderPhone: formData.senderPhone || undefined,
           deliveryMessage: formData.deliveryMessage || formData.deliveryRequest,
+          couponId: selectedCoupon?.id || undefined,
           items: orderItems.map((item) => ({
             productId: item.product.id,
             quantity: item.quantity,
@@ -412,7 +437,22 @@ export function CheckoutPage() {
 
             {/* Order Summary Sidebar */}
             <div className="lg:col-span-1">
-              <div className="sticky top-24">
+              <div className="sticky top-24 space-y-4">
+                {/* 쿠폰 선택 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>쿠폰 / 할인</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CouponSelector
+                      orderAmount={totalProductPrice}
+                      onCouponSelect={setSelectedCoupon}
+                      selectedCoupon={selectedCoupon}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* 주문 요약 */}
                 <Card>
                   <CardHeader>
                     <CardTitle>주문 상품</CardTitle>
@@ -447,6 +487,12 @@ export function CheckoutPage() {
                         <span className="text-muted-foreground">상품금액</span>
                         <span>{totalProductPrice.toLocaleString()}원</span>
                       </div>
+                      {couponDiscount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>쿠폰 할인</span>
+                          <span>-{couponDiscount.toLocaleString()}원</span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">배송비</span>
                         <span>{shippingFee === 0 ? "무료" : `${shippingFee.toLocaleString()}원`}</span>

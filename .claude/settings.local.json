@@ -38,7 +38,8 @@
       "Bash(xargs:*)",
       "Bash(rm:*)",
       "Bash(mysql:*)",
-      "Bash(./gradlew clean build:*)"
+      "Bash(./gradlew clean build:*)",
+      "Bash(npx tsc --noEmit)"
     ],
     "deny": [],
     "ask": []
