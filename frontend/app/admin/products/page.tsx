@@ -168,7 +168,10 @@ export default function AdminProductsPage() {
         auth: true,
       })
 
-      const fileUrls = data.fileUrls.map((url: string) => `${API_BASE_URL}${url}`)
+      // URL이 이미 절대 URL인 경우 그대로 사용, 아니면 API_BASE_URL 추가
+      const fileUrls = data.fileUrls.map((url: string) =>
+        url.startsWith('http://') || url.startsWith('https://') ? url : `${API_BASE_URL}${url}`
+      )
       setUploadedImages((prev) => [...prev, ...fileUrls])
       toast({
         title: "업로드 완료",
@@ -205,7 +208,10 @@ export default function AdminProductsPage() {
         auth: true,
       })
 
-      const fileUrls = data.fileUrls.map((url: string) => `${API_BASE_URL}${url}`)
+      // URL이 이미 절대 URL인 경우 그대로 사용, 아니면 API_BASE_URL 추가
+      const fileUrls = data.fileUrls.map((url: string) =>
+        url.startsWith('http://') || url.startsWith('https://') ? url : `${API_BASE_URL}${url}`
+      )
       setDescriptionImages((prev) => [...prev, ...fileUrls])
 
       const imageMarkdown = fileUrls.map((url: string) => `![이미지](${url})`).join("\n")
