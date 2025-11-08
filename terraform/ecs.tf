@@ -236,7 +236,7 @@ resource "aws_ecs_task_definition" "backend" {
         },
         {
           name  = "CORS_ALLOWED_ORIGINS"
-          value = "https://main.d3o2xbkegs5wzg.amplifyapp.com,http://localhost:3000,https://d1cd1v57a71ky2.cloudfront.net"
+          value = "https://todaymart.co.kr,https://www.todaymart.co.kr,https://main.d3o2xbkegs5wzg.amplifyapp.com,http://localhost:3000,https://api.todaymart.co.kr"
         }
       ]
 

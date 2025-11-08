@@ -3,7 +3,6 @@ package com.agri.market.admin;
 import com.agri.market.order.Order;
 import com.agri.market.order.OrderService;
 import com.agri.market.order.OrderStatus;
-import com.agri.market.order.PaymentStatus;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -77,14 +76,13 @@ public class AdminOrderController {
     @GetMapping
     public ResponseEntity<Page<Order>> getOrders(
             @RequestParam(required = false) OrderStatus orderStatus,
-            @RequestParam(required = false) PaymentStatus paymentStatus,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<Order> orders = orderService.getAllOrders(orderStatus, paymentStatus, startDate, endDate, pageable);
+        Page<Order> orders = orderService.getAllOrders(orderStatus, startDate, endDate, pageable);
         return ResponseEntity.ok(orders);
     }
 

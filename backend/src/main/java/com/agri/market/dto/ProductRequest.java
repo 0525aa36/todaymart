@@ -39,6 +39,32 @@ public class ProductRequest {
 
     private String imageUrl;
 
+    // 공급가 (도매가, 선택)
+    private BigDecimal supplyPrice;
+
+    // 상품별 배송비 (필수, 기본값 3000원)
+    @NotNull(message = "배송비는 필수입니다")
+    @DecimalMin(value = "0.0", inclusive = true, message = "배송비는 0 이상이어야 합니다")
+    private BigDecimal shippingFee = new BigDecimal("3000");
+
+    // 합포장 가능 여부 (필수, 기본값 false)
+    @NotNull
+    private Boolean canCombineShipping = false;
+
+    // 합포장 단위 (선택, 예: 5개씩 묶음)
+    private Integer combineShippingUnit;
+
+    // 택배사 (선택)
+    private String courierCompany;
+
+    // 최소 주문 수량 (필수, 기본값 1)
+    @NotNull(message = "최소 주문 수량은 필수입니다")
+    @Min(value = 1, message = "최소 주문 수량은 1 이상이어야 합니다")
+    private Integer minOrderQuantity = 1;
+
+    // 최대 주문 수량 (선택, null이면 제한 없음)
+    private Integer maxOrderQuantity;
+
     // 판매자 ID (선택 - null이면 직매)
     private Long sellerId;
 }

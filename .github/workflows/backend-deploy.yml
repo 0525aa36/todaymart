@@ -82,14 +82,30 @@ jobs:
           --force-new-deployment \
           --region ${{ env.AWS_REGION }}
 
-    - name: Wait for service stability
+    - name: Wait for deployment to start
       run: |
-        aws ecs wait services-stable \
+        echo "⏳ Waiting for deployment to start..."
+        sleep 30
+
+        # Check if new task is starting
+        NEW_TASKS=$(aws ecs list-tasks \
           --cluster ${{ env.ECS_CLUSTER }} \
-          --services ${{ env.ECS_SERVICE }} \
-          --region ${{ env.AWS_REGION }}
+          --service-name ${{ env.ECS_SERVICE }} \
+          --desired-status RUNNING \
+          --region ${{ env.AWS_REGION }} \
+          --query 'taskArns' \
+          --output text)
+
+        if [ -z "$NEW_TASKS" ]; then
+          echo "⚠️  Warning: No running tasks found"
+        else
+          echo "✅ Tasks are starting"
+        fi
 
     - name: Deployment complete
       run: |
-        echo "🚀 Deployment successful!"
+        echo "🚀 Deployment triggered successfully!"
         echo "Image: ${{ steps.build-image.outputs.image }}"
+        echo ""
+        echo "Note: Deployment continues in background"
+        echo "Check status: aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }}"

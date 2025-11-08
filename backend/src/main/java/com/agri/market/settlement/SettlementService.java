@@ -3,7 +3,7 @@ package com.agri.market.settlement;
 import com.agri.market.order.Order;
 import com.agri.market.order.OrderItem;
 import com.agri.market.order.OrderRepository;
-import com.agri.market.order.PaymentStatus;
+import com.agri.market.order.OrderStatus;
 import com.agri.market.seller.Seller;
 import com.agri.market.seller.SellerRepository;
 import org.springframework.data.domain.Page;
@@ -64,7 +64,7 @@ public class SettlementService {
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
         List<Order> paidOrders = orderRepository.findOrdersForExport(startDateTime, endDateTime).stream()
-                .filter(order -> order.getPaymentStatus() == PaymentStatus.PAID)
+                .filter(order -> order.getOrderStatus() == OrderStatus.PAID)
                 .toList();
 
         // 해당 판매자의 상품 매출 및 주문 건수 계산

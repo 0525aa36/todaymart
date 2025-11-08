@@ -30,8 +30,7 @@ interface Order {
   id: number
   createdAt: string
   totalAmount: number
-  orderStatus: string
-  paymentStatus: string
+  orderStatus: string  // 통합된 상태
   orderItems: OrderItem[]
   recipientName: string
   recipientPhone: string
@@ -147,22 +146,26 @@ export default function OrderDetailPage() {
 
   const getOrderStatusLabel = (status: string) => {
     const statusMap: Record<string, string> = {
-      PENDING: "결제대기",
-      PAID: "결제완료",
+      PENDING_PAYMENT: "결제 대기",
+      PAYMENT_FAILED: "결제 실패",
+      PAID: "결제 완료",
+      PREPARING: "상품 준비중",
       SHIPPED: "배송중",
-      DELIVERED: "배송완료",
-      CANCELLED: "취소됨",
+      DELIVERED: "배송 완료",
+      CANCELLED: "주문 취소",
     }
     return statusMap[status] || status
   }
 
   const getOrderStatusColor = (status: string) => {
     const colorMap: Record<string, string> = {
-      PENDING: "bg-muted",
+      PENDING_PAYMENT: "bg-yellow-500",
+      PAYMENT_FAILED: "bg-destructive",
       PAID: "bg-primary",
-      SHIPPED: "bg-blue-500",
-      DELIVERED: "bg-secondary",
-      CANCELLED: "bg-destructive",
+      PREPARING: "bg-blue-500",
+      SHIPPED: "bg-purple-500",
+      DELIVERED: "bg-green-500",
+      CANCELLED: "bg-gray-500",
     }
     return colorMap[status] || "bg-muted"
   }
@@ -251,8 +254,8 @@ export default function OrderDetailPage() {
                   <p className="font-medium mt-1">{formatDate(order.createdAt)}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">결제 상태</span>
-                  <p className="font-medium mt-1">{getOrderStatusLabel(order.paymentStatus)}</p>
+                  <span className="text-muted-foreground">주문 상태</span>
+                  <p className="font-medium mt-1">{getOrderStatusLabel(order.orderStatus)}</p>
                 </div>
               </div>
             </CardContent>

@@ -40,11 +40,7 @@ public class Order {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private OrderStatus orderStatus; // PENDING, PAID, SHIPPED, DELIVERED, CANCELLED
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PaymentStatus paymentStatus; // PENDING, PAID, FAILED
+    private OrderStatus orderStatus; // PENDING_PAYMENT, PAYMENT_FAILED, PAID, PREPARING, SHIPPED, DELIVERED, CANCELLED
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

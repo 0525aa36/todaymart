@@ -50,7 +50,6 @@ interface Order {
   createdAt: string
   totalAmount: number
   orderStatus: string
-  paymentStatus: string
   orderItems: OrderItem[]
   user: {
     id: number
@@ -196,16 +195,20 @@ export default function AdminOrdersPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "SHIPPED":
-        return <Badge className="bg-blue-500">배송중</Badge>
+      case "PENDING_PAYMENT":
+        return <Badge className="bg-yellow-500">결제 대기</Badge>
+      case "PAYMENT_FAILED":
+        return <Badge variant="destructive">결제 실패</Badge>
       case "PAID":
-        return <Badge className="bg-green-500">결제완료</Badge>
+        return <Badge className="bg-green-500">결제 완료</Badge>
+      case "PREPARING":
+        return <Badge className="bg-blue-500">상품 준비중</Badge>
+      case "SHIPPED":
+        return <Badge className="bg-purple-500">배송중</Badge>
       case "DELIVERED":
-        return <Badge variant="secondary">배송완료</Badge>
+        return <Badge className="bg-green-600">배송 완료</Badge>
       case "CANCELLED":
-        return <Badge variant="destructive">주문취소</Badge>
-      case "PENDING":
-        return <Badge className="bg-muted">결제대기</Badge>
+        return <Badge variant="destructive">주문 취소</Badge>
       default:
         return <Badge>{status}</Badge>
     }
@@ -280,11 +283,13 @@ export default function AdminOrdersPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">전체</SelectItem>
-                      <SelectItem value="PENDING">결제대기</SelectItem>
-                      <SelectItem value="PAID">결제완료</SelectItem>
+                      <SelectItem value="PENDING_PAYMENT">결제 대기</SelectItem>
+                      <SelectItem value="PAYMENT_FAILED">결제 실패</SelectItem>
+                      <SelectItem value="PAID">결제 완료</SelectItem>
+                      <SelectItem value="PREPARING">상품 준비중</SelectItem>
                       <SelectItem value="SHIPPED">배송중</SelectItem>
-                      <SelectItem value="DELIVERED">배송완료</SelectItem>
-                      <SelectItem value="CANCELLED">주문취소</SelectItem>
+                      <SelectItem value="DELIVERED">배송 완료</SelectItem>
+                      <SelectItem value="CANCELLED">주문 취소</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -407,11 +412,13 @@ export default function AdminOrdersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PENDING">결제대기</SelectItem>
-                  <SelectItem value="PAID">결제완료</SelectItem>
+                  <SelectItem value="PENDING_PAYMENT">결제 대기</SelectItem>
+                  <SelectItem value="PAYMENT_FAILED">결제 실패</SelectItem>
+                  <SelectItem value="PAID">결제 완료</SelectItem>
+                  <SelectItem value="PREPARING">상품 준비중</SelectItem>
                   <SelectItem value="SHIPPED">배송중</SelectItem>
-                  <SelectItem value="DELIVERED">배송완료</SelectItem>
-                  <SelectItem value="CANCELLED">주문취소</SelectItem>
+                  <SelectItem value="DELIVERED">배송 완료</SelectItem>
+                  <SelectItem value="CANCELLED">주문 취소</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -71,9 +71,8 @@ public class OrderService {
         
         // 배송 메시지 설정
         order.setDeliveryMessage(orderRequest.getDeliveryMessage());
-        
-        order.setOrderStatus(OrderStatus.PENDING);
-        order.setPaymentStatus(PaymentStatus.PENDING);
+
+        order.setOrderStatus(OrderStatus.PENDING_PAYMENT);
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         Set<OrderItem> orderItems = new HashSet<>();
@@ -250,7 +249,9 @@ public class OrderService {
         restoreStock(orderId);
 
         // 결제 완료된 경우 환불 처리
-        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+        if (order.getOrderStatus() == OrderStatus.PAID ||
+            order.getOrderStatus() == OrderStatus.PREPARING ||
+            order.getOrderStatus() == OrderStatus.SHIPPED) {
             Payment payment = paymentRepository.findByOrder(order)
                     .orElse(null);
 
@@ -260,13 +261,9 @@ public class OrderService {
                 payment.setRefundedAt(LocalDateTime.now());
                 payment.setRefundTransactionId("REFUND_" + System.currentTimeMillis());
                 payment.setRefundReason(cancellationReason);
-                payment.setStatus(PaymentStatus.FAILED);
+                // Payment 엔티티의 status는 별도 관리 (주문 상태와 독립)
                 paymentRepository.save(payment);
             }
-
-            order.setPaymentStatus(PaymentStatus.FAILED);
-        } else if (order.getPaymentStatus() == PaymentStatus.PENDING) {
-            order.setPaymentStatus(PaymentStatus.FAILED);
         }
 
         // 주문 상태 변경
@@ -314,7 +311,6 @@ public class OrderService {
     /**
      * 모든 주문 조회 (페이징, 필터링)
      * @param orderStatus 주문 상태 필터 (null이면 전체)
-     * @param paymentStatus 결제 상태 필터 (null이면 전체)
      * @param startDate 시작 날짜 (null이면 제한 없음)
      * @param endDate 종료 날짜 (null이면 제한 없음)
      * @param pageable 페이징 정보
@@ -323,7 +319,6 @@ public class OrderService {
     @Transactional(readOnly = true)
     public Page<Order> getAllOrders(
             OrderStatus orderStatus,
-            PaymentStatus paymentStatus,
             LocalDateTime startDate,
             LocalDateTime endDate,
             Pageable pageable) {
@@ -331,11 +326,11 @@ public class OrderService {
         Page<Order> orders;
 
         // 필터가 하나도 없으면 전체 조회
-        if (orderStatus == null && paymentStatus == null && startDate == null && endDate == null) {
+        if (orderStatus == null && startDate == null && endDate == null) {
             orders = orderRepository.findAllByOrderByCreatedAtDesc(pageable);
         } else {
             // 필터링 조회
-            orders = orderRepository.findOrdersWithFilters(orderStatus, paymentStatus, startDate, endDate, pageable);
+            orders = orderRepository.findOrdersWithFilters(orderStatus, startDate, endDate, pageable);
         }
 
         // Manually initialize lazy-loaded collections to avoid LazyInitializationException

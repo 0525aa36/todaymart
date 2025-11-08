@@ -60,7 +60,7 @@ public class PaymentService {
             throw new ForbiddenException("You are not authorized to request payment for this order");
         }
 
-        if (order.getPaymentStatus() != PaymentStatus.PENDING) {
+        if (order.getOrderStatus() != OrderStatus.PENDING_PAYMENT) {
             throw new RuntimeException("Payment already processed for order: " + orderId);
         }
 
@@ -88,12 +88,10 @@ public class PaymentService {
                 .orElseThrow(() -> new RuntimeException("Payment not found for order: " + webhookRequest.getOrderId()));
 
         if ("PAID".equalsIgnoreCase(webhookRequest.getStatus())) {
-            order.setPaymentStatus(PaymentStatus.PAID);
             order.setOrderStatus(OrderStatus.PAID);
             payment.setStatus(PaymentStatus.PAID);
         } else if ("FAILED".equalsIgnoreCase(webhookRequest.getStatus())) {
-            order.setPaymentStatus(PaymentStatus.FAILED);
-            order.setOrderStatus(OrderStatus.CANCELLED);
+            order.setOrderStatus(OrderStatus.PAYMENT_FAILED);
             payment.setStatus(PaymentStatus.FAILED);
             orderService.restoreStock(order.getId());
         }
@@ -140,7 +138,6 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.FAILED);
 
         order.setOrderStatus(OrderStatus.CANCELLED);
-        order.setPaymentStatus(PaymentStatus.FAILED);
 
         paymentRepository.save(payment);
         orderRepository.save(order);
@@ -208,7 +205,6 @@ public class PaymentService {
                 paymentRepository.save(payment);
 
                 // 주문 상태 업데이트
-                order.setPaymentStatus(PaymentStatus.PAID);
                 order.setOrderStatus(OrderStatus.PAID);
                 orderRepository.save(order);
 

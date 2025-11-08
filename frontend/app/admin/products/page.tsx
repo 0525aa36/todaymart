@@ -82,6 +82,14 @@ export default function AdminProductsPage() {
     stock: "",
     imageUrl: "",
     sellerId: "",
+    // 새로 추가된 필드
+    supplyPrice: "",
+    shippingFee: "3000",
+    canCombineShipping: false,
+    combineShippingUnit: "",
+    courierCompany: "",
+    minOrderQuantity: "1",
+    maxOrderQuantity: "",
   })
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
@@ -168,7 +176,10 @@ export default function AdminProductsPage() {
         auth: true,
       })
 
-      const fileUrls = data.fileUrls.map((url: string) => `${API_BASE_URL}${url}`)
+      // URL이 이미 절대 URL인 경우 그대로 사용, 아니면 API_BASE_URL 추가
+      const fileUrls = data.fileUrls.map((url: string) =>
+        url.startsWith('http://') || url.startsWith('https://') ? url : `${API_BASE_URL}${url}`
+      )
       setUploadedImages((prev) => [...prev, ...fileUrls])
       toast({
         title: "업로드 완료",
@@ -205,7 +216,10 @@ export default function AdminProductsPage() {
         auth: true,
       })
 
-      const fileUrls = data.fileUrls.map((url: string) => `${API_BASE_URL}${url}`)
+      // URL이 이미 절대 URL인 경우 그대로 사용, 아니면 API_BASE_URL 추가
+      const fileUrls = data.fileUrls.map((url: string) =>
+        url.startsWith('http://') || url.startsWith('https://') ? url : `${API_BASE_URL}${url}`
+      )
       setDescriptionImages((prev) => [...prev, ...fileUrls])
 
       const imageMarkdown = fileUrls.map((url: string) => `![이미지](${url})`).join("\n")
@@ -246,6 +260,14 @@ export default function AdminProductsPage() {
       imageUrl: uploadedImages.length > 0 ? uploadedImages[0] : (formData.imageUrl || null),
       imageUrls: uploadedImages.length > 0 ? uploadedImages.join(',') : null,
       sellerId: formData.sellerId ? parseInt(formData.sellerId) : null,
+      // 새로 추가된 필드
+      supplyPrice: formData.supplyPrice ? parseFloat(formData.supplyPrice) : null,
+      shippingFee: parseFloat(formData.shippingFee),
+      canCombineShipping: formData.canCombineShipping,
+      combineShippingUnit: formData.combineShippingUnit ? parseInt(formData.combineShippingUnit) : null,
+      courierCompany: formData.courierCompany || null,
+      minOrderQuantity: parseInt(formData.minOrderQuantity),
+      maxOrderQuantity: formData.maxOrderQuantity ? parseInt(formData.maxOrderQuantity) : null,
     }
 
     try {
@@ -275,7 +297,7 @@ export default function AdminProductsPage() {
     }
   }
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = (product: any) => {
     setEditingProduct(product)
     setFormData({
       name: product.name,
@@ -287,6 +309,14 @@ export default function AdminProductsPage() {
       stock: product.stock.toString(),
       imageUrl: product.imageUrl || "",
       sellerId: product.seller?.id.toString() || "",
+      // 새로 추가된 필드 (백엔드에서 안 오면 기본값)
+      supplyPrice: product.supplyPrice?.toString() || "",
+      shippingFee: product.shippingFee?.toString() || "3000",
+      canCombineShipping: product.canCombineShipping || false,
+      combineShippingUnit: product.combineShippingUnit?.toString() || "",
+      courierCompany: product.courierCompany || "",
+      minOrderQuantity: product.minOrderQuantity?.toString() || "1",
+      maxOrderQuantity: product.maxOrderQuantity?.toString() || "",
     })
 
     // 기존 이미지 URL들을 uploadedImages에 설정
@@ -339,6 +369,14 @@ export default function AdminProductsPage() {
       stock: "",
       imageUrl: "",
       sellerId: "",
+      // 새로 추가된 필드
+      supplyPrice: "",
+      shippingFee: "3000",
+      canCombineShipping: false,
+      combineShippingUnit: "",
+      courierCompany: "",
+      minOrderQuantity: "1",
+      maxOrderQuantity: "",
     })
     setUploadedImages([])
     setDescriptionImages([])
@@ -609,6 +647,103 @@ export default function AdminProductsPage() {
                         />
                       </div>
                     </div>
+
+                    {/* 배송 및 수량 정보 */}
+                    <div className="border-t pt-4 mt-2">
+                      <h3 className="font-semibold mb-3 text-sm text-gray-700">배송 정보</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="supplyPrice">공급가 (원)</Label>
+                          <Input
+                            id="supplyPrice"
+                            type="number"
+                            value={formData.supplyPrice}
+                            onChange={(e) => setFormData({ ...formData, supplyPrice: e.target.value })}
+                            min="0"
+                            placeholder="도매가 입력 (선택)"
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="shippingFee">배송비 (원) *</Label>
+                          <Input
+                            id="shippingFee"
+                            type="number"
+                            value={formData.shippingFee}
+                            onChange={(e) => setFormData({ ...formData, shippingFee: e.target.value })}
+                            required
+                            min="0"
+                            placeholder="3000"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div className="grid gap-2">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="canCombineShipping"
+                              checked={formData.canCombineShipping}
+                              onChange={(e) => setFormData({ ...formData, canCombineShipping: e.target.checked })}
+                              className="h-4 w-4"
+                            />
+                            <Label htmlFor="canCombineShipping">합포장 가능</Label>
+                          </div>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="combineShippingUnit">합포장 단위</Label>
+                          <Input
+                            id="combineShippingUnit"
+                            type="number"
+                            value={formData.combineShippingUnit}
+                            onChange={(e) => setFormData({ ...formData, combineShippingUnit: e.target.value })}
+                            min="1"
+                            placeholder="예: 5개씩"
+                            disabled={!formData.canCombineShipping}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid gap-2 mt-4">
+                        <Label htmlFor="courierCompany">택배사</Label>
+                        <Input
+                          id="courierCompany"
+                          value={formData.courierCompany}
+                          onChange={(e) => setFormData({ ...formData, courierCompany: e.target.value })}
+                          placeholder="예: CJ대한통운, 로젠택배"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 주문 수량 제한 */}
+                    <div className="border-t pt-4 mt-2">
+                      <h3 className="font-semibold mb-3 text-sm text-gray-700">주문 수량 설정</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="minOrderQuantity">최소 주문 수량 *</Label>
+                          <Input
+                            id="minOrderQuantity"
+                            type="number"
+                            value={formData.minOrderQuantity}
+                            onChange={(e) => setFormData({ ...formData, minOrderQuantity: e.target.value })}
+                            required
+                            min="1"
+                            placeholder="1"
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="maxOrderQuantity">최대 주문 수량</Label>
+                          <Input
+                            id="maxOrderQuantity"
+                            type="number"
+                            value={formData.maxOrderQuantity}
+                            onChange={(e) => setFormData({ ...formData, maxOrderQuantity: e.target.value })}
+                            min="1"
+                            placeholder="제한 없음"
+                          />
+                          <p className="text-xs text-muted-foreground">비워두면 제한 없음</p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="grid gap-2">
                       <Label htmlFor="productImages">상품 이미지 (여러 장 업로드 가능)</Label>
                       <Input

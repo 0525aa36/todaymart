@@ -40,6 +40,14 @@ public class CartService {
         Product product = productRepository.findByIdWithImagesAndOptions(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + request.getProductId()));
 
+        // 수량 검증
+        if (request.getQuantity() < product.getMinOrderQuantity()) {
+            throw new IllegalArgumentException("최소 주문 수량은 " + product.getMinOrderQuantity() + "개입니다");
+        }
+        if (product.getMaxOrderQuantity() != null && request.getQuantity() > product.getMaxOrderQuantity()) {
+            throw new IllegalArgumentException("최대 주문 수량은 " + product.getMaxOrderQuantity() + "개입니다");
+        }
+
         // 옵션 처리
         ProductOption productOption = null;
         if (request.getProductOptionId() != null) {
@@ -141,6 +149,15 @@ public class CartService {
 
         if (newQuantity <= 0) {
             throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
+
+        // 수량 검증
+        Product product = cartItem.getProduct();
+        if (newQuantity < product.getMinOrderQuantity()) {
+            throw new IllegalArgumentException("최소 주문 수량은 " + product.getMinOrderQuantity() + "개입니다");
+        }
+        if (product.getMaxOrderQuantity() != null && newQuantity > product.getMaxOrderQuantity()) {
+            throw new IllegalArgumentException("최대 주문 수량은 " + product.getMaxOrderQuantity() + "개입니다");
         }
 
         cartItem.setQuantity(newQuantity);

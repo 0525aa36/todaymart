@@ -56,7 +56,6 @@ public class UserDetailDto {
         private String orderNumber;
         private BigDecimal totalAmount;
         private String orderStatus;
-        private String paymentStatus;
         private LocalDateTime createdAt;
 
         public OrderSummary(Order order) {
@@ -64,7 +63,6 @@ public class UserDetailDto {
             this.orderNumber = order.getOrderNumber();
             this.totalAmount = order.getTotalAmount();
             this.orderStatus = order.getOrderStatus().name();
-            this.paymentStatus = order.getPaymentStatus().name();
             this.createdAt = order.getCreatedAt();
         }
     }
