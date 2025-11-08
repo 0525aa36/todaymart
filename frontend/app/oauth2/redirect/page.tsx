@@ -1,15 +1,15 @@
 "use client"
 
-import { useEffect } from "react"
+import { Suspense, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { API_BASE_URL } from "@/lib/api-client"
 
 /**
- * OAuth2 로그인 성공 후 리다이렉트 처리 페이지
- * 백엔드에서 JWT 토큰을 쿼리 파라미터로 전달받아 localStorage에 저장
+ * OAuth2 로그인 성공 후 리다이렉트 처리 컴포넌트
+ * useSearchParams 사용을 위해 Suspense로 감싸짐
  */
-export default function OAuth2RedirectPage() {
+function OAuth2RedirectHandler() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -90,5 +90,26 @@ export default function OAuth2RedirectPage() {
         <p className="text-lg text-muted-foreground">로그인 처리 중...</p>
       </div>
     </div>
+  )
+}
+
+/**
+ * OAuth2 로그인 성공 후 리다이렉트 처리 페이지
+ * 백엔드에서 JWT 토큰을 쿼리 파라미터로 전달받아 localStorage에 저장
+ */
+export default function OAuth2RedirectPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">로딩 중...</p>
+          </div>
+        </div>
+      }
+    >
+      <OAuth2RedirectHandler />
+    </Suspense>
   )
 }
