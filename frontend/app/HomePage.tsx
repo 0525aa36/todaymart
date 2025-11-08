@@ -4,7 +4,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ProductCard } from '@/components/product-card';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Trophy } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api-client';
@@ -137,28 +137,6 @@ export function HomePage() {
             <BannerCarousel />
           </section>
         )}
-
-        {/* Promotion Bar - Kurly Style */}
-        <section className="bg-white border-b">
-          <div className="container mx-auto px-4 max-w-6xl py-4">
-            <div className="flex items-center gap-3">
-              <Trophy className="h-5 w-5" style={{ color: COLORS.PRIMARY }} />
-              <div className="flex-1">
-                <Link
-                  href="/deals"
-                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                >
-                  <span className="font-bold text-lg">
-                    종료임박! 특가 ~61% &gt;
-                  </span>
-                </Link>
-                <p className="text-xs text-gray-500 mt-1">
-                  자신 있는 가격비교! 연중 최대 혜택가
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {loading ? (
           <div className="flex justify-center items-center py-20">

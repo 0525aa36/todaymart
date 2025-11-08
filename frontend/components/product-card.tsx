@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ShoppingCart } from "lucide-react"
@@ -36,8 +36,44 @@ export function ProductCard({
   hasOptions = false,
 }: ProductCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [cartQuantity, setCartQuantity] = useState(0)
   const router = useRouter()
   const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0
+
+  // 장바구니 수량 조회
+  const fetchCartQuantity = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setCartQuantity(0)
+        return
+      }
+
+      const cart = await apiFetch<{ cartItems: Array<{ product: { id: number }, quantity: number }> }>(
+        "/api/cart",
+        { auth: true }
+      )
+
+      const item = cart.cartItems.find(item => item.product.id === Number(id))
+      setCartQuantity(item?.quantity || 0)
+    } catch (error) {
+      setCartQuantity(0)
+    }
+  }, [id])
+
+  useEffect(() => {
+    fetchCartQuantity()
+
+    // 장바구니 업데이트 이벤트 리스너
+    const handleCartUpdate = () => {
+      fetchCartQuantity()
+    }
+    window.addEventListener("cartUpdated", handleCartUpdate)
+
+    return () => {
+      window.removeEventListener("cartUpdated", handleCartUpdate)
+    }
+  }, [fetchCartQuantity])
 
   const handleAddToCart = async (productId: string, quantity: number, optionId?: number) => {
     try {
@@ -68,38 +104,67 @@ export function ProductCard({
     }
   }
 
+  const handleCartButtonClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    // 옵션이 있는 상품은 모달 열기
+    if (hasOptions) {
+      setIsModalOpen(true)
+      return
+    }
+
+    // 옵션이 없는 상품은 바로 장바구니에 추가
+    const token = localStorage.getItem("token")
+    if (!token) {
+      toast.error("로그인이 필요합니다")
+      router.push("/login")
+      return
+    }
+
+    handleAddToCart(id, 1)
+  }
+
   return (
     <>
       <div className="relative bg-card rounded-lg overflow-hidden">
-        <Link href={`/product/${id}`} className="group block">
-          <div className="relative aspect-square overflow-hidden bg-muted">
+        <div className="relative aspect-square overflow-hidden bg-muted group">
+          <Link href={`/product/${id}`}>
             <Image
               src={image || "/placeholder.svg"}
               alt={name}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
-            {badge && <Badge className="absolute top-2 left-2 bg-accent text-accent-foreground">{badge}</Badge>}
-          </div>
-        </Link>
+          </Link>
+          {badge && <Badge className="absolute top-2 left-2 bg-accent text-accent-foreground">{badge}</Badge>}
+
+          {/* 장바구니 담기 버튼 - 이미지 우측 상단 */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2 bg-white/90 hover:bg-white shadow-md"
+            onClick={handleCartButtonClick}
+          >
+            <ShoppingCart className="h-5 w-5" style={{ color: COLORS.PRIMARY }} />
+            {cartQuantity > 0 && (
+              <span className="absolute -top-1 -right-1 min-h-5 min-w-5 rounded-full bg-primary text-white text-xs flex items-center justify-center px-1 font-bold">
+                {cartQuantity}
+              </span>
+            )}
+          </Button>
+        </div>
 
         <div className="pt-3">
-          <Button
-            variant="outline"
-            className="w-full rounded-none"
-            size="sm"
-            style={{
-              borderColor: COLORS.PRIMARY,
-              color: COLORS.PRIMARY
-            }}
-            onClick={(e) => {
-              e.preventDefault()
-              setIsModalOpen(true)
-            }}
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            담기
-          </Button>
+          <Link href={`/product/${id}`}>
+            <Button
+              variant="outline"
+              className="w-full transition-colors border-[#F6313A] text-[#F6313A] hover:bg-[#F6313A] hover:text-white hover:border-[#F6313A]"
+              size="sm"
+            >
+              바로 구매
+            </Button>
+          </Link>
         </div>
 
         <div className="py-3">
