@@ -9,6 +9,7 @@ import { Minus, Plus } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import Image from "next/image"
+import { COLORS } from "@/lib/colors"
 
 interface ProductOption {
   id: number
@@ -165,11 +166,16 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
               <Button variant="outline" onClick={onClose} className="flex-1" disabled={addingToCart}>
                 취소
               </Button>
-              <Button 
-                onClick={handleAddToCart} 
+              <Button
+                variant="outline"
+                onClick={handleAddToCart}
                 className="flex-1"
+                style={{
+                  borderColor: COLORS.PRIMARY,
+                  color: COLORS.PRIMARY
+                }}
                 disabled={
-                  addingToCart || 
+                  addingToCart ||
                   (product.options && product.options.length > 0 && !selectedOptionId)
                 }
               >

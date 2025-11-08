@@ -36,7 +36,8 @@
       "Bash(export AWS_REGION=ap-northeast-2:*)",
       "Bash(ssh:*)",
       "Bash(xargs:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(mysql:*)"
     ],
     "deny": [],
     "ask": []

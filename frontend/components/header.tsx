@@ -25,13 +25,16 @@ export function Header() {
   const [user, setUser] = useState<{
     name: string;
     email: string;
+    role?: string;
     roles?: string[];
   } | null>(null);
   const router = useRouter();
   const [cartCount, setCartCount] = useState(0);
 
-  // 관리자 여부 확인
+  // 관리자 여부 확인 (role 또는 roles 배열 모두 체크)
   const isAdmin =
+    user?.role === 'ADMIN' ||
+    user?.role === 'ROLE_ADMIN' ||
     user?.roles?.some((role) => role === 'ADMIN' || role === 'ROLE_ADMIN') ||
     false;
 
@@ -122,8 +125,7 @@ export function Header() {
                     >
                       마이페이지
                     </Link>
-                    {(user.roles?.includes('ADMIN') ||
-                      user.roles?.includes('ROLE_ADMIN')) && (
+                    {isAdmin && (
                       <Link
                         href="/admin"
                         className="text-primary hover:text-primary/80 transition-colors font-medium"
@@ -177,9 +179,8 @@ export function Header() {
                   className="object-contain"
                   unoptimized
                 />
-                <div className="text-2xl font-bold">
-                  <span style={{ color: COLORS.SECONDARY_COLOR }}>오늘</span>
-                  <span className="text-white">마트</span>
+                <div className="text-2xl font-bold text-white">
+                  오늘마트
                 </div>
               </Link>
 

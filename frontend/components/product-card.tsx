@@ -10,6 +10,7 @@ import { AddToCartModal } from "@/components/add-to-cart-modal"
 import { apiFetch } from "@/lib/api-client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { COLORS } from "@/lib/colors"
 
 interface ProductCardProps {
   id: string
@@ -84,8 +85,13 @@ export function ProductCard({
 
         <div className="pt-3">
           <Button
+            variant="outline"
             className="w-full rounded-none"
             size="sm"
+            style={{
+              borderColor: COLORS.PRIMARY,
+              color: COLORS.PRIMARY
+            }}
             onClick={(e) => {
               e.preventDefault()
               setIsModalOpen(true)
