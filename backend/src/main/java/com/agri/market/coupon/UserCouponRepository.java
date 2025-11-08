@@ -1,5 +1,6 @@
 package com.agri.market.coupon;
 
+import com.agri.market.order.Order;
 import com.agri.market.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -70,4 +71,9 @@ public interface UserCouponRepository extends JpaRepository<UserCoupon, Long> {
      */
     @Query("SELECT uc FROM UserCoupon uc WHERE uc.expiresAt < :now AND uc.usedAt IS NULL")
     List<UserCoupon> findExpiredCoupons(@Param("now") LocalDateTime now);
+
+    /**
+     * 주문에 사용된 쿠폰 조회
+     */
+    Optional<UserCoupon> findByOrder(Order order);
 }

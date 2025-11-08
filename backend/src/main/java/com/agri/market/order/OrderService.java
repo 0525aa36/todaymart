@@ -3,7 +3,11 @@ package com.agri.market.order;
 import com.agri.market.cart.Cart;
 import com.agri.market.cart.CartItem;
 import com.agri.market.cart.CartRepository;
+import com.agri.market.coupon.Coupon;
+import com.agri.market.coupon.UserCoupon;
+import com.agri.market.coupon.UserCouponService;
 import com.agri.market.dto.OrderRequest;
+import com.agri.market.exception.BusinessException;
 import com.agri.market.exception.ForbiddenException;
 import com.agri.market.notification.NotificationService;
 import com.agri.market.notification.NotificationType;
@@ -37,11 +41,12 @@ public class OrderService {
     private final PaymentRepository paymentRepository;
 
     private final NotificationService notificationService;
+    private final UserCouponService userCouponService;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
                         UserRepository userRepository, ProductRepository productRepository,
                         CartRepository cartRepository, PaymentRepository paymentRepository,
-                        NotificationService notificationService) {
+                        NotificationService notificationService, UserCouponService userCouponService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.userRepository = userRepository;
@@ -49,6 +54,7 @@ public class OrderService {
         this.cartRepository = cartRepository;
         this.paymentRepository = paymentRepository;
         this.notificationService = notificationService;
+        this.userCouponService = userCouponService;
     }
 
     @Transactional
@@ -100,8 +106,58 @@ public class OrderService {
 
         order.setOrderItems(orderItems);
         order.setTotalAmount(totalAmount);
+
+        // 쿠폰 적용 로직
+        BigDecimal couponDiscountAmount = BigDecimal.ZERO;
+        UserCoupon appliedUserCoupon = null;
+
+        if (orderRequest.getCouponId() != null) {
+            // UserCoupon 조회 및 검증
+            appliedUserCoupon = userCouponService.getUserCouponById(orderRequest.getCouponId());
+
+            // 쿠폰 사용 가능 여부 확인
+            if (!appliedUserCoupon.isAvailable()) {
+                if (appliedUserCoupon.isUsed()) {
+                    throw new BusinessException("이미 사용된 쿠폰입니다.", "COUPON_ALREADY_USED");
+                }
+                if (appliedUserCoupon.isExpired()) {
+                    throw new BusinessException("만료된 쿠폰입니다.", "COUPON_EXPIRED");
+                }
+                throw new BusinessException("사용할 수 없는 쿠폰입니다.", "COUPON_UNAVAILABLE");
+            }
+
+            // 쿠폰 소유자 확인
+            if (!appliedUserCoupon.getUser().getId().equals(user.getId())) {
+                throw new BusinessException("본인의 쿠폰만 사용할 수 있습니다.", "COUPON_OWNER_MISMATCH");
+            }
+
+            Coupon coupon = appliedUserCoupon.getCoupon();
+
+            // 최소 주문 금액 확인
+            if (!coupon.meetsMinOrderAmount(totalAmount)) {
+                throw new BusinessException(
+                    String.format("최소 주문 금액 %,d원 이상부터 사용 가능합니다.", coupon.getMinOrderAmount().intValue()),
+                    "COUPON_MIN_ORDER_AMOUNT_NOT_MET"
+                );
+            }
+
+            // 할인 금액 계산
+            couponDiscountAmount = coupon.calculateDiscount(totalAmount);
+            order.setAppliedCoupon(coupon);
+            order.setCouponDiscountAmount(couponDiscountAmount);
+        }
+
+        // 최종 금액 계산 (상품 금액 - 쿠폰 할인 + 배송비)
+        BigDecimal finalAmount = totalAmount.subtract(couponDiscountAmount).add(order.getShippingFee());
+        order.setFinalAmount(finalAmount);
+
         Order savedOrder = orderRepository.save(order);
         orderItemRepository.saveAll(orderItems);
+
+        // 쿠폰 사용 처리
+        if (appliedUserCoupon != null) {
+            userCouponService.useCoupon(appliedUserCoupon.getId(), savedOrder);
+        }
 
         // 주문 생성 시에는 장바구니를 비우지 않음 (결제 완료 후에 비움)
 
@@ -247,6 +303,15 @@ public class OrderService {
 
         // 재고 복구
         restoreStock(orderId);
+
+        // 쿠폰 사용 취소
+        if (order.getAppliedCoupon() != null) {
+            // 주문에 사용된 UserCoupon 찾기
+            UserCoupon userCoupon = userCouponService.findByOrder(order);
+            if (userCoupon != null && userCoupon.isUsed()) {
+                userCouponService.cancelCouponUsage(userCoupon.getId());
+            }
+        }
 
         // 결제 완료된 경우 환불 처리
         if (order.getOrderStatus() == OrderStatus.PAID ||
