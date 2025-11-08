@@ -214,6 +214,10 @@ public class OrderService {
             order.getOrderItems().forEach(item -> {
                 item.getProduct().getName();
             });
+            // Initialize appliedCoupon if present
+            if (order.getAppliedCoupon() != null) {
+                order.getAppliedCoupon().getName();
+            }
             return Optional.of(order);
         }
 
@@ -227,6 +231,10 @@ public class OrderService {
         order.getOrderItems().forEach(item -> {
             item.getProduct().getName();
         });
+        // Initialize appliedCoupon if present
+        if (order.getAppliedCoupon() != null) {
+            order.getAppliedCoupon().getName();
+        }
 
         return Optional.of(order);
     }
@@ -248,6 +256,10 @@ public class OrderService {
                     item.getProduct().getImages().size(); // Product images 초기화
                 }
             });
+            // Initialize appliedCoupon if present
+            if (order.getAppliedCoupon() != null) {
+                order.getAppliedCoupon().getName();
+            }
         });
 
         return orders;
