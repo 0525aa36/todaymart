@@ -7,12 +7,12 @@ SET @dbname = DATABASE();
 SET @payment_status_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = 'orders' AND COLUMN_NAME = 'payment_status');
 
--- Only proceed if payment_status exists (migration not yet run)
-SET @migration_needed = @payment_status_exists > 0;
-
--- Step 1: Add new_order_status column if needed
-SET @preparedStatement = (SELECT IF(@migration_needed,
-  CONCAT('ALTER TABLE orders ADD COLUMN IF NOT EXISTS new_order_status VARCHAR(50) COMMENT ''통합된 주문 상태'''),
+-- Step 1: Add new_order_status column if needed and migration not yet run
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = 'orders' AND COLUMN_NAME = 'new_order_status') = 0
+  AND @payment_status_exists > 0,
+  'ALTER TABLE orders ADD COLUMN new_order_status VARCHAR(50) COMMENT ''통합된 주문 상태''',
   'SELECT 1'
 ));
 PREPARE stmt FROM @preparedStatement;
@@ -20,7 +20,7 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- Step 2: Migrate existing data if migration needed
-SET @preparedStatement = (SELECT IF(@migration_needed,
+SET @preparedStatement = (SELECT IF(@payment_status_exists > 0,
   'UPDATE orders SET new_order_status = CASE
     WHEN payment_status = ''FAILED'' THEN ''PAYMENT_FAILED''
     WHEN order_status = ''PENDING'' AND payment_status = ''PENDING'' THEN ''PENDING_PAYMENT''

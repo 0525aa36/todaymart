@@ -4,6 +4,7 @@ import com.agri.market.cart.CartItemRepository;
 import com.agri.market.dto.ProductListDto;
 import com.agri.market.dto.ProductOptionRequest;
 import com.agri.market.dto.ProductRequest;
+import com.agri.market.exception.BusinessException;
 import com.agri.market.order.OrderItemRepository;
 import com.agri.market.review.ReviewRepository;
 import com.agri.market.seller.Seller;
@@ -181,13 +182,13 @@ public class ProductService {
     @Transactional
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found for this id :: " + id));
+                .orElseThrow(() -> new BusinessException("상품을 찾을 수 없습니다. ID: " + id, "PRODUCT_NOT_FOUND"));
 
         // 주문 내역이 있는 상품은 삭제 불가 (데이터 무결성 및 감사 추적 유지)
         if (orderItemRepository.existsByProduct(product)) {
-            throw new RuntimeException("Cannot delete product that has been ordered. " +
-                    "Product ID: " + id + " has existing order history. " +
-                    "Consider marking it as out of stock instead.");
+            throw new BusinessException(
+                    "주문 이력이 있는 상품은 삭제할 수 없습니다. 대신 재고를 0으로 설정하여 판매를 중단할 수 있습니다.",
+                    "PRODUCT_HAS_ORDER_HISTORY");
         }
 
         // 주문되지 않은 상품의 경우, 연관된 데이터를 먼저 삭제

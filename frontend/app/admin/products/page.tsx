@@ -347,13 +347,29 @@ export default function AdminProductsPage() {
         description: "상품이 삭제되었습니다.",
       })
       fetchProducts()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting product:", error)
-      toast({
-        title: "오류",
-        description: getErrorMessage(error, "상품 삭제 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
+
+      // 주문 이력이 있는 상품인 경우 특별한 안내
+      if (error?.payload?.errorCode === "PRODUCT_HAS_ORDER_HISTORY") {
+        const shouldSetStockZero = confirm(
+          "주문 이력이 있는 상품은 삭제할 수 없습니다.\n\n대신 재고를 0으로 설정하여 판매를 중단하시겠습니까?"
+        )
+
+        if (shouldSetStockZero) {
+          // 재고를 0으로 설정하는 로직은 별도로 구현 필요
+          toast({
+            title: "안내",
+            description: "상품 수정 페이지에서 재고를 0으로 설정해주세요.",
+          })
+        }
+      } else {
+        toast({
+          title: "삭제 실패",
+          description: getErrorMessage(error, "상품 삭제 중 오류가 발생했습니다."),
+          variant: "destructive",
+        })
+      }
     }
   }
 
