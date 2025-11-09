@@ -17,7 +17,10 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronRight,
-  Ticket
+  Ticket,
+  MessageSquare,
+  Bell,
+  MessageCircle
 } from 'lucide-react'
 import { API_BASE_URL } from '@/lib/api-client'
 
@@ -116,7 +119,9 @@ export default function AdminLayout({
     {
       label: '고객센터',
       items: [
-        { icon: HelpCircle, label: '고객센터', href: '/admin/help' },
+        { icon: HelpCircle, label: '자주 묻는 질문', href: '/admin/help/faq' },
+        { icon: Bell, label: '공지사항', href: '/admin/help/notices' },
+        { icon: MessageCircle, label: '1:1문의 관리', href: '/admin/help/inquiries' },
       ]
     },
   ]

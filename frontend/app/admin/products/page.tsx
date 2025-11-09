@@ -875,7 +875,7 @@ export default function AdminProductsPage() {
                                   {product.price.toLocaleString()}원
                                 </span>
                                 <span className="font-semibold text-gray-900">
-                                  {Math.floor(product.price * (1 - product.discountRate / 100)).toLocaleString()}원
+                                  {Math.round(product.price * (1 - product.discountRate / 100)).toLocaleString()}원
                                 </span>
                               </div>
                             ) : (

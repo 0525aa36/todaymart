@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -97,11 +98,13 @@ public class Product {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    // 할인이 적용된 실제 판매 가격 계산
+    // 할인이 적용된 실제 판매 가격 계산 (반올림하여 정수로 반환)
     public BigDecimal getDiscountedPrice() {
         if (discountRate != null && discountRate.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal discount = price.multiply(discountRate).divide(new BigDecimal("100"));
-            return price.subtract(discount);
+            BigDecimal discountedPrice = price.subtract(discount);
+            // 반올림하여 정수로 만들기 (1원 단위 제거)
+            return discountedPrice.setScale(0, RoundingMode.HALF_UP);
         }
         return price;
     }
