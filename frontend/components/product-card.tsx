@@ -42,13 +42,13 @@ export function ProductCard({
 
   // 장바구니 수량 조회
   const fetchCartQuantity = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        setCartQuantity(0)
-        return
-      }
+    const token = localStorage.getItem("token")
+    if (!token) {
+      setCartQuantity(0)
+      return
+    }
 
+    try {
       const cart = await apiFetch<{ cartItems: Array<{ product: { id: number }, quantity: number }> }>(
         "/api/cart",
         { auth: true }
@@ -57,6 +57,7 @@ export function ProductCard({
       const item = cart.cartItems.find(item => item.product.id === Number(id))
       setCartQuantity(item?.quantity || 0)
     } catch (error) {
+      // 401 에러 등은 조용히 처리
       setCartQuantity(0)
     }
   }, [id])
