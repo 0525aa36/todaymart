@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -27,7 +27,7 @@ const FAQ_CATEGORIES = {
   ETC: "기타",
 }
 
-export default function FaqPage() {
+function FaqContent() {
   const searchParams = useSearchParams()
   const initialCategory = searchParams.get('category') || 'ALL'
 
@@ -185,5 +185,21 @@ export default function FaqPage() {
 
       <Footer />
     </div>
+  )
+}
+
+export default function FaqPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <LoadingSpinner size="lg" />
+        </main>
+        <Footer />
+      </div>
+    }>
+      <FaqContent />
+    </Suspense>
   )
 }
