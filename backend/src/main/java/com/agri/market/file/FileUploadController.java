@@ -41,7 +41,7 @@ public class FileUploadController {
     }
 
     @PostMapping("/upload-multiple")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, List<String>>> uploadMultipleFiles(@RequestParam("files") MultipartFile[] files) {
         List<String> fileNames = new ArrayList<>();
         List<String> fileUrls = new ArrayList<>();

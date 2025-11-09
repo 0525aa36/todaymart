@@ -20,7 +20,7 @@ public class InquiryService {
 
     @Transactional(readOnly = true)
     public List<Inquiry> getAllInquiries() {
-        return inquiryRepository.findAllByOrderByStatusAscCreatedAtDesc();
+        return inquiryRepository.findAllWithUserAndAnsweredBy();
     }
 
     @Transactional(readOnly = true)
@@ -63,7 +63,10 @@ public class InquiryService {
         inquiry.setAnsweredAt(LocalDateTime.now());
         inquiry.setAnsweredBy(admin);
 
-        return inquiryRepository.save(inquiry);
+        inquiryRepository.save(inquiry);
+
+        // Fetch join으로 다시 조회하여 lazy loading proxy 문제 해결
+        return inquiryRepository.findByIdWithUserAndAnsweredBy(id);
     }
 
     @Transactional

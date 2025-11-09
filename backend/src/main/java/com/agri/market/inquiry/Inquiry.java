@@ -1,6 +1,7 @@
 package com.agri.market.inquiry;
 
 import com.agri.market.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @Table(name = "inquiries")
 @Getter
 @Setter
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Inquiry {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

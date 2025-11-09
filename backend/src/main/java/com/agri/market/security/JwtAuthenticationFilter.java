@@ -32,6 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
+        String method = request.getMethod();
 
         // OAuth2 경로는 필터 제외
         return path.startsWith("/oauth2/") ||
@@ -40,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                path.equals("/api/auth/register") ||
                path.startsWith("/api/products") ||
                path.startsWith("/api/reviews/product/") ||
-               path.startsWith("/api/files/") ||
+               (path.startsWith("/api/files/") && "GET".equals(method)) || // GET 요청만 필터 제외
                path.startsWith("/api/banners") ||
                path.startsWith("/api/coupons/") ||
                path.startsWith("/actuator/health") ||

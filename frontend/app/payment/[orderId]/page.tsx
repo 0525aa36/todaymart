@@ -81,9 +81,9 @@ export default function PaymentPage() {
         console.log("[Payment] Order ID:", order.id)
         console.log("[Payment] Total Amount:", order.totalAmount)
 
-        if (!clientKey || clientKey.includes("yZqmkKeP8g")) {
-          // 유효하지 않은 예시 키 감지
-          console.warn("[Payment] 유효하지 않은 API 키입니다. 토스페이먼츠 개발자 센터에서 실제 키를 발급받으세요.")
+        if (!clientKey) {
+          // 클라이언트 키가 설정되지 않음
+          console.warn("[Payment] 토스페이먼츠 API 키가 설정되지 않았습니다.")
           toast({
             title: "결제 설정 필요",
             description: "토스페이먼츠 API 키가 설정되지 않았습니다. 개발자에게 문의하세요.",
@@ -91,6 +91,11 @@ export default function PaymentPage() {
           })
           setWidgetReady(false)
           return
+        }
+
+        // 테스트 키 사용 여부 로그
+        if (clientKey.startsWith('test_')) {
+          console.log("[Payment] 테스트 환경으로 결제를 진행합니다. 실제 출금되지 않습니다.")
         }
 
         const customerKey = `customer_${order.user.id}_${Date.now()}`

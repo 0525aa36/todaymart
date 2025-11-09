@@ -28,10 +28,11 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ShoppingCart, Heart, Share2, Minus, Plus, Star, Truck, Shield, RefreshCw } from "lucide-react"
 import { ApiError, apiFetch, getErrorMessage } from "@/lib/api-client"
+import { marked } from "marked"
 
 interface Product {
   id: number
@@ -401,6 +402,12 @@ export function ProductDetailPage() {
     })
   }
 
+  // Convert markdown to HTML
+  const descriptionHtml = useMemo(() => {
+    if (!product) return ""
+    return marked(product.description) as string
+  }, [product])
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -650,7 +657,7 @@ export function ProductDetailPage() {
                   <h3 className="text-xl font-bold">상품 설명</h3>
                   <div
                     className="leading-relaxed [&_img]:mx-auto [&_img]:block [&_img]:my-4"
-                    dangerouslySetInnerHTML={{ __html: product.description }}
+                    dangerouslySetInnerHTML={{ __html: descriptionHtml }}
                   />
                 </div>
               </div>

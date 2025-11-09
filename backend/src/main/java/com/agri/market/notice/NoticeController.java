@@ -33,6 +33,12 @@ public class NoticeController {
 
     // Admin endpoints
     @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/notices")
+    public ResponseEntity<List<Notice>> getAdminNotices() {
+        return ResponseEntity.ok(noticeService.getAllNotices());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/admin/notices")
     public ResponseEntity<Notice> createNotice(@RequestBody Notice notice) {
         return ResponseEntity.ok(noticeService.createNotice(notice));

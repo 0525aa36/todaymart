@@ -547,13 +547,14 @@ export default function AdminProductsPage() {
             <p className="text-sm text-gray-500 mt-1">등록된 상품을 관리하고 새 상품을 추가하세요</p>
           </div>
 
+          <Link href="/admin/products/new">
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              상품 등록
+            </Button>
+          </Link>
+
           <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setEditingProduct(null)} className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" />
-                상품 등록
-              </Button>
-            </DialogTrigger>
               <DialogContent className="sm:max-w-[625px]">
                 <form onSubmit={handleSubmit}>
                   <DialogHeader>

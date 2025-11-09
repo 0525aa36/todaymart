@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -87,7 +88,7 @@ public class SecurityConfig {
                         .requestMatchers("/login/oauth2/code/**").permitAll() // OAuth2 callback
                         .requestMatchers("/api/products/**").permitAll()
                         .requestMatchers("/api/reviews/product/**").permitAll() // Public review endpoints
-                        .requestMatchers("/api/files/**").permitAll() // Public file access (images)
+                        .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll() // Public file download (images)
                         .requestMatchers("/api/banners").permitAll() // Public banner endpoints
                         .requestMatchers("/api/coupons/**").permitAll() // Public coupon endpoints (active, validate, code)
                         .requestMatchers("/api/notifications/stream").permitAll() // SSE endpoint with token auth

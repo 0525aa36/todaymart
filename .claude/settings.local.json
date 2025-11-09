@@ -50,7 +50,10 @@
       "WebFetch(domain:todaymart.co.kr)",
       "Bash(mkdir:*)",
       "Bash(./gradlew clean bootRun:*)",
-      "Bash(GOOGLE_SHEETS_ENABLED=true GOOGLE_SHEETS_CREDENTIALS_PATH=./google-credentials.json ./gradlew bootRun:*)"
+      "Bash(GOOGLE_SHEETS_ENABLED=true GOOGLE_SHEETS_CREDENTIALS_PATH=./google-credentials.json ./gradlew bootRun:*)",
+      "Bash(kill:*)",
+      "WebFetch(domain:docs.tosspayments.com)",
+      "Bash(pnpm add:*)"
     ],
     "deny": [],
     "ask": []
