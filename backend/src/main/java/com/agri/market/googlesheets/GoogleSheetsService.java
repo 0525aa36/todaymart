@@ -69,6 +69,9 @@ public class GoogleSheetsService {
         syncLog.setSyncTime(LocalDateTime.now());
 
         try {
+            log.info("Starting sync for seller: {} (ID: {})", seller.getName(), sellerId);
+            log.info("Spreadsheet ID: {}", seller.getSpreadsheetId());
+
             // 판매자의 주문 내역 조회
             List<Order> orders = orderRepository.findAll().stream()
                     .filter(order -> order.getOrderItems().stream()
@@ -76,11 +79,15 @@ public class GoogleSheetsService {
                                     && item.getProduct().getSeller().getId().equals(sellerId)))
                     .collect(Collectors.toList());
 
+            log.info("Found {} orders for seller {}", orders.size(), seller.getName());
+
             // 스프레드시트 데이터 준비
             List<List<Object>> values = prepareOrderData(orders, sellerId);
+            log.info("Prepared {} rows of data (including header)", values.size());
 
             // 스프레드시트 업데이트
             updateSpreadsheet(seller.getSpreadsheetId(), values);
+            log.info("Successfully updated spreadsheet");
 
             syncLog.setStatus(GoogleSheetsSyncLog.SyncStatus.SUCCESS);
             syncLog.setRowsUpdated(values.size() - 1); // 헤더 제외
