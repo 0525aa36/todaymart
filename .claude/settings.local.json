@@ -45,7 +45,8 @@
       "Bash(/tmp/current-github-policy.json)",
       "Bash(/tmp/ecs-logs.json)",
       "Bash(killall:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "WebFetch(domain:pages.tosspayments.com)"
     ],
     "deny": [],
     "ask": []
