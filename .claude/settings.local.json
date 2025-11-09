@@ -49,7 +49,8 @@
       "WebFetch(domain:pages.tosspayments.com)",
       "WebFetch(domain:todaymart.co.kr)",
       "Bash(mkdir:*)",
-      "Bash(./gradlew clean bootRun:*)"
+      "Bash(./gradlew clean bootRun:*)",
+      "Bash(GOOGLE_SHEETS_ENABLED=true GOOGLE_SHEETS_CREDENTIALS_PATH=./google-credentials.json ./gradlew bootRun:*)"
     ],
     "deny": [],
     "ask": []

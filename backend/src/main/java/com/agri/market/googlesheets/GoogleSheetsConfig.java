@@ -33,7 +33,7 @@ public class GoogleSheetsConfig {
     private String credentialsPath;
 
     @Bean
-    public Sheets googleSheetsService() throws IOException, GeneralSecurityException {
+    public Sheets googleSheetsClient() throws IOException, GeneralSecurityException {
         final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
 
         GoogleCredentials credentials;

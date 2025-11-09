@@ -94,6 +94,7 @@ export default function AdminOrdersPage() {
   const [updating, setUpdating] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
+  const [googleSheetsEnabled, setGoogleSheetsEnabled] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -109,7 +110,7 @@ export default function AdminOrdersPage() {
 
     fetchSellers()
     fetchOrders()
-    fetchLastSyncTime()
+    checkGoogleSheetsEnabled()
   }, [])
 
   useEffect(() => {
@@ -231,14 +232,16 @@ export default function AdminOrdersPage() {
     setTrackingDialogOpen(true)
   }
 
-  const fetchLastSyncTime = async () => {
+  const checkGoogleSheetsEnabled = async () => {
     try {
       const response = await apiFetch<{ success: boolean; data: { lastSyncTime: string | null } }>("/api/admin/sheets/last-sync", { auth: true })
+      setGoogleSheetsEnabled(true)
       if (response.data && response.data.lastSyncTime) {
         setLastSyncTime(response.data.lastSyncTime)
       }
     } catch (error) {
-      // Google Sheets가 비활성화되어 있을 수 있음 - 무시
+      // Google Sheets가 비활성화되어 있음
+      setGoogleSheetsEnabled(false)
       console.log("Google Sheets sync not available")
     }
   }
