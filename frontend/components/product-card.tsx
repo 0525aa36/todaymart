@@ -10,7 +10,6 @@ import { AddToCartModal } from "@/components/add-to-cart-modal"
 import { apiFetch } from "@/lib/api-client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { COLORS } from "@/lib/colors"
 
 interface ProductCardProps {
   id: string
@@ -147,7 +146,7 @@ export function ProductCard({
             className="absolute top-2 right-2 bg-white/90 hover:bg-white shadow-md"
             onClick={handleCartButtonClick}
           >
-            <ShoppingCart className="h-5 w-5" style={{ color: COLORS.PRIMARY }} />
+            <ShoppingCart className="h-5 w-5 text-primary" />
             {cartQuantity > 0 && (
               <span className="absolute -top-1 -right-1 min-h-5 min-w-5 rounded-full bg-primary text-white text-xs flex items-center justify-center px-1 font-bold">
                 {cartQuantity}
@@ -160,7 +159,7 @@ export function ProductCard({
           <Link href={`/product/${id}`}>
             <Button
               variant="outline"
-              className="w-full transition-colors border-[#F6313A] text-[#F6313A] hover:bg-[#F6313A] hover:text-white hover:border-[#F6313A]"
+              className="w-full transition-colors border-primary text-primary hover:bg-primary hover:text-white hover:border-primary"
               size="sm"
             >
               바로 구매

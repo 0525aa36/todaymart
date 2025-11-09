@@ -281,7 +281,7 @@ export function MyPage() {
                     </Link>
 
                     <Link
-                      href="/mypage/inquiries"
+                      href="/help?tab=inquiries"
                       className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors"
                     >
                       <div className="flex items-center gap-3">

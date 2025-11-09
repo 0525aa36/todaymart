@@ -1,27 +1,134 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ChevronRight } from "lucide-react"
 import Link from "next/link"
-import { COLORS } from "@/lib/colors"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { apiFetch, API_BASE_URL } from "@/lib/api-client"
+import { toast } from "sonner"
+import { LoadingSpinner } from "@/components/loading-spinner"
 
-type MenuItem = 'notices' | 'faq' | 'inquiries' | 'bulk-inquiry'
+type MenuItem = 'notices' | 'faq' | 'inquiries'
 
-export default function HelpCenterPage() {
-  const [activeMenu, setActiveMenu] = useState<MenuItem>('inquiries')
+const INQUIRY_CATEGORIES = [
+  "상품문의",
+  "배송문의",
+  "결제문의",
+  "취소/환불",
+  "교환/반품",
+  "회원정보",
+  "기타",
+]
+
+function HelpCenterContent() {
+  const searchParams = useSearchParams()
+  const [activeMenu, setActiveMenu] = useState<MenuItem>('notices')
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const [formData, setFormData] = useState({
+    category: "상품문의",
+    title: "",
+    content: "",
+    attachmentUrl: "",
+  })
+
+  useEffect(() => {
+    const tab = searchParams.get('tab') as MenuItem | null
+    if (tab && ['notices', 'faq', 'inquiries'].includes(tab)) {
+      setActiveMenu(tab)
+    }
+  }, [searchParams])
 
   const menuItems = [
-    { id: 'notices' as MenuItem, label: '공지사항', href: '/help/notices' },
-    { id: 'faq' as MenuItem, label: '자주하는 질문', href: '/help/faq' },
-    { id: 'inquiries' as MenuItem, label: '1:1 문의', href: '/mypage/inquiries' },
-    { id: 'bulk-inquiry' as MenuItem, label: '대량 주문 문의', subtitle: '1:1 문의하기' },
+    { id: 'notices' as MenuItem, label: '공지사항' },
+    { id: 'faq' as MenuItem, label: '자주하는 질문' },
+    { id: 'inquiries' as MenuItem, label: '1:1 문의' },
   ]
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("파일 크기는 10MB 이하여야 합니다")
+      return
+    }
+
+    setUploadingFile(true)
+
+    try {
+      const uploadFormData = new FormData()
+      uploadFormData.append("file", file)
+
+      const response = await fetch(`${API_BASE_URL}/api/files/upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: uploadFormData,
+      })
+
+      if (!response.ok) {
+        throw new Error("Upload failed")
+      }
+
+      const data = await response.json()
+      setFormData((prev) => ({ ...prev, attachmentUrl: data.fileUrl || data.url }))
+      toast.success("파일이 업로드되었습니다")
+    } catch (error) {
+      console.error("Error uploading file:", error)
+      toast.error("파일 업로드에 실패했습니다")
+    } finally {
+      setUploadingFile(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const token = localStorage.getItem("token")
+    if (!token) {
+      toast.error("로그인이 필요합니다")
+      return
+    }
+
+    if (!formData.title.trim()) {
+      toast.error("제목을 입력해주세요")
+      return
+    }
+
+    if (!formData.content.trim()) {
+      toast.error("내용을 입력해주세요")
+      return
+    }
+
+    try {
+      await apiFetch("/api/inquiries", {
+        auth: true,
+        method: "POST",
+        body: JSON.stringify(formData),
+      })
+      toast.success("문의가 등록되었습니다")
+      setFormData({
+        category: "상품문의",
+        title: "",
+        content: "",
+        attachmentUrl: "",
+      })
+    } catch (error) {
+      console.error("Error creating inquiry:", error)
+      toast.error("문의 등록에 실패했습니다")
+    }
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      <Header />
+    <>
 
       <main className="flex-1">
         {/* 페이지 타이틀 */}
@@ -39,64 +146,42 @@ export default function HelpCenterPage() {
               <nav className="space-y-1">
                 {menuItems.map((item) => {
                   const isActive = activeMenu === item.id
-                  const isLink = !!item.href
 
-                  const content = (
+                  return (
                     <div
+                      key={item.id}
                       className={`
                         flex items-center justify-between px-4 py-4 rounded-lg cursor-pointer transition-all
                         ${isActive
-                          ? 'bg-purple-50 border-l-4 border-purple-600 font-semibold text-purple-600'
-                          : 'hover:bg-gray-50 border-l-4 border-transparent text-gray-700'
+                          ? 'bg-primary/10 border-l-4 border-primary font-semibold text-primary'
+                          : 'hover:bg-muted border-l-4 border-transparent text-foreground'
                         }
                       `}
                       onClick={() => setActiveMenu(item.id)}
                     >
                       <div>
-                        <div className={isActive ? 'text-purple-600' : 'text-gray-900'}>
+                        <div className={isActive ? 'text-primary' : 'text-foreground'}>
                           {item.label}
                         </div>
-                        {item.subtitle && (
-                          <div className="text-xs text-gray-500 mt-1">{item.subtitle}</div>
-                        )}
                       </div>
-                      <ChevronRight className={`h-5 w-5 ${isActive ? 'text-purple-600' : 'text-gray-400'}`} />
+                      <ChevronRight className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                     </div>
-                  )
-
-                  return isLink ? (
-                    <Link key={item.id} href={item.href}>
-                      {content}
-                    </Link>
-                  ) : (
-                    <div key={item.id}>{content}</div>
                   )
                 })}
               </nav>
-
-              {/* 도움이 필요하신가요? */}
-              <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-                <h3 className="font-semibold mb-3 text-sm">도움이 필요하신가요 ?</h3>
-                <Link href="/mypage/inquiries">
-                  <div className="text-sm text-purple-600 hover:text-purple-700 cursor-pointer flex items-center">
-                    1:1 문의하기
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </div>
-                </Link>
-              </div>
             </aside>
 
             {/* 우측 컨텐츠 영역 */}
             <div className="flex-1">
               {activeMenu === 'notices' && (
                 <div>
-                  <h2 className="text-2xl font-bold mb-6">공지사항</h2>
-                  <div className="border rounded-lg">
-                    <div className="bg-gray-50 px-6 py-4 border-b flex items-center">
+                  <h2 className="text-2xl font-bold mb-6 text-primary">공지사항</h2>
+                  <div className="border border-primary/20 rounded-lg">
+                    <div className="bg-primary/5 px-6 py-4 border-b border-primary/20 flex items-center">
                       <div className="flex-1 text-center font-semibold">제목</div>
                       <div className="w-32 text-center font-semibold">작성일</div>
                     </div>
-                    <div className="p-12 text-center text-gray-500">
+                    <div className="p-12 text-center text-muted-foreground">
                       게시글이 없습니다.
                     </div>
                   </div>
@@ -105,13 +190,13 @@ export default function HelpCenterPage() {
 
               {activeMenu === 'faq' && (
                 <div>
-                  <h2 className="text-2xl font-bold mb-6">자주하는 질문</h2>
-                  <div className="border rounded-lg">
-                    <div className="bg-gray-50 px-6 py-4 border-b flex items-center">
+                  <h2 className="text-2xl font-bold mb-6 text-primary">자주하는 질문</h2>
+                  <div className="border border-primary/20 rounded-lg">
+                    <div className="bg-primary/5 px-6 py-4 border-b border-primary/20 flex items-center">
                       <div className="flex-1 text-center font-semibold">제목</div>
                       <div className="w-32 text-center font-semibold">카테고리</div>
                     </div>
-                    <div className="p-12 text-center text-gray-500">
+                    <div className="p-12 text-center text-muted-foreground">
                       게시글이 없습니다.
                     </div>
                   </div>
@@ -120,54 +205,74 @@ export default function HelpCenterPage() {
 
               {activeMenu === 'inquiries' && (
                 <div>
-                  <h2 className="text-2xl font-bold mb-6">1:1 문의</h2>
-                  <div className="border rounded-lg">
-                    <div className="bg-gray-50 px-6 py-4 border-b">
-                      <div className="flex items-center">
-                        <div className="flex-1 text-center font-semibold">제목</div>
-                        <div className="w-32 text-center font-semibold">작성일</div>
-                        <div className="w-32 text-center font-semibold">답변상태</div>
-                      </div>
-                    </div>
-                    <div className="p-12 text-center text-gray-500">
-                      게시글이 없습니다.
-                    </div>
-                  </div>
+                  <h2 className="text-2xl font-bold mb-6 text-primary">1:1 문의</h2>
 
-                  {/* 문의하기 버튼 */}
-                  <div className="flex justify-end mt-6">
-                    <Link href="/mypage/inquiries">
-                      <button
-                        className="px-8 py-3 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
-                        style={{ backgroundColor: '#7C3AED' }}
-                      >
-                        문의하기
-                      </button>
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {activeMenu === 'bulk-inquiry' && (
-                <div>
-                  <h2 className="text-2xl font-bold mb-6">대량 주문 문의</h2>
-                  <div className="border rounded-lg p-8">
-                    <div className="text-center space-y-4">
-                      <p className="text-gray-600">
-                        대량 주문이 필요하신가요?
-                      </p>
-                      <p className="text-gray-600">
-                        1:1 문의를 통해 상담받으실 수 있습니다.
-                      </p>
-                      <Link href="/mypage/inquiries">
-                        <button
-                          className="mt-4 px-8 py-3 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
-                          style={{ backgroundColor: '#7C3AED' }}
+                  <div className="bg-white border border-primary/20 rounded-lg p-6">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      <div>
+                        <Label htmlFor="category">카테고리 *</Label>
+                        <Select
+                          value={formData.category}
+                          onValueChange={(value) => setFormData({ ...formData, category: value })}
                         >
-                          1:1 문의하기
-                        </button>
-                      </Link>
-                    </div>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {INQUIRY_CATEGORIES.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="title">제목 *</Label>
+                        <Input
+                          id="title"
+                          value={formData.title}
+                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                          placeholder="문의 제목을 입력하세요"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="content">내용 *</Label>
+                        <Textarea
+                          id="content"
+                          value={formData.content}
+                          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                          placeholder="문의 내용을 자세히 입력하세요"
+                          rows={8}
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="file">파일 첨부 (선택)</Label>
+                        <div className="space-y-2">
+                          <Input
+                            id="file"
+                            type="file"
+                            onChange={handleFileUpload}
+                            disabled={uploadingFile}
+                          />
+                          {uploadingFile && <p className="text-sm text-muted-foreground">업로드 중...</p>}
+                          {formData.attachmentUrl && (
+                            <p className="text-sm text-primary">✓ 파일이 업로드되었습니다</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <Button type="submit" disabled={uploadingFile} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                          {uploadingFile ? "업로드 중..." : "문의 등록"}
+                        </Button>
+                      </div>
+                    </form>
                   </div>
                 </div>
               )}
@@ -175,7 +280,17 @@ export default function HelpCenterPage() {
           </div>
         </div>
       </main>
+    </>
+  )
+}
 
+export default function HelpCenterPage() {
+  return (
+    <div className="min-h-screen flex flex-col bg-white">
+      <Header />
+      <Suspense fallback={<div className="flex-1 flex items-center justify-center">로딩중...</div>}>
+        <HelpCenterContent />
+      </Suspense>
       <Footer />
     </div>
   )

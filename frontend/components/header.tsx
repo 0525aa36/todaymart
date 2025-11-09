@@ -3,24 +3,14 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Search, ShoppingCart, User, Menu, LogOut, Heart } from 'lucide-react';
+import { Search, ShoppingCart, User, LogOut, Heart, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { useNotifications } from '@/hooks/use-notifications';
-import { COLORS } from '@/lib/colors';
 
 export function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [user, setUser] = useState<{
     name: string;
@@ -30,6 +20,8 @@ export function Header() {
   } | null>(null);
   const router = useRouter();
   const [cartCount, setCartCount] = useState(0);
+  const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
+  const helpMenuRef = useRef<HTMLDivElement>(null);
 
   // 관리자 여부 확인 (role 또는 roles 배열 모두 체크)
   const isAdmin =
@@ -90,6 +82,23 @@ export function Header() {
     };
   }, [fetchCartCount]);
 
+  // 드롭다운 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (helpMenuRef.current && !helpMenuRef.current.contains(event.target as Node)) {
+        setIsHelpMenuOpen(false);
+      }
+    };
+
+    if (isHelpMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isHelpMenuOpen]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchKeyword.trim()) {
@@ -108,7 +117,7 @@ export function Header() {
 
   return (
     <>
-      <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-[100] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         {/* Top Bar */}
         <div>
           <div className="container mx-auto px-4 max-w-6xl py-2">
@@ -156,46 +165,73 @@ export function Header() {
                     </Link>
                   </>
                 )}
-                <Link
-                  href="/help"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  고객센터
-                </Link>
+                <div className="relative" ref={helpMenuRef}>
+                  <button
+                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors py-2 px-3"
+                    onClick={() => setIsHelpMenuOpen(!isHelpMenuOpen)}
+                  >
+                    고객센터
+                    <ChevronDown className={`h-3 w-3 transition-transform ${isHelpMenuOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isHelpMenuOpen && (
+                    <div className="absolute left-0 top-full mt-1 z-[9999]">
+                      <div className="w-36 rounded-md shadow-lg overflow-hidden" style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb' }}>
+                        <Link
+                          href="/help?tab=notices"
+                          className="block px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                          style={{ backgroundColor: '#ffffff' }}
+                          onClick={() => setIsHelpMenuOpen(false)}
+                        >
+                          공지사항
+                        </Link>
+                        <Link
+                          href="/help?tab=faq"
+                          className="block px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                          style={{ backgroundColor: '#ffffff' }}
+                          onClick={() => setIsHelpMenuOpen(false)}
+                        >
+                          자주하는 질문
+                        </Link>
+                        <Link
+                          href="/help?tab=inquiries"
+                          className="block px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                          style={{ backgroundColor: '#ffffff' }}
+                          onClick={() => setIsHelpMenuOpen(false)}
+                        >
+                          1:1 문의
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Main Header with Red Background */}
-        <div
-          className="w-full py-4 relative"
-          style={{ backgroundColor: COLORS.PRIMARY }}
-        >
+        {/* Main Header */}
+        <div className="w-full py-4 relative">
           <div className="container mx-auto px-4 max-w-6xl">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-2">
+              <Link href="/" className="flex items-center gap-2 flex-shrink-0">
                 <Image
-                  src="/logo_image_todaymart.png"
+                  src="/logo_main.png"
                   alt="오늘마트 로고"
-                  width={32}
-                  height={32}
+                  width={120}
+                  height={40}
                   className="object-contain"
                   unoptimized
                 />
-                <div className="text-2xl font-bold text-white">
-                  오늘마트
-                </div>
               </Link>
 
-              {/* Search Bar - 중앙 배치 */}
-              <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 w-full max-w-2xl">
+              {/* Search Bar - 중앙 유연하게 */}
+              <div className="hidden md:flex flex-1 max-w-2xl mx-auto">
                 <form onSubmit={handleSearch} className="relative w-full">
                   <Input
                     type="search"
                     placeholder="신선한 농수산물을 검색해보세요"
-                    className="w-full pr-10 bg-white border-white"
+                    className="w-full pr-10 bg-primary/17 border-primary/17"
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
                   />
@@ -211,14 +247,14 @@ export function Header() {
               </div>
 
               {/* Actions - 오른쪽 정렬 */}
-              <div className="flex items-center gap-2 ml-auto">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {/* 찜한 상품 */}
                 {user && (
                   <Link href="/mypage/wishlist">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hidden md:flex text-white hover:bg-white/20"
+                      className="hidden md:flex text-foreground hover:bg-muted"
                       title="찜한 상품"
                     >
                       <Heart className="h-5 w-5" />
@@ -231,25 +267,17 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative text-white hover:bg-white/20"
+                    className="relative text-foreground hover:bg-muted"
                     title="장바구니"
                   >
                     <ShoppingCart className="h-5 w-5" />
                     {cartCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-h-5 min-w-5 rounded-full bg-white text-primary text-xs flex items-center justify-center px-1 font-bold">
+                      <span className="absolute -top-1 -right-1 min-h-5 min-w-5 rounded-full bg-primary text-white text-xs flex items-center justify-center px-1 font-bold">
                         {cartCount}
                       </span>
                     )}
                   </Button>
                 </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden text-white hover:bg-white/20"
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
-                >
-                  <Menu className="h-5 w-5" />
-                </Button>
               </div>
             </div>
 
@@ -259,7 +287,7 @@ export function Header() {
                 <Input
                   type="search"
                   placeholder="신선한 농수산물을 검색해보세요"
-                  className="w-full pr-10 bg-white border-white"
+                  className="w-full pr-10 bg-primary/17 border-primary/17"
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
                 />
@@ -277,8 +305,8 @@ export function Header() {
         </div>
       </header>
 
-      {/* Navigation - 헤더 밖으로 분리하여 독립적으로 고정 */}
-      <nav className="sticky top-0 z-50 w-full border-t bg-white shadow-sm">
+      {/* Navigation */}
+      <nav className="w-full border-t bg-white shadow-sm">
         <div className="container mx-auto px-4 max-w-6xl">
           <ul className="flex items-center gap-8 py-3 overflow-x-auto">
             <li>

@@ -4,7 +4,7 @@ export function Footer() {
   return (
     <footer className="border-t bg-muted/30 mt-20">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Company Info */}
           <div>
             <h3 className="font-bold text-lg mb-4">오늘마트</h3>
@@ -13,41 +13,6 @@ export function Footer() {
               <br />
               신선한 농수산물 쇼핑몰
             </p>
-          </div>
-
-          {/* Customer Service */}
-          <div>
-            <h4 className="font-semibold mb-4">고객센터</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link
-                  href="/help/faq"
-                  className="hover:text-foreground transition-colors"
-                >
-                  자주 묻는 질문
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/help/notices"
-                  className="hover:text-foreground transition-colors"
-                >
-                  공지사항
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/mypage/inquiries"
-                  className="hover:text-foreground transition-colors"
-                >
-                  1:1 문의
-                </Link>
-              </li>
-              <li className="pt-2">
-                <div className="font-semibold text-foreground">help.todaymart@gmail.com</div>
-                <div className="text-xs">평일 09:00 - 18:00</div>
-              </li>
-            </ul>
           </div>
 
           {/* Shopping Info */}

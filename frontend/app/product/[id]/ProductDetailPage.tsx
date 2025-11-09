@@ -41,6 +41,8 @@ interface Product {
   origin: string
   description: string
   price: number
+  discountedPrice: number
+  discountRate: number | null
   stock: number
   imageUrl: string
   createdAt: string
@@ -413,7 +415,7 @@ export function ProductDetailPage() {
       <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 py-8">
-          <div className="container mx-auto px-4">
+          <div className="container mx-auto px-4 max-w-6xl">
             <p className="text-center">로딩 중...</p>
           </div>
         </main>
@@ -431,11 +433,11 @@ export function ProductDetailPage() {
       <Header />
 
       <main className="flex-1 py-8">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 max-w-6xl">
           {/* Product Info Section */}
-          <div className="grid md:grid-cols-2 gap-8 mb-12">
+          <div className="grid md:grid-cols-5 gap-8 mb-12">
             {/* Images */}
-            <div>
+            <div className="md:col-span-2">
               <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-4">
                 <Image
                   src={mainImage || "/placeholder.svg"}
@@ -448,7 +450,7 @@ export function ProductDetailPage() {
             </div>
 
             {/* Product Details */}
-            <div>
+            <div className="md:col-span-3">
               <div className="mb-4">
                 <Badge className="mb-2" variant="secondary">
                   {product.origin}
@@ -478,10 +480,27 @@ export function ProductDetailPage() {
 
               {/* Price */}
               <div className="mb-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-3xl font-bold">{product.price.toLocaleString()}원</span>
-                </div>
-                <div className="text-sm text-muted-foreground">재고: {product.stock}개</div>
+                {product.discountRate && product.discountRate > 0 ? (
+                  <>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-lg text-muted-foreground line-through">
+                        {product.price.toLocaleString()}원
+                      </span>
+                      <span className="text-2xl font-bold text-accent">
+                        {product.discountRate}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-3xl font-bold">
+                        {product.discountedPrice.toLocaleString()}원
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl font-bold">{product.price.toLocaleString()}원</span>
+                  </div>
+                )}
               </div>
 
               <Separator className="my-6" />
@@ -555,12 +574,12 @@ export function ProductDetailPage() {
                 <div className="flex items-center justify-between text-lg">
                   <span className="font-semibold">총 상품 금액</span>
                   <span className="text-2xl font-bold text-primary">
-                    {((product.price + (selectedOption?.additionalPrice || 0)) * quantity).toLocaleString()}원
+                    {((product.discountedPrice + (selectedOption?.additionalPrice || 0)) * quantity).toLocaleString()}원
                   </span>
                 </div>
                 {selectedOption && selectedOption.additionalPrice !== 0 && (
                   <div className="text-sm text-muted-foreground mt-2">
-                    기본가: {product.price.toLocaleString()}원 + 옵션: {selectedOption.additionalPrice.toLocaleString()}원
+                    기본가: {product.discountedPrice.toLocaleString()}원 + 옵션: {selectedOption.additionalPrice.toLocaleString()}원
                   </div>
                 )}
               </div>
@@ -641,10 +660,6 @@ export function ProductDetailPage() {
                     <div className="flex">
                       <span className="font-semibold w-24">원산지</span>
                       <span>{product.origin}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="font-semibold w-24">재고</span>
-                      <span>{product.stock}개</span>
                     </div>
                     <div className="flex">
                       <span className="font-semibold w-24">보관방법</span>

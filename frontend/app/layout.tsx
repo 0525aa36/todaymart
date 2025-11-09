@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   title: '오늘마트 - 농수산물 직송 쇼핑몰',
   description: '신선한 농수산물을 농가에서 직접 배송받으세요',
   generator: 'v0.app',
+  icons: {
+    icon: '/logo_todaymart.png',
+  },
 }
 
 export default function RootLayout({
@@ -41,6 +44,9 @@ export default function RootLayout({
             style: {
               marginBottom: '1rem',
               marginRight: '1rem',
+              backgroundColor: '#DAE7E9',
+              border: 'none',
+              color: '#1a1a1a',
             },
           }}
         />

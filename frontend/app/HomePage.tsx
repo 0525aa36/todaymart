@@ -9,7 +9,6 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api-client';
 import { LoadingSpinner } from '@/components/loading-spinner';
-import { COLORS } from '@/lib/colors';
 import BannerCarousel from '@/components/banner-carousel';
 import SignupPromotionModal from '@/components/signup-promotion-modal';
 import { NoticePopup } from '@/components/notice-popup';
