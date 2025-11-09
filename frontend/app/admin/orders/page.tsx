@@ -265,7 +265,7 @@ export default function AdminOrdersPage() {
         description: "구글 스프레드시트에 주문 내역이 동기화되었습니다.",
       })
 
-      fetchLastSyncTime()
+      checkGoogleSheetsEnabled()
     } catch (error) {
       console.error("Error syncing to Google Sheets:", error)
       toast({
