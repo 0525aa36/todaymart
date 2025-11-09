@@ -20,6 +20,7 @@ public class UserProfileResponse {
     private LocalDate birthDate;
     private String gender;
     private String role;
+    private String provider;
     private LocalDateTime createdAt;
 
     public static UserProfileResponse from(User user) {
@@ -34,6 +35,7 @@ public class UserProfileResponse {
         response.setBirthDate(user.getBirthDate());
         response.setGender(user.getGender());
         response.setRole(user.getRole());
+        response.setProvider(user.getProvider());
         response.setCreatedAt(user.getCreatedAt());
         return response;
     }

@@ -12,15 +12,12 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, User, Lock } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { PhoneInput } from "@/components/phone-input"
+import { AddressSearch } from "@/components/address-search"
+import { formatBirthDate } from "@/lib/format-phone"
+import { Toaster } from "@/components/ui/toaster"
 
 interface UserProfile {
   id: number
@@ -33,6 +30,7 @@ interface UserProfile {
   birthDate: string
   gender: string
   role: string
+  provider: string
   createdAt: string
 }
 
@@ -55,6 +53,40 @@ export default function SettingsPage() {
     newPassword: "",
     confirmPassword: "",
   })
+  const [isAddressSearched, setIsAddressSearched] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // 전화번호 검증 함수
+  const validatePhone = () => {
+    if (!profileForm.phone) {
+      setErrors(prev => ({ ...prev, phone: "휴대폰 번호를 입력해주세요." }))
+      return false
+    }
+    // 하이픈 제거 후 숫자만 추출
+    const phoneNumbers = profileForm.phone.replace(/[^\d]/g, "")
+    if (phoneNumbers.length !== 11) {
+      setErrors(prev => ({ ...prev, phone: "휴대폰 번호는 11자리 숫자여야 합니다." }))
+      return false
+    }
+    setErrors(prev => ({ ...prev, phone: "" }))
+    return true
+  }
+
+  // 생년월일 검증 함수
+  const validateBirthDate = () => {
+    if (!profileForm.birthDate) {
+      setErrors(prev => ({ ...prev, birthDate: "생년월일을 입력해주세요." }))
+      return false
+    }
+    // 하이픈 제거 후 숫자만 추출
+    const birthNumbers = profileForm.birthDate.replace(/[^\d]/g, "")
+    if (birthNumbers.length !== 8) {
+      setErrors(prev => ({ ...prev, birthDate: "생년월일은 8자리 숫자로 입력해주세요. (예: 1999-01-01)" }))
+      return false
+    }
+    setErrors(prev => ({ ...prev, birthDate: "" }))
+    return true
+  }
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -82,6 +114,10 @@ export default function SettingsPage() {
         birthDate: data.birthDate || "",
         gender: data.gender || "",
       })
+      // 주소가 있으면 주소 필드 표시
+      if (data.postcode || data.addressLine1) {
+        setIsAddressSearched(true)
+      }
     } catch (error) {
       console.error("Error fetching profile:", error)
       toast({
@@ -97,6 +133,31 @@ export default function SettingsPage() {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // 검증 실행 (값이 있을 때만)
+    if (profileForm.phone) {
+      const isPhoneValid = validatePhone()
+      if (!isPhoneValid) {
+        toast({
+          title: "입력 오류",
+          description: "전화번호를 확인해주세요.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
+    if (profileForm.birthDate) {
+      const isBirthDateValid = validateBirthDate()
+      if (!isBirthDateValid) {
+        toast({
+          title: "입력 오류",
+          description: "생년월일을 확인해주세요.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
     const token = localStorage.getItem("token")
     if (!token) return
 
@@ -109,7 +170,7 @@ export default function SettingsPage() {
       })
 
       toast({
-        title: "프로필 수정 완료",
+        title: "저장되었습니다",
         description: "프로필 정보가 성공적으로 수정되었습니다.",
       })
       fetchProfile()
@@ -147,7 +208,7 @@ export default function SettingsPage() {
       })
 
       toast({
-        title: "비밀번호 변경 완료",
+        title: "변경되었습니다",
         description: "비밀번호가 성공적으로 변경되었습니다.",
       })
       setPasswordForm({
@@ -208,15 +269,17 @@ export default function SettingsPage() {
 
           {/* Settings Tabs */}
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className={`grid w-full ${profile?.provider === "LOCAL" ? "grid-cols-2" : "grid-cols-1"}`}>
               <TabsTrigger value="profile">
                 <User className="h-4 w-4 mr-2" />
                 프로필 정보
               </TabsTrigger>
-              <TabsTrigger value="password">
-                <Lock className="h-4 w-4 mr-2" />
-                비밀번호 변경
-              </TabsTrigger>
+              {profile?.provider === "LOCAL" && (
+                <TabsTrigger value="password">
+                  <Lock className="h-4 w-4 mr-2" />
+                  비밀번호 변경
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* Profile Tab */}
@@ -230,7 +293,7 @@ export default function SettingsPage() {
                   <form onSubmit={handleProfileUpdate} className="space-y-4">
                     <div className="grid gap-4">
                       <div>
-                        <Label htmlFor="email">이메일</Label>
+                        <Label htmlFor="email" className="mb-2 block">이메일</Label>
                         <Input
                           id="email"
                           type="email"
@@ -244,7 +307,7 @@ export default function SettingsPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="name">이름</Label>
+                        <Label htmlFor="name" className="mb-2 block">이름</Label>
                         <Input
                           id="name"
                           value={profileForm.name}
@@ -254,79 +317,120 @@ export default function SettingsPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="phone">전화번호</Label>
+                        <Label htmlFor="phone" className="mb-2 block">전화번호</Label>
                         <PhoneInput
                           id="phone"
                           value={profileForm.phone}
-                          onChange={(value) => setProfileForm({ ...profileForm, phone: value })}
+                          onChange={(value) => {
+                            setProfileForm({ ...profileForm, phone: value })
+                            setErrors(prev => ({ ...prev, phone: "" }))
+                          }}
+                          onBlur={validatePhone}
                           required
                         />
+                        {errors.phone && (
+                          <p className="text-sm text-destructive mt-1">{errors.phone}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="mb-2 block">주소</Label>
+                          <AddressSearch
+                            onComplete={(data) => {
+                              setProfileForm({
+                                ...profileForm,
+                                postcode: data.zonecode,
+                                addressLine1: data.address,
+                              })
+                              setIsAddressSearched(true)
+                            }}
+                            buttonText="주소 검색"
+                            variant="outline"
+                            size="default"
+                            className="w-full"
+                          />
+                        </div>
+
+                        {isAddressSearched && (
+                          <>
+                            <div>
+                              <Input
+                                id="postcode"
+                                placeholder="우편번호"
+                                value={profileForm.postcode}
+                                readOnly
+                                className="bg-muted"
+                              />
+                            </div>
+
+                            <div>
+                              <Input
+                                id="addressLine1"
+                                placeholder="주소"
+                                value={profileForm.addressLine1}
+                                readOnly
+                                className="bg-muted"
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <Input
+                                id="addressLine2"
+                                placeholder="상세 주소"
+                                value={profileForm.addressLine2}
+                                onChange={(e) =>
+                                  setProfileForm({ ...profileForm, addressLine2: e.target.value })
+                                }
+                              />
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       <div>
-                        <Label htmlFor="postcode">우편번호</Label>
-                        <Input
-                          id="postcode"
-                          value={profileForm.postcode}
-                          onChange={(e) => setProfileForm({ ...profileForm, postcode: e.target.value })}
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="addressLine1">주소</Label>
-                        <Input
-                          id="addressLine1"
-                          value={profileForm.addressLine1}
-                          onChange={(e) =>
-                            setProfileForm({ ...profileForm, addressLine1: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="addressLine2">상세 주소</Label>
-                        <Input
-                          id="addressLine2"
-                          value={profileForm.addressLine2}
-                          onChange={(e) =>
-                            setProfileForm({ ...profileForm, addressLine2: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="birthDate">생년월일</Label>
+                        <Label htmlFor="birthDate" className="mb-2 block">생년월일</Label>
                         <Input
                           id="birthDate"
-                          type="date"
+                          type="text"
+                          placeholder="1999-01-01"
+                          maxLength={10}
                           value={profileForm.birthDate}
-                          onChange={(e) =>
-                            setProfileForm({ ...profileForm, birthDate: e.target.value })
-                          }
+                          onChange={(e) => {
+                            const formatted = formatBirthDate(e.target.value)
+                            setProfileForm({ ...profileForm, birthDate: formatted })
+                            setErrors(prev => ({ ...prev, birthDate: "" }))
+                          }}
+                          onBlur={validateBirthDate}
                         />
+                        {errors.birthDate && (
+                          <p className="text-sm text-destructive mt-1">{errors.birthDate}</p>
+                        )}
                       </div>
 
                       <div>
-                        <Label htmlFor="gender">성별</Label>
-                        <Select
+                        <Label className="mb-2 block">성별</Label>
+                        <RadioGroup
                           value={profileForm.gender}
                           onValueChange={(value) =>
                             setProfileForm({ ...profileForm, gender: value })
                           }
+                          className="flex gap-4"
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="성별을 선택하세요" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="male">남성</SelectItem>
-                            <SelectItem value="female">여성</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="male" id="male" />
+                            <Label htmlFor="male" className="cursor-pointer">남성</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="female" id="female" />
+                            <Label htmlFor="female" className="cursor-pointer">여성</Label>
+                          </div>
+                        </RadioGroup>
                       </div>
 
                       <div className="pt-4">
-                        <Label>가입일</Label>
+                        <Label className="mb-2 block">가입일</Label>
                         <p className="text-sm text-muted-foreground">
                           {formatDate(profile?.createdAt || "")}
                         </p>
@@ -341,73 +445,76 @@ export default function SettingsPage() {
               </Card>
             </TabsContent>
 
-            {/* Password Tab */}
-            <TabsContent value="password">
-              <Card>
-                <CardHeader>
-                  <CardTitle>비밀번호 변경</CardTitle>
-                  <CardDescription>
-                    보안을 위해 주기적으로 비밀번호를 변경하는 것을 권장합니다.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handlePasswordChange} className="space-y-4">
-                    <div className="grid gap-4">
-                      <div>
-                        <Label htmlFor="currentPassword">현재 비밀번호</Label>
-                        <Input
-                          id="currentPassword"
-                          type="password"
-                          value={passwordForm.currentPassword}
-                          onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
-                          }
-                          required
-                        />
+            {/* Password Tab - LOCAL 사용자만 표시 */}
+            {profile?.provider === "LOCAL" && (
+              <TabsContent value="password">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>비밀번호 변경</CardTitle>
+                    <CardDescription>
+                      보안을 위해 주기적으로 비밀번호를 변경하는 것을 권장합니다.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handlePasswordChange} className="space-y-4">
+                      <div className="grid gap-4">
+                        <div>
+                          <Label htmlFor="currentPassword">현재 비밀번호</Label>
+                          <Input
+                            id="currentPassword"
+                            type="password"
+                            value={passwordForm.currentPassword}
+                            onChange={(e) =>
+                              setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                            }
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="newPassword">새 비밀번호</Label>
+                          <Input
+                            id="newPassword"
+                            type="password"
+                            value={passwordForm.newPassword}
+                            onChange={(e) =>
+                              setPasswordForm({ ...passwordForm, newPassword: e.target.value })
+                            }
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            최소 8자 이상, 영문, 숫자, 특수문자를 포함해야 합니다.
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="confirmPassword">새 비밀번호 확인</Label>
+                          <Input
+                            id="confirmPassword"
+                            type="password"
+                            value={passwordForm.confirmPassword}
+                            onChange={(e) =>
+                              setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                            }
+                            required
+                          />
+                        </div>
                       </div>
 
-                      <div>
-                        <Label htmlFor="newPassword">새 비밀번호</Label>
-                        <Input
-                          id="newPassword"
-                          type="password"
-                          value={passwordForm.newPassword}
-                          onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, newPassword: e.target.value })
-                          }
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          최소 8자 이상, 영문, 숫자, 특수문자를 포함해야 합니다.
-                        </p>
+                      <div className="flex justify-end">
+                        <Button type="submit">비밀번호 변경</Button>
                       </div>
-
-                      <div>
-                        <Label htmlFor="confirmPassword">새 비밀번호 확인</Label>
-                        <Input
-                          id="confirmPassword"
-                          type="password"
-                          value={passwordForm.confirmPassword}
-                          onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end">
-                      <Button type="submit">비밀번호 변경</Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                    </form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </main>
 
       <Footer />
+      <Toaster />
     </div>
   )
 }

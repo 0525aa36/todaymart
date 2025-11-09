@@ -39,7 +39,13 @@
       "Bash(rm:*)",
       "Bash(mysql:*)",
       "Bash(./gradlew clean build:*)",
-      "Bash(npx tsc --noEmit)"
+      "Bash(npx tsc --noEmit)",
+      "Bash(pkill:*)",
+      "WebSearch",
+      "Bash(/tmp/current-github-policy.json)",
+      "Bash(/tmp/ecs-logs.json)",
+      "Bash(killall:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
