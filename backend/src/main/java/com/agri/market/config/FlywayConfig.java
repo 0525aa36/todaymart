@@ -46,19 +46,37 @@ public class FlywayConfig {
                 try (Connection conn = dataSource.getConnection();
                      Statement stmt = conn.createStatement()) {
 
+                    // Disable autocommit for explicit transaction control
+                    conn.setAutoCommit(false);
+
                     int deleted = stmt.executeUpdate(
                         "DELETE FROM flyway_schema_history WHERE success = 0"
                     );
                     logger.info("Deleted {} failed migration(s) from flyway_schema_history", deleted);
 
-                    // Retry migrate
-                    logger.info("Retrying Flyway migrate after cleanup...");
-                    flyway.migrate();
-                    logger.info("Flyway migrate completed successfully after cleanup");
+                    // Explicitly commit the deletion
+                    conn.commit();
+                    logger.info("Committed deletion transaction");
 
                 } catch (Exception cleanupException) {
-                    logger.error("Failed to clean up failed migrations: {}", cleanupException.getMessage());
+                    logger.error("Failed to delete failed migrations: {}", cleanupException.getMessage());
                     throw new RuntimeException("Flyway migration failed and cleanup unsuccessful", cleanupException);
+                }
+
+                // Third attempt: repair after manual cleanup
+                logger.info("Running Flyway repair after manual cleanup...");
+                try {
+                    flyway.repair();
+                    logger.info("Flyway repair completed after manual cleanup");
+
+                    // Final retry
+                    logger.info("Final attempt: running Flyway migrate...");
+                    flyway.migrate();
+                    logger.info("Flyway migrate completed successfully after cleanup and repair");
+
+                } catch (Exception retryException) {
+                    logger.error("Flyway migration failed even after cleanup and repair: {}", retryException.getMessage());
+                    throw new RuntimeException("Flyway migration failed after all recovery attempts", retryException);
                 }
             }
         };
