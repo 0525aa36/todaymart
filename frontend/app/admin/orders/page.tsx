@@ -31,7 +31,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Search, Truck, Package2, Edit } from "lucide-react"
+import { ChevronLeft, Search, Truck, Package2, Edit, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 
@@ -40,6 +40,10 @@ interface OrderItem {
   product: {
     id: number
     name: string
+    seller?: {
+      id: number
+      name: string
+    }
   }
   quantity: number
   price: number
@@ -64,12 +68,21 @@ interface Order {
   trackingNumber?: string
 }
 
+interface Seller {
+  id: number
+  name: string
+  contactPerson: string
+  email: string
+}
+
 export default function AdminOrdersPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [orders, setOrders] = useState<Order[]>([])
+  const [sellers, setSellers] = useState<Seller[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL")
+  const [selectedSellerId, setSelectedSellerId] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState("")
 
   // Dialog states
@@ -79,6 +92,8 @@ export default function AdminOrdersPage() {
   const [newStatus, setNewStatus] = useState<string>("")
   const [trackingNumber, setTrackingNumber] = useState("")
   const [updating, setUpdating] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -92,15 +107,38 @@ export default function AdminOrdersPage() {
       return
     }
 
+    fetchSellers()
     fetchOrders()
+    fetchLastSyncTime()
   }, [])
+
+  useEffect(() => {
+    fetchOrders()
+  }, [selectedStatus, selectedSellerId])
+
+  const fetchSellers = async () => {
+    try {
+      const data = await apiFetch<Seller[]>("/api/admin/orders/sellers", { auth: true })
+      setSellers(data || [])
+    } catch (error) {
+      console.error("Error fetching sellers:", error)
+    }
+  }
 
   const fetchOrders = async () => {
     const token = localStorage.getItem("token")
     if (!token) return
 
     try {
-      const data = await apiFetch<{ content?: Order[] }>("/api/admin/orders?size=100", { auth: true })
+      let url = "/api/admin/orders?size=100"
+      if (selectedStatus !== "ALL") {
+        url += `&orderStatus=${selectedStatus}`
+      }
+      if (selectedSellerId !== "ALL") {
+        url += `&sellerId=${selectedSellerId}`
+      }
+
+      const data = await apiFetch<{ content?: Order[] }>(url, { auth: true })
       setOrders(data.content || [])
     } catch (error) {
       console.error("Error fetching orders:", error)
@@ -193,6 +231,50 @@ export default function AdminOrdersPage() {
     setTrackingDialogOpen(true)
   }
 
+  const fetchLastSyncTime = async () => {
+    try {
+      const response = await apiFetch<{ success: boolean; data: { lastSyncTime: string | null } }>("/api/admin/sheets/last-sync", { auth: true })
+      if (response.data && response.data.lastSyncTime) {
+        setLastSyncTime(response.data.lastSyncTime)
+      }
+    } catch (error) {
+      // Google Sheets가 비활성화되어 있을 수 있음 - 무시
+      console.log("Google Sheets sync not available")
+    }
+  }
+
+  const handleSyncToGoogleSheets = async () => {
+    setSyncing(true)
+    try {
+      let url = "/api/admin/sheets/sync-all"
+      if (selectedSellerId !== "ALL") {
+        url = `/api/admin/sheets/sync/${selectedSellerId}`
+      }
+
+      await apiFetch(url, {
+        method: "POST",
+        auth: true,
+        parseResponse: "json",
+      })
+
+      toast({
+        title: "동기화 완료",
+        description: "구글 스프레드시트에 주문 내역이 동기화되었습니다.",
+      })
+
+      fetchLastSyncTime()
+    } catch (error) {
+      console.error("Error syncing to Google Sheets:", error)
+      toast({
+        title: "동기화 실패",
+        description: getErrorMessage(error, "구글 스프레드시트 동기화 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PENDING_PAYMENT":
@@ -266,16 +348,33 @@ export default function AdminOrdersPage() {
                 대시보드로 돌아가기
               </Link>
             </Button>
-            <h1 className="text-3xl font-bold mb-2">주문 관리</h1>
-            <p className="text-gray-600 mt-2">총 {orders.length}건의 주문</p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">주문 관리</h1>
+                <p className="text-gray-600 mt-2">총 {orders.length}건의 주문</p>
+                {lastSyncTime && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    마지막 동기화: {new Date(lastSyncTime).toLocaleString("ko-KR")}
+                  </p>
+                )}
+              </div>
+              <Button
+                onClick={handleSyncToGoogleSheets}
+                disabled={syncing}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                {syncing ? "동기화 중..." : "구글 시트 동기화"}
+              </Button>
+            </div>
         </div>
 
         {/* Filters */}
         <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Status Filter */}
-                <div className="flex-1">
+                <div>
                   <Label htmlFor="status-filter">주문 상태</Label>
                   <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                     <SelectTrigger id="status-filter">
@@ -294,8 +393,26 @@ export default function AdminOrdersPage() {
                   </Select>
                 </div>
 
+                {/* Seller Filter */}
+                <div>
+                  <Label htmlFor="seller-filter">판매자</Label>
+                  <Select value={selectedSellerId} onValueChange={setSelectedSellerId}>
+                    <SelectTrigger id="seller-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">전체 판매자</SelectItem>
+                      {sellers.map((seller) => (
+                        <SelectItem key={seller.id} value={seller.id.toString()}>
+                          {seller.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Search */}
-                <div className="flex-1">
+                <div>
                   <Label htmlFor="search">검색</Label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -329,6 +446,7 @@ export default function AdminOrdersPage() {
                         <TableHead>주문일시</TableHead>
                         <TableHead>고객명</TableHead>
                         <TableHead>상품</TableHead>
+                        <TableHead>판매자</TableHead>
                         <TableHead>금액</TableHead>
                         <TableHead>상태</TableHead>
                         <TableHead>송장번호</TableHead>
@@ -355,6 +473,11 @@ export default function AdminOrdersPage() {
                                 </p>
                               )}
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">
+                              {order.orderItems[0]?.product.seller?.name || "-"}
+                            </span>
                           </TableCell>
                           <TableCell className="font-semibold">{order.totalAmount.toLocaleString()}원</TableCell>
                           <TableCell>{getStatusBadge(order.orderStatus)}</TableCell>

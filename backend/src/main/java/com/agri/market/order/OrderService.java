@@ -390,6 +390,7 @@ public class OrderService {
      * @param orderStatus 주문 상태 필터 (null이면 전체)
      * @param startDate 시작 날짜 (null이면 제한 없음)
      * @param endDate 종료 날짜 (null이면 제한 없음)
+     * @param sellerId 판매자 ID 필터 (null이면 전체)
      * @param pageable 페이징 정보
      * @return 주문 페이지
      */
@@ -398,16 +399,17 @@ public class OrderService {
             OrderStatus orderStatus,
             LocalDateTime startDate,
             LocalDateTime endDate,
+            Long sellerId,
             Pageable pageable) {
 
         Page<Order> orders;
 
         // 필터가 하나도 없으면 전체 조회
-        if (orderStatus == null && startDate == null && endDate == null) {
+        if (orderStatus == null && startDate == null && endDate == null && sellerId == null) {
             orders = orderRepository.findAllByOrderByCreatedAtDesc(pageable);
         } else {
             // 필터링 조회
-            orders = orderRepository.findOrdersWithFilters(orderStatus, startDate, endDate, pageable);
+            orders = orderRepository.findOrdersWithFilters(orderStatus, startDate, endDate, sellerId, pageable);
         }
 
         // Manually initialize lazy-loaded collections to avoid LazyInitializationException
@@ -417,6 +419,10 @@ public class OrderService {
             // Initialize product for each order item
             order.getOrderItems().forEach(item -> {
                 item.getProduct().getName(); // Initialize product
+                // Initialize seller
+                if (item.getProduct().getSeller() != null) {
+                    item.getProduct().getSeller().getName(); // Initialize seller
+                }
                 if (item.getProduct().getImages() != null) {
                     item.getProduct().getImages().size(); // Initialize product images
                 }

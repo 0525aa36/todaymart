@@ -3,6 +3,8 @@ package com.agri.market.admin;
 import com.agri.market.order.Order;
 import com.agri.market.order.OrderService;
 import com.agri.market.order.OrderStatus;
+import com.agri.market.seller.Seller;
+import com.agri.market.seller.SellerRepository;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -20,6 +22,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -29,10 +32,12 @@ public class AdminOrderController {
 
     private final ExcelService excelService;
     private final OrderService orderService;
+    private final SellerRepository sellerRepository;
 
-    public AdminOrderController(ExcelService excelService, OrderService orderService) {
+    public AdminOrderController(ExcelService excelService, OrderService orderService, SellerRepository sellerRepository) {
         this.excelService = excelService;
         this.orderService = orderService;
+        this.sellerRepository = sellerRepository;
     }
 
     @GetMapping("/export")
@@ -78,11 +83,12 @@ public class AdminOrderController {
             @RequestParam(required = false) OrderStatus orderStatus,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) Long sellerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<Order> orders = orderService.getAllOrders(orderStatus, startDate, endDate, pageable);
+        Page<Order> orders = orderService.getAllOrders(orderStatus, startDate, endDate, sellerId, pageable);
         return ResponseEntity.ok(orders);
     }
 
@@ -118,5 +124,11 @@ public class AdminOrderController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @GetMapping("/sellers")
+    public ResponseEntity<List<Seller>> getAllSellers() {
+        List<Seller> sellers = sellerRepository.findAll();
+        return ResponseEntity.ok(sellers);
     }
 }

@@ -30,16 +30,22 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         Pageable pageable
     );
 
-    // 관리자용: 복합 필터링 (상태 + 날짜)
-    @Query("SELECT o FROM Order o WHERE " +
+    // 관리자용: 복합 필터링 (상태 + 날짜 + 판매자)
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN o.orderItems oi " +
+           "LEFT JOIN oi.product p " +
+           "LEFT JOIN p.seller s " +
+           "WHERE " +
            "(:orderStatus IS NULL OR o.orderStatus = :orderStatus) AND " +
            "(:startDate IS NULL OR o.createdAt >= :startDate) AND " +
-           "(:endDate IS NULL OR o.createdAt <= :endDate) " +
+           "(:endDate IS NULL OR o.createdAt <= :endDate) AND " +
+           "(:sellerId IS NULL OR s.id = :sellerId) " +
            "ORDER BY o.createdAt DESC")
     Page<Order> findOrdersWithFilters(
         @Param("orderStatus") OrderStatus orderStatus,
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate,
+        @Param("sellerId") Long sellerId,
         Pageable pageable
     );
 
