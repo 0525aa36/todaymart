@@ -92,6 +92,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/coupons/**").permitAll() // Public coupon endpoints (active, validate, code)
                         .requestMatchers("/api/notifications/stream").permitAll() // SSE endpoint with token auth
                         .requestMatchers("/actuator/health/**").permitAll() // Health check for ECS/Docker
+                        .requestMatchers("/api/faqs/**").permitAll() // Public FAQ endpoints
+                        .requestMatchers("/api/notices/**").permitAll() // Public notice endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN") // Admin roles for admin endpoints
                         .anyRequest().authenticated()
                 )
