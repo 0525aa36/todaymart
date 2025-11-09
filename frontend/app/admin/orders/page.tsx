@@ -344,160 +344,160 @@ export default function AdminOrdersPage() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="mb-8">
-            <Button variant="ghost" asChild className="mb-4">
-              <Link href="/admin">
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                대시보드로 돌아가기
-              </Link>
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">주문 관리</h1>
+            <p className="text-sm text-gray-500 mt-1">총 {orders.length}건의 주문</p>
+            {lastSyncTime && (
+              <p className="text-xs text-gray-400 mt-1">
+                마지막 동기화: {new Date(lastSyncTime).toLocaleString("ko-KR")}
+              </p>
+            )}
+          </div>
+          {googleSheetsEnabled && (
+            <Button
+              onClick={handleSyncToGoogleSheets}
+              disabled={syncing}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "동기화 중..." : "구글 시트 동기화"}
             </Button>
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">주문 관리</h1>
-                <p className="text-gray-600 mt-2">총 {orders.length}건의 주문</p>
-                {lastSyncTime && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    마지막 동기화: {new Date(lastSyncTime).toLocaleString("ko-KR")}
-                  </p>
-                )}
-              </div>
-              <Button
-                onClick={handleSyncToGoogleSheets}
-                disabled={syncing}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-                {syncing ? "동기화 중..." : "구글 시트 동기화"}
-              </Button>
-            </div>
+          )}
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Status Filter */}
-                <div>
-                  <Label htmlFor="status-filter">주문 상태</Label>
-                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger id="status-filter">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">전체</SelectItem>
-                      <SelectItem value="PENDING_PAYMENT">결제 대기</SelectItem>
-                      <SelectItem value="PAYMENT_FAILED">결제 실패</SelectItem>
-                      <SelectItem value="PAID">결제 완료</SelectItem>
-                      <SelectItem value="PREPARING">상품 준비중</SelectItem>
-                      <SelectItem value="SHIPPED">배송중</SelectItem>
-                      <SelectItem value="DELIVERED">배송 완료</SelectItem>
-                      <SelectItem value="CANCELLED">주문 취소</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Status Filter */}
+              <div className="space-y-2">
+                <Label htmlFor="status-filter" className="text-sm font-medium text-gray-700">주문 상태</Label>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger id="status-filter" className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">전체</SelectItem>
+                    <SelectItem value="PENDING_PAYMENT">결제 대기</SelectItem>
+                    <SelectItem value="PAYMENT_FAILED">결제 실패</SelectItem>
+                    <SelectItem value="PAID">결제 완료</SelectItem>
+                    <SelectItem value="PREPARING">상품 준비중</SelectItem>
+                    <SelectItem value="SHIPPED">배송중</SelectItem>
+                    <SelectItem value="DELIVERED">배송 완료</SelectItem>
+                    <SelectItem value="CANCELLED">주문 취소</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {/* Seller Filter */}
-                <div>
-                  <Label htmlFor="seller-filter">판매자</Label>
-                  <Select value={selectedSellerId} onValueChange={setSelectedSellerId}>
-                    <SelectTrigger id="seller-filter">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">전체 판매자</SelectItem>
-                      {sellers.map((seller) => (
-                        <SelectItem key={seller.id} value={seller.id.toString()}>
-                          {seller.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Seller Filter */}
+              <div className="space-y-2">
+                <Label htmlFor="seller-filter" className="text-sm font-medium text-gray-700">판매자</Label>
+                <Select value={selectedSellerId} onValueChange={setSelectedSellerId}>
+                  <SelectTrigger id="seller-filter" className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">전체 판매자</SelectItem>
+                    {sellers.map((seller) => (
+                      <SelectItem key={seller.id} value={seller.id.toString()}>
+                        {seller.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {/* Search */}
-                <div>
-                  <Label htmlFor="search">검색</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="search"
-                      placeholder="주문번호, 고객명, 상품명..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
+              {/* Search */}
+              <div className="space-y-2">
+                <Label htmlFor="search" className="text-sm font-medium text-gray-700">검색</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="search"
+                    placeholder="주문번호, 고객명, 상품명..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-10"
+                  />
                 </div>
               </div>
+            </div>
           </CardContent>
         </Card>
 
         {/* Orders Table */}
-        <Card>
-            <CardHeader>
-              <CardTitle>주문 목록 ({filteredOrders.length}건)</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="border-b bg-gray-50/50 px-6 py-4">
+            <CardTitle className="text-lg font-semibold text-gray-900">
+              주문 목록 ({filteredOrders.length}건)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
               {filteredOrders.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">주문이 없습니다</p>
+                <div className="text-center py-12">
+                  <Package2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">주문이 없습니다</p>
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>주문번호</TableHead>
-                        <TableHead>주문일시</TableHead>
-                        <TableHead>고객명</TableHead>
-                        <TableHead>상품</TableHead>
-                        <TableHead>판매자</TableHead>
-                        <TableHead>금액</TableHead>
-                        <TableHead>상태</TableHead>
-                        <TableHead>송장번호</TableHead>
-                        <TableHead>관리</TableHead>
+                      <TableRow className="border-b bg-gray-50/50">
+                        <TableHead className="font-semibold text-gray-700">주문번호</TableHead>
+                        <TableHead className="font-semibold text-gray-700">주문일시</TableHead>
+                        <TableHead className="font-semibold text-gray-700">고객명</TableHead>
+                        <TableHead className="font-semibold text-gray-700">상품</TableHead>
+                        <TableHead className="font-semibold text-gray-700">판매자</TableHead>
+                        <TableHead className="font-semibold text-gray-700">금액</TableHead>
+                        <TableHead className="font-semibold text-gray-700">상태</TableHead>
+                        <TableHead className="font-semibold text-gray-700">송장번호</TableHead>
+                        <TableHead className="font-semibold text-gray-700 text-center">관리</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredOrders.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-medium">#{order.id}</TableCell>
-                          <TableCell className="text-sm">{formatDate(order.createdAt)}</TableCell>
+                        <TableRow key={order.id} className="hover:bg-gray-50/50 transition-colors">
+                          <TableCell className="font-medium text-gray-900">#{order.id}</TableCell>
+                          <TableCell className="text-sm text-gray-600">{formatDate(order.createdAt)}</TableCell>
                           <TableCell>
                             <div>
-                              <p className="font-medium">{order.user.name}</p>
-                              <p className="text-xs text-muted-foreground">{order.user.email}</p>
+                              <p className="font-medium text-gray-900">{order.user.name}</p>
+                              <p className="text-xs text-gray-500">{order.user.email}</p>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="max-w-xs">
-                              <p className="text-sm truncate">{order.orderItems[0]?.product.name}</p>
+                              <p className="text-sm text-gray-900 truncate">{order.orderItems[0]?.product.name}</p>
                               {order.orderItems.length > 1 && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-xs text-gray-500">
                                   외 {order.orderItems.length - 1}개
                                 </p>
                               )}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm">
+                            <span className="text-sm text-gray-600">
                               {order.orderItems[0]?.product.seller?.name || "-"}
                             </span>
                           </TableCell>
-                          <TableCell className="font-semibold">{order.totalAmount.toLocaleString()}원</TableCell>
+                          <TableCell className="font-semibold text-gray-900">{order.totalAmount.toLocaleString()}원</TableCell>
                           <TableCell>{getStatusBadge(order.orderStatus)}</TableCell>
                           <TableCell>
                             {order.trackingNumber ? (
-                              <span className="text-sm">{order.trackingNumber}</span>
+                              <span className="text-sm text-gray-900 font-mono">{order.trackingNumber}</span>
                             ) : (
-                              <span className="text-xs text-muted-foreground">-</span>
+                              <span className="text-xs text-gray-400">-</span>
                             )}
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 justify-center">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => openStatusDialog(order)}
                                 title="상태 변경"
+                                className="h-8 w-8 p-0"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -507,6 +507,7 @@ export default function AdminOrdersPage() {
                                   variant="outline"
                                   onClick={() => openTrackingDialog(order)}
                                   title="송장번호 등록"
+                                  className="h-8 w-8 p-0"
                                 >
                                   <Truck className="h-4 w-4" />
                                 </Button>
@@ -517,8 +518,8 @@ export default function AdminOrdersPage() {
                       ))}
                     </TableBody>
                   </Table>
-              </div>
-            )}
+                </div>
+              )}
           </CardContent>
         </Card>
       </div>

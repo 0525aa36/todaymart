@@ -224,7 +224,7 @@ export default function BannersAdminPage() {
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">배너 관리</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">배너 관리</h1>
         <Button onClick={() => handleOpenDialog()}>
           <Plus className="h-4 w-4 mr-2" />
           배너 추가

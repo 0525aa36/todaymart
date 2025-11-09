@@ -90,9 +90,9 @@ export default function AdminCouponsPage() {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>전체 쿠폰 목록 ({coupons.length}개)</CardTitle>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="border-b bg-gray-50/50 px-6 py-4">
+          <CardTitle className="text-lg font-semibold text-gray-900">전체 쿠폰 목록 ({coupons.length}개)</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>

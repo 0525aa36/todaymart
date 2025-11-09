@@ -166,8 +166,8 @@ export default function AdminUsersPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">사용자 관리</h1>
-            <p className="text-gray-600 mt-2">등록된 사용자를 관리하고 역할을 변경하세요</p>
+            <h1 className="text-2xl font-semibold text-gray-900">사용자 관리</h1>
+            <p className="text-sm text-gray-500 mt-1">등록된 사용자를 관리하고 역할을 변경하세요</p>
         </div>
 
         {/* Search and Filter */}
@@ -200,9 +200,9 @@ export default function AdminUsersPage() {
         </Card>
 
         {/* Users Table */}
-        <Card>
-            <CardHeader>
-              <CardTitle>등록된 사용자 ({filteredUsers.length}명)</CardTitle>
+        <Card className="border-0 shadow-sm">
+            <CardHeader className="border-b bg-gray-50/50 px-6 py-4">
+              <CardTitle className="text-lg font-semibold text-gray-900">등록된 사용자 ({filteredUsers.length}명)</CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (

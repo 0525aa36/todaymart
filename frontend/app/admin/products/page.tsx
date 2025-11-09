@@ -538,21 +538,22 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">상품 관리</h1>
-          <p className="text-gray-600 mt-2">등록된 상품을 관리하고 새 상품을 추가하세요</p>
-        </div>
+    <>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">상품 관리</h1>
+            <p className="text-sm text-gray-500 mt-1">등록된 상품을 관리하고 새 상품을 추가하세요</p>
+          </div>
 
-            <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditingProduct(null)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  상품 등록
-                </Button>
-              </DialogTrigger>
+          <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setEditingProduct(null)} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                상품 등록
+              </Button>
+            </DialogTrigger>
               <DialogContent className="sm:max-w-[625px]">
                 <form onSubmit={handleSubmit}>
                   <DialogHeader>
@@ -813,114 +814,126 @@ export default function AdminProductsPage() {
           </div>
 
           {/* Products Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>등록된 상품 ({products.length}개)</CardTitle>
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="border-b bg-gray-50/50 px-6 py-4">
+              <CardTitle className="text-lg font-semibold text-gray-900">
+                등록된 상품 ({products.length}개)
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {loading ? (
-                <div className="text-center py-12 text-muted-foreground">로딩 중...</div>
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
+                </div>
               ) : products.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  등록된 상품이 없습니다. 새 상품을 등록해보세요!
+                <div className="text-center py-12">
+                  <Plus className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">등록된 상품이 없습니다. 새 상품을 등록해보세요!</p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[60px]">ID</TableHead>
-                      <TableHead>상품명</TableHead>
-                      <TableHead>카테고리</TableHead>
-                      <TableHead>원산지</TableHead>
-                      <TableHead>판매자</TableHead>
-                      <TableHead>가격</TableHead>
-                      <TableHead>할인</TableHead>
-                      <TableHead>재고</TableHead>
-                      <TableHead>등록일</TableHead>
-                      <TableHead className="text-right">작업</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {products.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.id}</TableCell>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{product.category}</Badge>
-                        </TableCell>
-                        <TableCell>{product.origin}</TableCell>
-                        <TableCell>
-                          {product.seller ? (
-                            <div className="text-sm">
-                              <div className="font-medium">{product.seller.name}</div>
-                              <div className="text-muted-foreground text-xs">{product.seller.businessNumber}</div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b bg-gray-50/50">
+                        <TableHead className="w-[60px] font-semibold text-gray-700">ID</TableHead>
+                        <TableHead className="font-semibold text-gray-700">상품명</TableHead>
+                        <TableHead className="font-semibold text-gray-700">카테고리</TableHead>
+                        <TableHead className="font-semibold text-gray-700">원산지</TableHead>
+                        <TableHead className="font-semibold text-gray-700">판매자</TableHead>
+                        <TableHead className="font-semibold text-gray-700">가격</TableHead>
+                        <TableHead className="font-semibold text-gray-700">할인</TableHead>
+                        <TableHead className="font-semibold text-gray-700">재고</TableHead>
+                        <TableHead className="font-semibold text-gray-700">등록일</TableHead>
+                        <TableHead className="text-center font-semibold text-gray-700">작업</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.map((product) => (
+                        <TableRow key={product.id} className="hover:bg-gray-50/50 transition-colors">
+                          <TableCell className="font-medium text-gray-900">{product.id}</TableCell>
+                          <TableCell className="font-medium text-gray-900">{product.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="bg-blue-50 text-blue-700">{product.category}</Badge>
+                          </TableCell>
+                          <TableCell className="text-gray-600">{product.origin}</TableCell>
+                          <TableCell>
+                            {product.seller ? (
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-900">{product.seller.name}</div>
+                                <div className="text-gray-500 text-xs">{product.seller.businessNumber}</div>
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className="text-gray-600">직매</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {product.discountRate ? (
+                              <div className="flex flex-col">
+                                <span className="line-through text-xs text-gray-400">
+                                  {product.price.toLocaleString()}원
+                                </span>
+                                <span className="font-semibold text-gray-900">
+                                  {Math.floor(product.price * (1 - product.discountRate / 100)).toLocaleString()}원
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="font-semibold text-gray-900">{product.price.toLocaleString()}원</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {product.discountRate ? (
+                              <Badge variant="destructive">{product.discountRate}%</Badge>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={product.stock > 0 ? "default" : "destructive"} className={product.stock > 0 ? "bg-green-100 text-green-800" : ""}>
+                              {product.stock > 0 ? `${product.stock}개` : "품절"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">{formatDate(product.createdAt)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2 justify-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleManageOptions(product)}
+                                className="h-8 w-8 p-0"
+                                title="옵션 관리"
+                              >
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(product)}
+                                className="h-8 w-8 p-0"
+                                title="수정"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(product.id)}
+                                className="h-8 w-8 p-0"
+                                title="삭제"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
-                          ) : (
-                            <Badge variant="outline">직매</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {product.discountRate ? (
-                            <div className="flex flex-col">
-                              <span className="line-through text-xs text-muted-foreground">
-                                {product.price.toLocaleString()}원
-                              </span>
-                              <span className="font-medium">
-                                {Math.floor(product.price * (1 - product.discountRate / 100)).toLocaleString()}원
-                              </span>
-                            </div>
-                          ) : (
-                            <span>{product.price.toLocaleString()}원</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {product.discountRate ? (
-                            <Badge variant="destructive">{product.discountRate}%</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={product.stock > 0 ? "default" : "destructive"}>
-                            {product.stock > 0 ? `${product.stock}개` : "품절"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatDate(product.createdAt)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleManageOptions(product)}
-                            className="mr-2"
-                            title="옵션 관리"
-                          >
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(product)}
-                            className="mr-2"
-                            title="수정"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(product.id)}
-                            title="삭제"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+              </div>
               )}
             </CardContent>
           </Card>
+      </div>
 
       {/* Options Management Dialog */}
       <Dialog open={optionsDialogOpen} onOpenChange={setOptionsDialogOpen}>
@@ -1077,6 +1090,6 @@ export default function AdminProductsPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }

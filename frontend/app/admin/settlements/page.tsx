@@ -294,8 +294,8 @@ export default function AdminSettlementsPage() {
         <div className="mb-8">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">정산 관리</h1>
-                <p className="text-gray-600 mt-2">판매자별 정산 내역을 관리하세요</p>
+                <h1 className="text-2xl font-semibold text-gray-900">정산 관리</h1>
+                <p className="text-sm text-gray-500 mt-1">판매자별 정산 내역을 관리하세요</p>
               </div>
               <Button onClick={() => setGenerateDialogOpen(true)}>
                 <DollarSign className="h-4 w-4 mr-2" />
@@ -336,9 +336,9 @@ export default function AdminSettlementsPage() {
         </Card>
 
         {/* Settlements Table */}
-        <Card>
-            <CardHeader>
-              <CardTitle>정산 내역 ({settlements.length}건)</CardTitle>
+        <Card className="border-0 shadow-sm">
+            <CardHeader className="border-b bg-gray-50/50 px-6 py-4">
+              <CardTitle className="text-lg font-semibold text-gray-900">정산 내역 ({settlements.length}건)</CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (

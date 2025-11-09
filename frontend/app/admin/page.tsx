@@ -7,6 +7,9 @@ import {
   ShoppingCart,
   DollarSign,
   Ticket,
+  TrendingUp,
+  Users,
+  ArrowUpRight
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -115,12 +118,13 @@ export default function AdminDashboard() {
   const totalSales = orders.reduce((sum, order) => sum + order.totalAmount, 0)
   const totalOrders = orders.length
   const totalProducts = products.length
+  const lowStockProducts = products.filter(p => p.stock < 10).length
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
         </div>
       </div>
@@ -128,95 +132,174 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">대시보드</h1>
-        <p className="text-gray-600 mt-2">농수산물 쇼핑몰 운영 현황을 한눈에 확인하세요</p>
+        <h1 className="text-2xl font-semibold text-gray-900">대시보드</h1>
+        <p className="text-sm text-gray-500 mt-1">쇼핑몰 운영 현황을 한눈에 확인하세요</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 매출</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalSales.toLocaleString()}원</div>
-            <p className="text-xs text-muted-foreground mt-1">누적 매출액</p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* 총 매출 */}
+        <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="flex items-center text-green-600 text-sm">
+                <TrendingUp className="h-4 w-4 mr-1" />
+                <span className="font-medium">+12%</span>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">
+              {totalSales.toLocaleString()}원
+            </div>
+            <p className="text-sm text-gray-500">총 매출</p>
           </CardContent>
         </Card>
 
+        {/* 총 주문 */}
         <Link href="/admin/orders">
-          <Card className="cursor-pointer hover:border-primary transition-colors">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">총 주문</CardTitle>
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalOrders}건</div>
-              <p className="text-xs text-muted-foreground mt-1">전체 주문 수 (클릭하여 관리)</p>
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
+                  <ShoppingCart className="h-6 w-6 text-purple-600" />
+                </div>
+                <ArrowUpRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900 mb-1">
+                {totalOrders}건
+              </div>
+              <p className="text-sm text-gray-500">총 주문</p>
             </CardContent>
           </Card>
         </Link>
 
+        {/* 총 상품 */}
         <Link href="/admin/products">
-          <Card className="cursor-pointer hover:border-primary transition-colors">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">총 상품</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalProducts}개</div>
-              <p className="text-xs text-muted-foreground mt-1">등록된 상품 수 (클릭하여 관리)</p>
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                  <Package className="h-6 w-6 text-green-600" />
+                </div>
+                <ArrowUpRight className="h-5 w-5 text-gray-400 group-hover:text-green-600 transition-colors" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900 mb-1">
+                {totalProducts}개
+              </div>
+              <p className="text-sm text-gray-500">등록된 상품</p>
             </CardContent>
           </Card>
         </Link>
 
-        <Link href="/admin/coupons">
-          <Card className="cursor-pointer hover:border-primary transition-colors">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">쿠폰 관리</CardTitle>
-              <Ticket className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">관리</div>
-              <p className="text-xs text-muted-foreground mt-1">쿠폰 목록 및 생성 (클릭하여 관리)</p>
+        {/* 재고 부족 */}
+        <Link href="/admin/products">
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
+                  <Package className="h-6 w-6 text-orange-600" />
+                </div>
+                <ArrowUpRight className="h-5 w-5 text-gray-400 group-hover:text-orange-600 transition-colors" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900 mb-1">
+                {lowStockProducts}개
+              </div>
+              <p className="text-sm text-gray-500">재고 부족 (10개 미만)</p>
             </CardContent>
           </Card>
         </Link>
       </div>
 
-      {/* Quick Links */}
-      <Card>
-        <CardHeader>
-          <CardTitle>빠른 링크</CardTitle>
-          <CardDescription>자주 사용하는 관리 기능</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Link href="/admin/orders">
-              <Button variant="outline" className="w-full justify-start">
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                주문 관리
-              </Button>
-            </Link>
-            <Link href="/admin/products">
-              <Button variant="outline" className="w-full justify-start">
-                <Package className="h-4 w-4 mr-2" />
-                상품 관리
-              </Button>
-            </Link>
-            <Link href="/admin/coupons">
-              <Button variant="outline" className="w-full justify-start">
-                <Ticket className="h-4 w-4 mr-2" />
-                쿠폰 관리
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 빠른 작업 */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold">빠른 작업</CardTitle>
+            <CardDescription className="text-sm">자주 사용하는 기능</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Link href="/admin/orders" className="block">
+                <Button variant="outline" className="w-full justify-start h-auto py-3 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300">
+                  <ShoppingCart className="h-4 w-4 mr-3" />
+                  <div className="text-left">
+                    <div className="font-medium">주문 관리</div>
+                    <div className="text-xs text-gray-500">주문 목록 확인 및 처리</div>
+                  </div>
+                </Button>
+              </Link>
+              <Link href="/admin/products" className="block">
+                <Button variant="outline" className="w-full justify-start h-auto py-3 hover:bg-green-50 hover:text-green-700 hover:border-green-300">
+                  <Package className="h-4 w-4 mr-3" />
+                  <div className="text-left">
+                    <div className="font-medium">상품 관리</div>
+                    <div className="text-xs text-gray-500">상품 등록 및 수정</div>
+                  </div>
+                </Button>
+              </Link>
+              <Link href="/admin/coupons" className="block">
+                <Button variant="outline" className="w-full justify-start h-auto py-3 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300">
+                  <Ticket className="h-4 w-4 mr-3" />
+                  <div className="text-left">
+                    <div className="font-medium">쿠폰 관리</div>
+                    <div className="text-xs text-gray-500">쿠폰 생성 및 발급</div>
+                  </div>
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 최근 활동 */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold">최근 활동</CardTitle>
+            <CardDescription className="text-sm">최근 주문 현황</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {orders.slice(0, 5).length === 0 ? (
+              <div className="text-center py-8 text-gray-500 text-sm">
+                최근 주문 내역이 없습니다
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {orders.slice(0, 5).map((order) => (
+                  <Link
+                    key={order.id}
+                    href={`/admin/orders`}
+                    className="flex items-center justify-between py-2 px-3 rounded hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {order.user.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(order.createdAt).toLocaleDateString('ko-KR')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {order.totalAmount.toLocaleString()}원
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {order.orderStatus === 'PAID' ? '결제완료' :
+                         order.orderStatus === 'SHIPPED' ? '배송중' :
+                         order.orderStatus === 'DELIVERED' ? '배송완료' : '처리중'}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -290,8 +290,8 @@ export default function AdminSellersPage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">판매자 관리</h1>
-              <p className="text-gray-600 mt-2">등록된 판매자를 관리하고 새 판매자를 추가하세요</p>
+              <h1 className="text-2xl font-semibold text-gray-900">판매자 관리</h1>
+              <p className="text-sm text-gray-500 mt-1">등록된 판매자를 관리하고 새 판매자를 추가하세요</p>
             </div>
 
             <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
@@ -465,9 +465,9 @@ export default function AdminSellersPage() {
           </div>
 
           {/* Sellers Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>등록된 판매자 ({sellers.length}개)</CardTitle>
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="border-b bg-gray-50/50 px-6 py-4">
+              <CardTitle className="text-lg font-semibold text-gray-900">등록된 판매자 ({sellers.length}개)</CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (
