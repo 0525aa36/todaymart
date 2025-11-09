@@ -63,19 +63,14 @@ public class FlywayConfig {
                     throw new RuntimeException("Flyway migration failed and cleanup unsuccessful", cleanupException);
                 }
 
-                // Third attempt: repair after manual cleanup
-                logger.info("Running Flyway repair after manual cleanup...");
+                // Third attempt: retry migrate without repair (repair doesn't handle 'failed' state)
+                logger.info("Final attempt: running Flyway migrate after manual cleanup...");
                 try {
-                    flyway.repair();
-                    logger.info("Flyway repair completed after manual cleanup");
-
-                    // Final retry
-                    logger.info("Final attempt: running Flyway migrate...");
                     flyway.migrate();
-                    logger.info("Flyway migrate completed successfully after cleanup and repair");
+                    logger.info("Flyway migrate completed successfully after cleanup");
 
                 } catch (Exception retryException) {
-                    logger.error("Flyway migration failed even after cleanup and repair: {}", retryException.getMessage());
+                    logger.error("Flyway migration failed even after cleanup: {}", retryException.getMessage());
                     throw new RuntimeException("Flyway migration failed after all recovery attempts", retryException);
                 }
             }
