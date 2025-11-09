@@ -52,6 +52,11 @@ dependencies {
 	// Jsoup for web crawling
 	implementation 'org.jsoup:jsoup:1.16.1'
 
+	// Google Sheets API
+	implementation platform('com.google.cloud:libraries-bom:26.1.0')
+	implementation 'com.google.apis:google-api-services-sheets:v4-rev20220927-2.0.0'
+	implementation 'com.google.auth:google-auth-library-oauth2-http:1.19.0'
+
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 

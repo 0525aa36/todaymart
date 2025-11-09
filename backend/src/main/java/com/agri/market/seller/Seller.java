@@ -8,6 +8,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 /**
  * 판매자 엔티티 (농가/공급업체)
@@ -56,6 +57,16 @@ public class Seller {
 
     @Column(columnDefinition = "TEXT")
     private String memo; // 메모
+
+    // Google Sheets 연동 관련 필드
+    @Column(name = "spreadsheet_id", length = 200)
+    private String spreadsheetId; // 판매자별 구글 스프레드시트 ID
+
+    @Column(name = "update_schedule_time")
+    private LocalTime updateScheduleTime; // 자동 업데이트 시간 (예: 23:00:00)
+
+    @Column(name = "last_synced_at")
+    private LocalDateTime lastSyncedAt; // 마지막 동기화 시간
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
