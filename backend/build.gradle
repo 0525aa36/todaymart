@@ -49,6 +49,9 @@ dependencies {
 	implementation platform('software.amazon.awssdk:bom:2.20.26')
 	implementation 'software.amazon.awssdk:s3'
 
+	// AWS Secrets Manager
+	implementation 'io.awspring.cloud:spring-cloud-aws-secrets-manager-config:3.0.3'
+
 	// Jsoup for web crawling
 	implementation 'org.jsoup:jsoup:1.16.1'
 

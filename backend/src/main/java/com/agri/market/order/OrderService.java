@@ -486,10 +486,19 @@ public class OrderService {
     public void completePayment(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
-        
-        // 재고 차감
+
+        // 재고 차감 (Pessimistic Lock으로 동시성 제어)
         for (OrderItem item : order.getOrderItems()) {
-            Product product = item.getProduct();
+            // Pessimistic Write Lock을 사용하여 재고 차감 시 동시성 문제 방지
+            Product product = productRepository.findByIdWithLock(item.getProduct().getId())
+                    .orElseThrow(() -> new RuntimeException("Product not found with id: " + item.getProduct().getId()));
+
+            // 재고 부족 체크
+            if (product.getStock() < item.getQuantity()) {
+                throw new RuntimeException("Insufficient stock for product: " + product.getName() +
+                        " (requested: " + item.getQuantity() + ", available: " + product.getStock() + ")");
+            }
+
             product.setStock(product.getStock() - item.getQuantity());
             productRepository.save(product);
         }

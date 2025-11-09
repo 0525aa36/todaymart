@@ -53,7 +53,10 @@
       "Bash(GOOGLE_SHEETS_ENABLED=true GOOGLE_SHEETS_CREDENTIALS_PATH=./google-credentials.json ./gradlew bootRun:*)",
       "Bash(kill:*)",
       "WebFetch(domain:docs.tosspayments.com)",
-      "Bash(pnpm add:*)"
+      "Bash(pnpm add:*)",
+      "Bash(git log:*)",
+      "Bash(find:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []
