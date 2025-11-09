@@ -48,6 +48,9 @@ export default function RootLayout({
               border: 'none',
               color: '#1a1a1a',
             },
+            classNames: {
+              closeButton: '!bg-transparent !text-black hover:!bg-black/10 !border-none',
+            },
           }}
         />
       </body>

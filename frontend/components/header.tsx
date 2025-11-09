@@ -22,6 +22,7 @@ export function Header() {
   const [cartCount, setCartCount] = useState(0);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
   const helpMenuRef = useRef<HTMLDivElement>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // 관리자 여부 확인 (role 또는 roles 배열 모두 체크)
   const isAdmin =
@@ -99,6 +100,16 @@ export function Header() {
     };
   }, [isHelpMenuOpen]);
 
+  // 스크롤 감지
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 100);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchKeyword.trim()) {
@@ -117,7 +128,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-[100] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         {/* Top Bar */}
         <div>
           <div className="container mx-auto px-4 max-w-6xl py-2">
@@ -305,7 +316,7 @@ export function Header() {
         </div>
       </header>
 
-      {/* Navigation */}
+      {/* Navigation - 고정하지 않음 */}
       <nav className="w-full border-t bg-white shadow-sm">
         <div className="container mx-auto px-4 max-w-6xl">
           <ul className="flex items-center gap-8 py-3 overflow-x-auto">
@@ -368,6 +379,105 @@ export function Header() {
           </ul>
         </div>
       </nav>
+
+      {/* 스크롤 시 나타나는 고정 헤더 */}
+      {isScrolled && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-white border-b shadow-md animate-in slide-in-from-top duration-200">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <div className="flex items-center justify-between py-3">
+              <ul className="flex items-center gap-8 overflow-x-auto">
+                <li>
+                  <Link
+                    href="/deals"
+                    className="text-sm font-medium text-accent hover:text-accent/80 transition-colors whitespace-nowrap"
+                  >
+                    특가/할인
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/category/vegetables"
+                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
+                  >
+                    채소
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/category/fruits"
+                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
+                  >
+                    과일
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/category/seafood"
+                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
+                  >
+                    수산물
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/category/meat"
+                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
+                  >
+                    축산물
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/category/grain"
+                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
+                  >
+                    쌀/잡곡
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/new-arrivals"
+                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
+                  >
+                    신상품
+                  </Link>
+                </li>
+              </ul>
+
+              {/* 우측 아이콘 */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {user && (
+                  <Link href="/mypage/wishlist">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hidden md:flex"
+                      title="찜한 상품"
+                    >
+                      <Heart className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                )}
+                <Link href="/cart">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative"
+                    title="장바구니"
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-h-5 min-w-5 rounded-full bg-primary text-white text-xs flex items-center justify-center px-1 font-bold">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

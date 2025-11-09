@@ -123,8 +123,7 @@
   }
 
   *:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
+    outline: none;
   }
 
   /* 검색창 및 입력 필드 focus 스타일 */
@@ -133,10 +132,27 @@
   input[type="email"]:focus,
   input[type="password"]:focus,
   input[type="number"]:focus,
-  textarea:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: none;
+  textarea:focus,
+  select:focus {
+    outline: none !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: none !important;
+    ring: 0 !important;
+  }
+
+  /* 라벨과 입력 필드 간격 */
+  label {
+    margin-bottom: 0.5rem;
+    display: inline-block;
+  }
+
+  /* 드롭다운 투명도 제거 */
+  [role="listbox"],
+  [role="menu"],
+  [role="dialog"],
+  [data-radix-popper-content-wrapper] {
+    background-color: #ffffff !important;
+    opacity: 1 !important;
   }
 
   body {

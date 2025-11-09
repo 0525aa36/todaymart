@@ -27,6 +27,19 @@ const INQUIRY_CATEGORIES = [
   "기타",
 ]
 
+interface Inquiry {
+  id: number
+  category: string
+  title: string
+  content: string
+  attachmentUrl?: string
+  status: string
+  answer?: string
+  answeredAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
 function HelpCenterContent() {
   const searchParams = useSearchParams()
   const [activeMenu, setActiveMenu] = useState<MenuItem>('notices')
@@ -37,13 +50,39 @@ function HelpCenterContent() {
     content: "",
     attachmentUrl: "",
   })
+  const [inquiries, setInquiries] = useState<Inquiry[]>([])
+  const [loadingInquiries, setLoadingInquiries] = useState(false)
+  const [showInquiryForm, setShowInquiryForm] = useState(false)
+  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null)
 
   useEffect(() => {
     const tab = searchParams.get('tab') as MenuItem | null
     if (tab && ['notices', 'faq', 'inquiries'].includes(tab)) {
       setActiveMenu(tab)
+      if (tab === 'inquiries') {
+        fetchInquiries()
+      }
     }
   }, [searchParams])
+
+  const fetchInquiries = async () => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      setInquiries([])
+      return
+    }
+
+    try {
+      setLoadingInquiries(true)
+      const data = await apiFetch<Inquiry[]>("/api/inquiries", { auth: true })
+      setInquiries(data)
+    } catch (error) {
+      console.error("Error fetching inquiries:", error)
+      toast.error("문의 목록을 불러오지 못했습니다")
+    } finally {
+      setLoadingInquiries(false)
+    }
+  }
 
   const menuItems = [
     { id: 'notices' as MenuItem, label: '공지사항' },
@@ -121,10 +160,21 @@ function HelpCenterContent() {
         content: "",
         attachmentUrl: "",
       })
+      setShowInquiryForm(false)
+      fetchInquiries()
     } catch (error) {
       console.error("Error creating inquiry:", error)
       toast.error("문의 등록에 실패했습니다")
     }
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
   }
 
   return (
@@ -205,75 +255,216 @@ function HelpCenterContent() {
 
               {activeMenu === 'inquiries' && (
                 <div>
-                  <h2 className="text-2xl font-bold mb-6 text-primary">1:1 문의</h2>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-primary">1:1 문의</h2>
+                    {!showInquiryForm && (
+                      <Button
+                        onClick={() => setShowInquiryForm(true)}
+                        className="bg-accent text-accent-foreground hover:bg-accent/90"
+                      >
+                        새로 문의하기
+                      </Button>
+                    )}
+                  </div>
 
-                  <div className="bg-white border border-primary/20 rounded-lg p-6">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      <div>
-                        <Label htmlFor="category">카테고리 *</Label>
-                        <Select
-                          value={formData.category}
-                          onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  {showInquiryForm ? (
+                    <div className="bg-white border border-primary/20 rounded-lg p-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">새 문의 작성</h3>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setShowInquiryForm(false)}
+                          className="text-muted-foreground"
                         >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {INQUIRY_CATEGORIES.map((category) => (
-                              <SelectItem key={category} value={category}>
-                                {category}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="title">제목 *</Label>
-                        <Input
-                          id="title"
-                          value={formData.title}
-                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                          placeholder="문의 제목을 입력하세요"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="content">내용 *</Label>
-                        <Textarea
-                          id="content"
-                          value={formData.content}
-                          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                          placeholder="문의 내용을 자세히 입력하세요"
-                          rows={8}
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="file">파일 첨부 (선택)</Label>
-                        <div className="space-y-2">
-                          <Input
-                            id="file"
-                            type="file"
-                            onChange={handleFileUpload}
-                            disabled={uploadingFile}
-                          />
-                          {uploadingFile && <p className="text-sm text-muted-foreground">업로드 중...</p>}
-                          {formData.attachmentUrl && (
-                            <p className="text-sm text-primary">✓ 파일이 업로드되었습니다</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end">
-                        <Button type="submit" disabled={uploadingFile} className="bg-accent text-accent-foreground hover:bg-accent/90">
-                          {uploadingFile ? "업로드 중..." : "문의 등록"}
+                          목록으로
                         </Button>
                       </div>
-                    </form>
-                  </div>
+                      <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                          <Label htmlFor="category">카테고리 *</Label>
+                          <Select
+                            value={formData.category}
+                            onValueChange={(value) => setFormData({ ...formData, category: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {INQUIRY_CATEGORIES.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                  {category}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="title">제목 *</Label>
+                          <Input
+                            id="title"
+                            value={formData.title}
+                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                            placeholder="문의 제목을 입력하세요"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="content">내용 *</Label>
+                          <Textarea
+                            id="content"
+                            value={formData.content}
+                            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                            placeholder="문의 내용을 자세히 입력하세요"
+                            rows={8}
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="file">파일 첨부 (선택)</Label>
+                          <div className="space-y-2">
+                            <Input
+                              id="file"
+                              type="file"
+                              onChange={handleFileUpload}
+                              disabled={uploadingFile}
+                            />
+                            {uploadingFile && <p className="text-sm text-muted-foreground">업로드 중...</p>}
+                            {formData.attachmentUrl && (
+                              <p className="text-sm text-primary">✓ 파일이 업로드되었습니다</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setShowInquiryForm(false)}
+                          >
+                            취소
+                          </Button>
+                          <Button type="submit" disabled={uploadingFile} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                            {uploadingFile ? "업로드 중..." : "문의 등록"}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-primary/20 rounded-lg">
+                      {loadingInquiries ? (
+                        <div className="p-12 text-center">
+                          <LoadingSpinner size="lg" />
+                        </div>
+                      ) : inquiries.length === 0 ? (
+                        <div className="p-12 text-center text-muted-foreground">
+                          아직 문의 내역이 없습니다.
+                        </div>
+                      ) : (
+                        <div className="divide-y">
+                          {inquiries.map((inquiry) => (
+                            <div
+                              key={inquiry.id}
+                              className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                              onClick={() => setSelectedInquiry(inquiry)}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="px-2 py-1 rounded text-xs bg-primary/10 text-primary">
+                                      {inquiry.category}
+                                    </span>
+                                    <span className={`px-2 py-1 rounded text-xs ${
+                                      inquiry.status === 'PENDING'
+                                        ? 'bg-accent/10 text-accent'
+                                        : 'bg-primary/10 text-primary'
+                                    }`}>
+                                      {inquiry.status === 'PENDING' ? '답변 대기' : '답변 완료'}
+                                    </span>
+                                  </div>
+                                  <h3 className="font-medium mb-1">{inquiry.title}</h3>
+                                  <p className="text-sm text-muted-foreground">
+                                    {formatDate(inquiry.createdAt)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedInquiry && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+                      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <h3 className="text-xl font-bold">문의 상세</h3>
+                            <Button
+                              variant="ghost"
+                              onClick={() => setSelectedInquiry(null)}
+                              className="text-muted-foreground"
+                            >
+                              ✕
+                            </Button>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="bg-muted/30 rounded-lg p-4">
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="px-2 py-1 rounded text-xs bg-primary/10 text-primary">
+                                  {selectedInquiry.category}
+                                </span>
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  selectedInquiry.status === 'PENDING'
+                                    ? 'bg-accent/10 text-accent'
+                                    : 'bg-primary/10 text-primary'
+                                }`}>
+                                  {selectedInquiry.status === 'PENDING' ? '답변 대기' : '답변 완료'}
+                                </span>
+                                <span className="text-sm text-muted-foreground ml-auto">
+                                  {formatDate(selectedInquiry.createdAt)}
+                                </span>
+                              </div>
+
+                              <h4 className="font-semibold text-lg mb-2">{selectedInquiry.title}</h4>
+                              <p className="whitespace-pre-wrap text-sm">{selectedInquiry.content}</p>
+
+                              {selectedInquiry.attachmentUrl && (
+                                <div className="mt-3">
+                                  <a
+                                    href={selectedInquiry.attachmentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-primary hover:underline"
+                                  >
+                                    첨부 파일 보기
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+
+                            {selectedInquiry.answer && (
+                              <div className="bg-primary/5 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h5 className="font-semibold text-primary">답변</h5>
+                                  {selectedInquiry.answeredAt && (
+                                    <span className="text-sm text-muted-foreground">
+                                      {formatDate(selectedInquiry.answeredAt)}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="whitespace-pre-wrap text-sm">{selectedInquiry.answer}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

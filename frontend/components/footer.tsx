@@ -1,13 +1,23 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function Footer() {
   return (
     <footer className="border-t bg-muted/30 mt-20">
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-12 max-w-6xl">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Company Info */}
           <div>
-            <h3 className="font-bold text-lg mb-4">오늘마트</h3>
+            <div className="mb-4">
+              <Image
+                src="/logo_main.png"
+                alt="오늘마트 로고"
+                width={120}
+                height={40}
+                className="object-contain"
+                unoptimized
+              />
+            </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               농가와 소비자를 직접 연결하는
               <br />
