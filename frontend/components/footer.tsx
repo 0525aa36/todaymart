@@ -21,7 +21,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link
-                  href="/help"
+                  href="/help/faq"
                   className="hover:text-foreground transition-colors"
                 >
                   자주 묻는 질문
@@ -29,7 +29,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/notice"
+                  href="/help/notices"
                   className="hover:text-foreground transition-colors"
                 >
                   공지사항
@@ -37,15 +37,15 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/contact"
+                  href="/mypage/inquiries"
                   className="hover:text-foreground transition-colors"
                 >
                   1:1 문의
                 </Link>
               </li>
               <li className="pt-2">
-                {/* <div className="font-semibold text-foreground">1588-0000</div>
-                <div className="text-xs">평일 09:00 - 18:00</div> */}
+                <div className="font-semibold text-foreground">help.todaymart@gmail.com</div>
+                <div className="text-xs">평일 09:00 - 18:00</div>
               </li>
             </ul>
           </div>

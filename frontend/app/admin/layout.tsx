@@ -13,7 +13,8 @@ import {
   LogOut,
   Menu,
   X,
-  Image
+  Image,
+  HelpCircle
 } from 'lucide-react'
 import { API_BASE_URL } from '@/lib/api-client'
 
@@ -67,6 +68,7 @@ export default function AdminLayout({
     { icon: Store, label: '판매자 관리', href: '/admin/sellers' },
     { icon: Receipt, label: '정산 관리', href: '/admin/settlements' },
     { icon: Image, label: '배너 관리', href: '/admin/banners' },
+    { icon: HelpCircle, label: '고객센터 관리', href: '/admin/help' },
   ]
 
   if (!user) {

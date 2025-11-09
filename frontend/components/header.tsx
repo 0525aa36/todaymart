@@ -156,7 +156,12 @@ export function Header() {
                     </Link>
                   </>
                 )}
-                <span className="text-muted-foreground">고객센터</span>
+                <Link
+                  href="/help"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  고객센터
+                </Link>
               </div>
             </div>
           </div>

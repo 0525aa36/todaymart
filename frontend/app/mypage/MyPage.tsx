@@ -25,6 +25,7 @@ import {
   Truck,
   CheckCircle,
   Ticket,
+  MessageSquare,
 } from "lucide-react"
 
 interface User {
@@ -275,6 +276,17 @@ export function MyPage() {
                       <div className="flex items-center gap-3">
                         <MapPin className="h-5 w-5 text-muted-foreground" />
                         <span className="text-sm font-medium">배송지 관리</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </Link>
+
+                    <Link
+                      href="/mypage/inquiries"
+                      className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm font-medium">1:1 문의</span>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </Link>
