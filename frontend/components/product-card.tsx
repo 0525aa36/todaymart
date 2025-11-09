@@ -139,11 +139,11 @@ export function ProductCard({
           </Link>
           {badge && <Badge className="absolute top-2 left-2 bg-accent text-accent-foreground">{badge}</Badge>}
 
-          {/* 장바구니 담기 버튼 - 이미지 우측 상단 */}
+          {/* 장바구니 담기 버튼 - 이미지 우측 하단 */}
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2 bg-white/90 hover:bg-white shadow-md"
+            className="absolute bottom-2 right-2 bg-white/90 hover:bg-white shadow-md"
             onClick={handleCartButtonClick}
           >
             <ShoppingCart className="h-5 w-5 text-primary" />

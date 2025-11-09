@@ -223,26 +223,28 @@ export function Header() {
         {/* Main Header */}
         <div className="w-full py-4 relative">
           <div className="container mx-auto px-4 max-w-6xl">
-            <div className="flex items-center gap-4">
-              {/* Logo */}
-              <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-                <Image
-                  src="/logo_main.png"
-                  alt="오늘마트 로고"
-                  width={120}
-                  height={40}
-                  className="object-contain"
-                  unoptimized
-                />
-              </Link>
+            <div className="hidden md:grid md:grid-cols-[15%_70%_15%] items-center gap-4">
+              {/* Logo - 왼쪽 영역 중앙 정렬 */}
+              <div className="flex justify-center">
+                <Link href="/" className="flex items-center gap-2">
+                  <Image
+                    src="/logo_main.png"
+                    alt="오늘마트 로고"
+                    width={120}
+                    height={40}
+                    className="object-contain"
+                    unoptimized
+                  />
+                </Link>
+              </div>
 
-              {/* Search Bar - 중앙 유연하게 */}
-              <div className="hidden md:flex flex-1 max-w-2xl mx-auto">
-                <form onSubmit={handleSearch} className="relative w-full">
+              {/* Search Bar - 중앙 영역 */}
+              <div className="flex justify-center">
+                <form onSubmit={handleSearch} className="relative w-full max-w-4xl">
                   <Input
                     type="search"
                     placeholder="신선한 농수산물을 검색해보세요"
-                    className="w-full pr-10 bg-primary/17 border-primary/17"
+                    className="w-full pl-5 pr-14 bg-primary/17 border-primary/17 h-12 text-lg placeholder:text-base"
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
                   />
@@ -252,23 +254,23 @@ export function Header() {
                     variant="ghost"
                     className="absolute right-0 top-0 h-full"
                   >
-                    <Search className="h-5 w-5" />
+                    <Search className="h-7 w-7" />
                   </Button>
                 </form>
               </div>
 
               {/* Actions - 오른쪽 정렬 */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center justify-end gap-3">
                 {/* 찜한 상품 */}
                 {user && (
                   <Link href="/mypage/wishlist">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hidden md:flex text-foreground hover:bg-muted"
+                      className="text-foreground hover:bg-muted h-12 w-12"
                       title="찜한 상품"
                     >
-                      <Heart className="h-5 w-5" />
+                      <Heart className="h-10 w-10" />
                     </Button>
                   </Link>
                 )}
@@ -278,10 +280,10 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative text-foreground hover:bg-muted"
+                    className="relative text-foreground hover:bg-muted h-12 w-12"
                     title="장바구니"
                   >
-                    <ShoppingCart className="h-5 w-5" />
+                    <ShoppingCart className="h-10 w-10" />
                     {cartCount > 0 && (
                       <span className="absolute -top-1 -right-1 min-h-5 min-w-5 rounded-full bg-primary text-white text-xs flex items-center justify-center px-1 font-bold">
                         {cartCount}
@@ -292,13 +294,42 @@ export function Header() {
               </div>
             </div>
 
+            {/* Mobile View */}
+            <div className="md:hidden flex items-center justify-between">
+              <Link href="/" className="flex items-center gap-2">
+                <Image
+                  src="/logo_main.png"
+                  alt="오늘마트 로고"
+                  width={100}
+                  height={33}
+                  className="object-contain"
+                  unoptimized
+                />
+              </Link>
+              <Link href="/cart">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative text-foreground hover:bg-muted h-12 w-12"
+                  title="장바구니"
+                >
+                  <ShoppingCart className="h-10 w-10" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-h-5 min-w-5 rounded-full bg-primary text-white text-xs flex items-center justify-center px-1 font-bold">
+                      {cartCount}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+            </div>
+
             {/* Mobile Search */}
             <div className="md:hidden mt-4">
               <form onSubmit={handleSearch} className="relative">
                 <Input
                   type="search"
                   placeholder="신선한 농수산물을 검색해보세요"
-                  className="w-full pr-10 bg-primary/17 border-primary/17"
+                  className="w-full pl-5 pr-14 bg-primary/17 border-primary/17 h-12 text-lg placeholder:text-base"
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
                 />
@@ -308,7 +339,7 @@ export function Header() {
                   variant="ghost"
                   className="absolute right-0 top-0 h-full"
                 >
-                  <Search className="h-5 w-5" />
+                  <Search className="h-7 w-7" />
                 </Button>
               </form>
             </div>
@@ -445,16 +476,16 @@ export function Header() {
               </ul>
 
               {/* 우측 아이콘 */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-3 flex-shrink-0">
                 {user && (
                   <Link href="/mypage/wishlist">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hidden md:flex"
+                      className="hidden md:flex h-12 w-12"
                       title="찜한 상품"
                     >
-                      <Heart className="h-5 w-5" />
+                      <Heart className="h-10 w-10" />
                     </Button>
                   </Link>
                 )}
@@ -462,10 +493,10 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative"
+                    className="relative h-12 w-12"
                     title="장바구니"
                   >
-                    <ShoppingCart className="h-5 w-5" />
+                    <ShoppingCart className="h-10 w-10" />
                     {cartCount > 0 && (
                       <span className="absolute -top-1 -right-1 min-h-5 min-w-5 rounded-full bg-primary text-white text-xs flex items-center justify-center px-1 font-bold">
                         {cartCount}
