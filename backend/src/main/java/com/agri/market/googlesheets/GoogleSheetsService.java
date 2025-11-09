@@ -158,7 +158,7 @@ public class GoogleSheetsService {
                             item.getProduct().getName(),
                             item.getQuantity().toString(),
                             item.getPrice().toString(),
-                            (item.getPrice() * item.getQuantity()) + "",
+                            item.getPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())).toString(),
                             getOrderStatusKorean(order.getOrderStatus().name()),
                             order.getShippingAddressLine1() + " " + (order.getShippingAddressLine2() != null ? order.getShippingAddressLine2() : ""),
                             order.getRecipientName(),
