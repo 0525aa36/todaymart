@@ -1,147 +1,176 @@
+'use client'
+
+import { useState } from 'react'
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { HelpCircle, MessageSquare, Bell, Search } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 import Link from "next/link"
+import { COLORS } from "@/lib/colors"
+
+type MenuItem = 'notices' | 'faq' | 'inquiries' | 'bulk-inquiry'
 
 export default function HelpCenterPage() {
+  const [activeMenu, setActiveMenu] = useState<MenuItem>('inquiries')
+
+  const menuItems = [
+    { id: 'notices' as MenuItem, label: '공지사항', href: '/help/notices' },
+    { id: 'faq' as MenuItem, label: '자주하는 질문', href: '/help/faq' },
+    { id: 'inquiries' as MenuItem, label: '1:1 문의', href: '/mypage/inquiries' },
+    { id: 'bulk-inquiry' as MenuItem, label: '대량 주문 문의', subtitle: '1:1 문의하기' },
+  ]
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-white">
       <Header />
 
-      <main className="flex-1 bg-gradient-to-b from-background to-muted">
-        {/* Hero Section */}
-        <div className="bg-primary text-primary-foreground py-16">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl font-bold mb-4">무엇을 도와드릴까요?</h1>
-            <p className="text-lg mb-8 opacity-90">
-              자주 묻는 질문과 공지사항을 확인하거나 1:1 문의를 남겨주세요
-            </p>
-            <div className="max-w-2xl mx-auto">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="궁금한 내용을 검색해보세요"
-                  className="w-full pl-12 pr-4 py-4 rounded-lg text-foreground"
-                />
-              </div>
-            </div>
+      <main className="flex-1">
+        {/* 페이지 타이틀 */}
+        <div className="border-b bg-white">
+          <div className="container mx-auto px-4 max-w-6xl py-8">
+            <h1 className="text-3xl font-bold">고객센터</h1>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {/* FAQ 카드 */}
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="bg-blue-100 p-3 rounded-full">
-                    <HelpCircle className="h-6 w-6 text-blue-600" />
-                  </div>
-                </div>
-                <CardTitle>자주 묻는 질문</CardTitle>
-                <CardDescription>
-                  가장 많이 묻는 질문과 답변을 확인하세요
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href="/help/faq">
-                  <Button className="w-full" variant="outline">
-                    FAQ 보기
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+        {/* 메인 컨텐츠 */}
+        <div className="container mx-auto px-4 max-w-6xl py-8">
+          <div className="flex gap-8">
+            {/* 좌측 사이드바 */}
+            <aside className="w-64 flex-shrink-0">
+              <nav className="space-y-1">
+                {menuItems.map((item) => {
+                  const isActive = activeMenu === item.id
+                  const isLink = !!item.href
 
-            {/* 공지사항 카드 */}
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="bg-green-100 p-3 rounded-full">
-                    <Bell className="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
-                <CardTitle>공지사항</CardTitle>
-                <CardDescription>
-                  오늘마트의 새로운 소식을 확인하세요
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href="/help/notices">
-                  <Button className="w-full" variant="outline">
-                    공지사항 보기
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+                  const content = (
+                    <div
+                      className={`
+                        flex items-center justify-between px-4 py-4 rounded-lg cursor-pointer transition-all
+                        ${isActive
+                          ? 'bg-purple-50 border-l-4 border-purple-600 font-semibold text-purple-600'
+                          : 'hover:bg-gray-50 border-l-4 border-transparent text-gray-700'
+                        }
+                      `}
+                      onClick={() => setActiveMenu(item.id)}
+                    >
+                      <div>
+                        <div className={isActive ? 'text-purple-600' : 'text-gray-900'}>
+                          {item.label}
+                        </div>
+                        {item.subtitle && (
+                          <div className="text-xs text-gray-500 mt-1">{item.subtitle}</div>
+                        )}
+                      </div>
+                      <ChevronRight className={`h-5 w-5 ${isActive ? 'text-purple-600' : 'text-gray-400'}`} />
+                    </div>
+                  )
 
-            {/* 1:1 문의 카드 */}
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="bg-orange-100 p-3 rounded-full">
-                    <MessageSquare className="h-6 w-6 text-orange-600" />
-                  </div>
-                </div>
-                <CardTitle>1:1 문의</CardTitle>
-                <CardDescription>
-                  궁금한 점을 직접 문의해주세요
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+                  return isLink ? (
+                    <Link key={item.id} href={item.href}>
+                      {content}
+                    </Link>
+                  ) : (
+                    <div key={item.id}>{content}</div>
+                  )
+                })}
+              </nav>
+
+              {/* 도움이 필요하신가요? */}
+              <div className="mt-8 p-6 bg-gray-50 rounded-lg">
+                <h3 className="font-semibold mb-3 text-sm">도움이 필요하신가요 ?</h3>
                 <Link href="/mypage/inquiries">
-                  <Button className="w-full">
-                    문의하기
-                  </Button>
+                  <div className="text-sm text-purple-600 hover:text-purple-700 cursor-pointer flex items-center">
+                    1:1 문의하기
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </div>
                 </Link>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quick Links */}
-          <div className="bg-white rounded-lg p-8 shadow">
-            <h2 className="text-2xl font-bold mb-6">빠른 도움말</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Link href="/help/faq?category=ORDER_DELIVERY" className="p-4 border rounded-lg hover:bg-muted transition-colors">
-                <h3 className="font-semibold mb-1">주문/배송</h3>
-                <p className="text-sm text-muted-foreground">주문 방법, 배송 조회, 배송 기간 등</p>
-              </Link>
-              <Link href="/help/faq?category=PAYMENT" className="p-4 border rounded-lg hover:bg-muted transition-colors">
-                <h3 className="font-semibold mb-1">결제</h3>
-                <p className="text-sm text-muted-foreground">결제 수단, 영수증 발행, 할인 쿠폰 등</p>
-              </Link>
-              <Link href="/help/faq?category=CANCEL_REFUND" className="p-4 border rounded-lg hover:bg-muted transition-colors">
-                <h3 className="font-semibold mb-1">취소/환불</h3>
-                <p className="text-sm text-muted-foreground">주문 취소, 반품, 환불 절차 등</p>
-              </Link>
-              <Link href="/help/faq?category=MEMBER" className="p-4 border rounded-lg hover:bg-muted transition-colors">
-                <h3 className="font-semibold mb-1">회원</h3>
-                <p className="text-sm text-muted-foreground">회원가입, 정보 수정, 탈퇴 등</p>
-              </Link>
-            </div>
-          </div>
-
-          {/* Contact Info */}
-          <div className="mt-12 bg-muted rounded-lg p-8">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4">추가 도움이 필요하신가요?</h2>
-              <p className="text-muted-foreground mb-6">
-                고객센터로 직접 문의해주세요
-              </p>
-              <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">이메일</p>
-                  <p className="font-semibold">help.todaymart@gmail.com</p>
-                </div>
-                <div className="hidden md:block h-8 w-px bg-border"></div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">운영시간</p>
-                  <p className="font-semibold">평일 09:00 - 18:00</p>
-                </div>
               </div>
+            </aside>
+
+            {/* 우측 컨텐츠 영역 */}
+            <div className="flex-1">
+              {activeMenu === 'notices' && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-6">공지사항</h2>
+                  <div className="border rounded-lg">
+                    <div className="bg-gray-50 px-6 py-4 border-b flex items-center">
+                      <div className="flex-1 text-center font-semibold">제목</div>
+                      <div className="w-32 text-center font-semibold">작성일</div>
+                    </div>
+                    <div className="p-12 text-center text-gray-500">
+                      게시글이 없습니다.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeMenu === 'faq' && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-6">자주하는 질문</h2>
+                  <div className="border rounded-lg">
+                    <div className="bg-gray-50 px-6 py-4 border-b flex items-center">
+                      <div className="flex-1 text-center font-semibold">제목</div>
+                      <div className="w-32 text-center font-semibold">카테고리</div>
+                    </div>
+                    <div className="p-12 text-center text-gray-500">
+                      게시글이 없습니다.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeMenu === 'inquiries' && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-6">1:1 문의</h2>
+                  <div className="border rounded-lg">
+                    <div className="bg-gray-50 px-6 py-4 border-b">
+                      <div className="flex items-center">
+                        <div className="flex-1 text-center font-semibold">제목</div>
+                        <div className="w-32 text-center font-semibold">작성일</div>
+                        <div className="w-32 text-center font-semibold">답변상태</div>
+                      </div>
+                    </div>
+                    <div className="p-12 text-center text-gray-500">
+                      게시글이 없습니다.
+                    </div>
+                  </div>
+
+                  {/* 문의하기 버튼 */}
+                  <div className="flex justify-end mt-6">
+                    <Link href="/mypage/inquiries">
+                      <button
+                        className="px-8 py-3 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                        style={{ backgroundColor: '#7C3AED' }}
+                      >
+                        문의하기
+                      </button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {activeMenu === 'bulk-inquiry' && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-6">대량 주문 문의</h2>
+                  <div className="border rounded-lg p-8">
+                    <div className="text-center space-y-4">
+                      <p className="text-gray-600">
+                        대량 주문이 필요하신가요?
+                      </p>
+                      <p className="text-gray-600">
+                        1:1 문의를 통해 상담받으실 수 있습니다.
+                      </p>
+                      <Link href="/mypage/inquiries">
+                        <button
+                          className="mt-4 px-8 py-3 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                          style={{ backgroundColor: '#7C3AED' }}
+                        >
+                          1:1 문의하기
+                        </button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
