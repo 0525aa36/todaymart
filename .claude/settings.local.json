@@ -48,7 +48,8 @@
       "Bash(git pull:*)",
       "WebFetch(domain:pages.tosspayments.com)",
       "WebFetch(domain:todaymart.co.kr)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(./gradlew clean bootRun:*)"
     ],
     "deny": [],
     "ask": []
