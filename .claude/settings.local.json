@@ -46,7 +46,9 @@
       "Bash(/tmp/ecs-logs.json)",
       "Bash(killall:*)",
       "Bash(git pull:*)",
-      "WebFetch(domain:pages.tosspayments.com)"
+      "WebFetch(domain:pages.tosspayments.com)",
+      "WebFetch(domain:todaymart.co.kr)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []
