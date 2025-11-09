@@ -4,12 +4,16 @@ import { useState, useEffect } from "react";
 import { UserCoupon } from "@/types/coupon";
 import { apiFetch } from "@/lib/api-client";
 import CouponList from "@/components/coupon/CouponList";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Ticket, Download } from "lucide-react";
+import { ChevronLeft, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import Link from "next/link";
 
 export default function MyCouponsPage() {
   const router = useRouter();
@@ -17,6 +21,7 @@ export default function MyCouponsPage() {
   const [availableCoupons, setAvailableCoupons] = useState<UserCoupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<"available" | "all">("available");
 
   const [couponCode, setCouponCode] = useState("");
   const [downloading, setDownloading] = useState(false);
@@ -84,86 +89,122 @@ export default function MyCouponsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <p className="text-muted-foreground">쿠폰을 불러오는 중...</p>
-        </div>
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 py-8 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <p className="text-center">로딩 중...</p>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
-          <Ticket className="h-8 w-8" />
-          내 쿠폰
-        </h1>
+  const displayCoupons = selectedFilter === "available" ? availableCoupons : allCoupons;
 
-        {/* 쿠폰 다운로드 */}
-        <div className="mb-6 p-4 border rounded-lg bg-card">
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <Download className="h-5 w-5" />
-            쿠폰 코드로 다운로드
-          </h2>
-          <div className="flex gap-2">
-            <Input
-              placeholder="쿠폰 코드 입력 (예: WELCOME)"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === 'Enter' && handleDownloadCoupon()}
-              disabled={downloading}
-            />
-            <Button
-              onClick={handleDownloadCoupon}
-              disabled={downloading || !couponCode.trim()}
-            >
-              {downloading ? "발급 중..." : "다운로드"}
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+
+      <main className="flex-1 py-8 bg-muted/30">
+        <div className="container mx-auto px-4 max-w-6xl">
+          {/* Header */}
+          <div className="mb-8">
+            <Button variant="ghost" asChild className="mb-4">
+              <Link href="/mypage">
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                마이페이지로 돌아가기
+              </Link>
             </Button>
+            <h1 className="text-3xl font-bold mb-2">내 쿠폰</h1>
+            <p className="text-muted-foreground">총 {allCoupons.length}개의 쿠폰 보유 중</p>
           </div>
 
-          {downloadMessage && (
-            <Alert
-              variant={downloadMessage.type === 'error' ? 'destructive' : 'default'}
-              className="mt-3"
-            >
-              <AlertDescription>{downloadMessage.text}</AlertDescription>
+          {/* Coupon Download Card */}
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Download className="h-5 w-5" />
+                쿠폰 코드로 다운로드
+              </h2>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="쿠폰 코드 입력 (예: WELCOME)"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === 'Enter' && handleDownloadCoupon()}
+                  disabled={downloading}
+                />
+                <Button
+                  onClick={handleDownloadCoupon}
+                  disabled={downloading || !couponCode.trim()}
+                >
+                  {downloading ? "발급 중..." : "다운로드"}
+                </Button>
+              </div>
+
+              {downloadMessage && (
+                <Alert
+                  variant={downloadMessage.type === 'error' ? 'destructive' : 'default'}
+                  className="mt-3"
+                >
+                  <AlertDescription>{downloadMessage.text}</AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Error Alert */}
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+          {/* Filters */}
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex gap-2">
+                <Button
+                  variant={selectedFilter === "available" ? "default" : "outline"}
+                  onClick={() => setSelectedFilter("available")}
+                  className="flex-1"
+                >
+                  사용 가능
+                  <Badge variant="secondary" className="ml-2">
+                    {availableCoupons.length}
+                  </Badge>
+                </Button>
+                <Button
+                  variant={selectedFilter === "all" ? "default" : "outline"}
+                  onClick={() => setSelectedFilter("all")}
+                  className="flex-1"
+                >
+                  전체
+                  <Badge variant="secondary" className="ml-2">
+                    {allCoupons.length}
+                  </Badge>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Coupon List */}
+          <div className="space-y-4">
+            <CouponList
+              userCoupons={displayCoupons}
+              emptyMessage={
+                selectedFilter === "available"
+                  ? "사용 가능한 쿠폰이 없습니다."
+                  : "보유한 쿠폰이 없습니다."
+              }
+            />
+          </div>
         </div>
+      </main>
 
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* 쿠폰 목록 탭 */}
-        <Tabs defaultValue="available" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="available">
-              사용 가능 ({availableCoupons.length})
-            </TabsTrigger>
-            <TabsTrigger value="all">
-              전체 ({allCoupons.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="available" className="mt-6">
-            <CouponList
-              userCoupons={availableCoupons}
-              emptyMessage="사용 가능한 쿠폰이 없습니다."
-            />
-          </TabsContent>
-
-          <TabsContent value="all" className="mt-6">
-            <CouponList
-              userCoupons={allCoupons}
-              emptyMessage="보유한 쿠폰이 없습니다."
-            />
-          </TabsContent>
-        </Tabs>
-      </div>
+      <Footer />
     </div>
   );
 }

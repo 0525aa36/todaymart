@@ -48,6 +48,44 @@ public class NaverOAuth2UserInfo implements OAuth2UserInfo {
     }
 
     @Override
+    public String getPhoneNumber() {
+        if (responseAttributes == null) {
+            return null;
+        }
+        return (String) responseAttributes.get("mobile");
+    }
+
+    @Override
+    public String getBirthDate() {
+        if (responseAttributes == null) {
+            return null;
+        }
+        String birthyear = (String) responseAttributes.get("birthyear");
+        String birthday = (String) responseAttributes.get("birthday");
+
+        if (birthyear != null && birthday != null) {
+            // birthyear: "1990", birthday: "01-15" -> "1990-01-15"
+            return birthyear + "-" + birthday;
+        }
+        return null;
+    }
+
+    @Override
+    public String getGender() {
+        if (responseAttributes == null) {
+            return null;
+        }
+        String gender = (String) responseAttributes.get("gender");
+        // 네이버는 "M" 또는 "F" 형식으로 반환
+        if ("M".equals(gender)) {
+            return "male";
+        } else if ("F".equals(gender)) {
+            return "female";
+        }
+        return null;
+    }
+
+    @Override
     public Map<String, Object> getAttributes() {
         return attributes;
     }

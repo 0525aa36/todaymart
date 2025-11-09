@@ -61,6 +61,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String providerId = oauth2UserInfo.getProviderId();
         String email = oauth2UserInfo.getEmail();
         String name = oauth2UserInfo.getName();
+        String phoneNumber = oauth2UserInfo.getPhoneNumber();
+        String birthDateStr = oauth2UserInfo.getBirthDate();
+        String gender = oauth2UserInfo.getGender();
 
         if (email == null || email.isEmpty()) {
             // 이메일이 없는 경우 provider와 providerId로 고유한 이메일 생성
@@ -76,6 +79,22 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             user = existingUser.get();
             user.setName(name);
             user.setEmail(email);
+
+            // 전화번호, 생년월일, 성별 업데이트
+            if (phoneNumber != null && !phoneNumber.isEmpty()) {
+                user.setPhone(phoneNumber);
+            }
+            if (birthDateStr != null && !birthDateStr.isEmpty()) {
+                try {
+                    user.setBirthDate(java.time.LocalDate.parse(birthDateStr));
+                } catch (Exception e) {
+                    logger.warn("생년월일 파싱 실패: {}", birthDateStr);
+                }
+            }
+            if (gender != null && !gender.isEmpty()) {
+                user.setGender(gender);
+            }
+
             user = userRepository.save(user);
             logger.info("기존 OAuth2 사용자 업데이트: {} ({})", email, provider);
         } else {
@@ -101,11 +120,31 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             user.setRole("USER");
             user.setEnabled(true);
 
-            // 소셜 로그인 사용자는 추가 정보 입력이 필요하므로 기본값 설정
-            user.setPhone("010-0000-0000"); // 나중에 프로필 완성 시 업데이트
+            // OAuth2에서 가져온 정보 설정
+            if (phoneNumber != null && !phoneNumber.isEmpty()) {
+                user.setPhone(phoneNumber);
+            } else {
+                user.setPhone("010-0000-0000"); // 기본값
+            }
+
+            if (birthDateStr != null && !birthDateStr.isEmpty()) {
+                try {
+                    user.setBirthDate(java.time.LocalDate.parse(birthDateStr));
+                } catch (Exception e) {
+                    logger.warn("생년월일 파싱 실패: {}, 기본값 사용", birthDateStr);
+                    user.setBirthDate(java.time.LocalDate.of(1900, 1, 1));
+                }
+            } else {
+                user.setBirthDate(java.time.LocalDate.of(1900, 1, 1)); // 기본값
+            }
+
+            if (gender != null && !gender.isEmpty()) {
+                user.setGender(gender);
+            }
+
+            // 주소는 나중에 입력받도록 기본값 설정
             user.setAddressLine1("주소 미입력");
             user.setPostcode("00000");
-            user.setBirthDate(java.time.LocalDate.of(1900, 1, 1)); // 기본값
 
             logger.info("신규 OAuth2 사용자 생성: {} ({})", email, provider);
 

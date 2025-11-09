@@ -49,6 +49,46 @@ public class KakaoOAuth2UserInfo implements OAuth2UserInfo {
     }
 
     @Override
+    public String getPhoneNumber() {
+        // 카카오는 전화번호를 기본 제공하지 않음
+        if (kakaoAccount == null) {
+            return null;
+        }
+        return (String) kakaoAccount.get("phone_number");
+    }
+
+    @Override
+    public String getBirthDate() {
+        // 카카오는 생년월일을 기본 제공하지 않음
+        if (kakaoAccount == null) {
+            return null;
+        }
+        String birthyear = (String) kakaoAccount.get("birthyear");
+        String birthday = (String) kakaoAccount.get("birthday");
+
+        if (birthyear != null && birthday != null) {
+            // birthyear: "1990", birthday: "0115" -> "1990-01-15"
+            if (birthday.length() == 4) {
+                String month = birthday.substring(0, 2);
+                String day = birthday.substring(2, 4);
+                return birthyear + "-" + month + "-" + day;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public String getGender() {
+        // 카카오는 성별을 기본 제공하지 않음
+        if (kakaoAccount == null) {
+            return null;
+        }
+        String gender = (String) kakaoAccount.get("gender");
+        // 카카오는 "male" 또는 "female" 형식으로 반환
+        return gender;
+    }
+
+    @Override
     public Map<String, Object> getAttributes() {
         return attributes;
     }

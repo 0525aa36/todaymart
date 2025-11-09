@@ -27,6 +27,21 @@ public interface OAuth2UserInfo {
     String getName();
 
     /**
+     * 사용자 전화번호
+     */
+    String getPhoneNumber();
+
+    /**
+     * 사용자 생년월일 (YYYY-MM-DD)
+     */
+    String getBirthDate();
+
+    /**
+     * 사용자 성별 (M/F)
+     */
+    String getGender();
+
+    /**
      * 전체 사용자 정보 속성
      */
     Map<String, Object> getAttributes();
