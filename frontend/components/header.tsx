@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Search, ShoppingCart, User, LogOut, Heart, ChevronDown } from 'lucide-react';
+import { Search, ShoppingCart, User, LogOut, Heart, ChevronDown, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -124,6 +124,13 @@ export function Header() {
     setCartCount(0);
     router.push('/');
     window.location.href = '/';
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   };
 
   return (
@@ -350,7 +357,7 @@ export function Header() {
       {/* Navigation - 고정하지 않음 */}
       <nav className="w-full border-t bg-white shadow-sm">
         <div className="container mx-auto px-4 max-w-6xl">
-          <ul className="flex items-center gap-8 py-3 overflow-x-auto">
+          <ul className="flex items-center gap-8 py-3 overflow-x-auto scrollbar-hide">
             <li>
               <Link
                 href="/deals"
@@ -415,8 +422,8 @@ export function Header() {
       {isScrolled && (
         <div className="fixed top-0 left-0 right-0 z-[100] bg-white border-b shadow-md animate-in slide-in-from-top duration-200">
           <div className="container mx-auto px-4 max-w-6xl">
-            <div className="flex items-center justify-between py-3">
-              <ul className="flex items-center gap-8 overflow-x-auto">
+            <div className="flex items-center justify-between py-2">
+              <ul className="flex items-center gap-6 overflow-x-auto scrollbar-hide">
                 <li>
                   <Link
                     href="/deals"
@@ -475,17 +482,36 @@ export function Header() {
                 </li>
               </ul>
 
-              {/* 우측 아이콘 */}
-              <div className="flex items-center gap-3 flex-shrink-0">
+              {/* 우측 아이콘 및 검색창 */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* 미니 검색창 */}
+                <form onSubmit={handleSearch} className="relative hidden md:block">
+                  <Input
+                    type="search"
+                    placeholder="검색"
+                    className="w-40 pl-3 pr-9 bg-primary/17 border-primary/17 h-8 text-sm placeholder:text-xs"
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                  />
+                  <Button
+                    type="submit"
+                    size="icon"
+                    variant="ghost"
+                    className="absolute right-0 top-0 h-full w-8"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </form>
+
                 {user && (
                   <Link href="/mypage/wishlist">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hidden md:flex h-12 w-12"
+                      className="hidden md:flex h-9 w-9"
                       title="찜한 상품"
                     >
-                      <Heart className="h-10 w-10" />
+                      <Heart className="h-5 w-5" />
                     </Button>
                   </Link>
                 )}
@@ -493,12 +519,12 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative h-12 w-12"
+                    className="relative h-9 w-9"
                     title="장바구니"
                   >
-                    <ShoppingCart className="h-10 w-10" />
+                    <ShoppingCart className="h-5 w-5" />
                     {cartCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-h-5 min-w-5 rounded-full bg-primary text-white text-xs flex items-center justify-center px-1 font-bold">
+                      <span className="absolute -top-1 -right-1 min-h-4 min-w-4 rounded-full bg-primary text-white text-[10px] flex items-center justify-center px-0.5 font-bold">
                         {cartCount}
                       </span>
                     )}
@@ -508,6 +534,17 @@ export function Header() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 최상단으로 이동 플로팅 버튼 */}
+      {isScrolled && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center border border-gray-200 hover:bg-gray-50"
+          aria-label="맨 위로 이동"
+        >
+          <ArrowUp className="h-5 w-5 text-gray-700" />
+        </button>
       )}
     </>
   );

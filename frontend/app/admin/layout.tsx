@@ -3,6 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import NextImage from 'next/image'
 import {
   LayoutDashboard,
   Package,
@@ -149,11 +150,15 @@ export default function AdminLayout({
         <div className="h-full flex flex-col">
           {/* 로고 영역 */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-            <Link href="/admin" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-                <span className="text-white font-bold text-sm">오늘</span>
-              </div>
-              <span className="text-lg font-semibold text-gray-900">오늘마트</span>
+            <Link href="/admin" className="flex items-center">
+              <NextImage
+                src="/logo_main.png"
+                alt="오늘마트 로고"
+                width={120}
+                height={40}
+                className="object-contain"
+                unoptimized
+              />
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
