@@ -14,6 +14,8 @@ public class ProductWithOptionsDto {
     private BigDecimal discountRate;
     private Integer stock;
     private String imageUrl;
+    private String imageUrls;
+    private String detailImageUrls;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private BigDecimal discountedPrice;
@@ -46,6 +48,12 @@ public class ProductWithOptionsDto {
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public String getImageUrls() { return imageUrls; }
+    public void setImageUrls(String imageUrls) { this.imageUrls = imageUrls; }
+
+    public String getDetailImageUrls() { return detailImageUrls; }
+    public void setDetailImageUrls(String detailImageUrls) { this.detailImageUrls = detailImageUrls; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

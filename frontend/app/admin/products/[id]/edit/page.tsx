@@ -7,21 +7,35 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, Upload, X, Plus, Trash2 } from "lucide-react"
+import { useRouter, useParams } from "next/navigation"
+import { ArrowLeft, Upload, X, Plus, Edit, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, API_BASE_URL, getErrorMessage } from "@/lib/api-client"
+import { Badge } from "@/components/ui/badge"
 
 interface Seller {
   id: number
   name: string
 }
 
-export default function NewProductPage() {
+interface ProductOption {
+  id: number
+  optionName: string
+  optionValue: string
+  additionalPrice: number
+  stock: number
+  isAvailable: boolean
+}
+
+export default function EditProductPage() {
   const router = useRouter()
+  const params = useParams()
   const { toast } = useToast()
+  const productId = params.id as string
+
   const [activeSellers, setActiveSellers] = useState<Seller[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingProduct, setLoadingProduct] = useState(true)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -42,19 +56,14 @@ export default function NewProductPage() {
     minOrderQuantity: "1",
     maxOrderQuantity: "",
   })
+
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
   const [detailImages, setDetailImages] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadingDetail, setUploadingDetail] = useState(false)
 
   // Options state
-  const [options, setOptions] = useState<Array<{
-    optionName: string
-    optionValue: string
-    additionalPrice: string
-    stock: string
-    isAvailable: boolean
-  }>>([])
+  const [options, setOptions] = useState<ProductOption[]>([])
   const [newOption, setNewOption] = useState({
     optionName: "",
     optionValue: "",
@@ -62,6 +71,7 @@ export default function NewProductPage() {
     stock: "0",
     isAvailable: true,
   })
+  const [editingOption, setEditingOption] = useState<ProductOption | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -76,36 +86,77 @@ export default function NewProductPage() {
     }
 
     fetchActiveSellers()
-  }, [])
+    fetchProduct()
+    fetchOptions()
+  }, [productId])
 
   const fetchActiveSellers = async () => {
     try {
-      const data = await apiFetch<Seller[]>("/api/admin/sellers/active", {
-        auth: true,
-      })
+      const data = await apiFetch<Seller[]>("/api/admin/sellers/active", { auth: true })
       setActiveSellers(data)
     } catch (error) {
-      console.error("Error fetching active sellers:", error)
+      console.error("Error fetching sellers:", error)
+    }
+  }
+
+  const fetchProduct = async () => {
+    try {
+      const product = await apiFetch<any>(`/api/products/${productId}`)
+      setFormData({
+        name: product.name || "",
+        category: product.category || "",
+        origin: product.origin || "",
+        description: product.description || "",
+        price: product.price?.toString() || "",
+        discountRate: product.discountRate?.toString() || "",
+        stock: product.stock?.toString() || "",
+        imageUrl: product.imageUrl || "",
+        sellerId: product.seller?.id?.toString() || "",
+        supplyPrice: product.supplyPrice?.toString() || "",
+        shippingFee: product.shippingFee?.toString() || "3000",
+        canCombineShipping: product.canCombineShipping || false,
+        combineShippingUnit: product.combineShippingUnit?.toString() || "",
+        courierCompany: product.courierCompany || "",
+        minOrderQuantity: product.minOrderQuantity?.toString() || "1",
+        maxOrderQuantity: product.maxOrderQuantity?.toString() || "",
+      })
+
+      if (product.imageUrls) {
+        setUploadedImages(product.imageUrls.split(','))
+      } else if (product.imageUrl) {
+        setUploadedImages([product.imageUrl])
+      }
+
+      if (product.detailImageUrls) {
+        setDetailImages(product.detailImageUrls.split(','))
+      }
+    } catch (error) {
       toast({
         title: "오류",
-        description: getErrorMessage(error, "판매자 목록을 불러오는 중 오류가 발생했습니다."),
+        description: getErrorMessage(error, "상품 정보를 불러올 수 없습니다."),
         variant: "destructive",
       })
+    } finally {
+      setLoadingProduct(false)
+    }
+  }
+
+  const fetchOptions = async () => {
+    try {
+      const data = await apiFetch<ProductOption[]>(`/api/products/${productId}/options`)
+      setOptions(data)
+    } catch (error) {
+      console.error("Error fetching options:", error)
     }
   }
 
   const handleImageUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
 
-    const token = localStorage.getItem("token")
-    if (!token) return
-
     setUploading(true)
     try {
       const formData = new FormData()
-      Array.from(files).forEach((file) => {
-        formData.append("files", file)
-      })
+      Array.from(files).forEach((file) => formData.append("files", file))
 
       const data = await apiFetch<{ fileUrls: string[] }>("/api/files/upload-multiple", {
         method: "POST",
@@ -117,12 +168,12 @@ export default function NewProductPage() {
         url.startsWith('http://') || url.startsWith('https://') ? url : `${API_BASE_URL}${url}`
       )
       setUploadedImages((prev) => [...prev, ...fileUrls])
+
       toast({
         title: "업로드 완료",
         description: `${files.length}개의 메인 이미지가 업로드되었습니다.`,
       })
     } catch (error) {
-      console.error("Error uploading images:", error)
       toast({
         title: "오류",
         description: getErrorMessage(error, "이미지 업로드 중 오류가 발생했습니다."),
@@ -136,15 +187,10 @@ export default function NewProductPage() {
   const handleDetailImageUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
 
-    const token = localStorage.getItem("token")
-    if (!token) return
-
     setUploadingDetail(true)
     try {
       const formData = new FormData()
-      Array.from(files).forEach((file) => {
-        formData.append("files", file)
-      })
+      Array.from(files).forEach((file) => formData.append("files", file))
 
       const data = await apiFetch<{ fileUrls: string[] }>("/api/files/upload-multiple", {
         method: "POST",
@@ -156,12 +202,12 @@ export default function NewProductPage() {
         url.startsWith('http://') || url.startsWith('https://') ? url : `${API_BASE_URL}${url}`
       )
       setDetailImages((prev) => [...prev, ...fileUrls])
+
       toast({
         title: "업로드 완료",
         description: `${files.length}개의 상세 이미지가 업로드되었습니다.`,
       })
     } catch (error) {
-      console.error("Error uploading detail images:", error)
       toast({
         title: "오류",
         description: getErrorMessage(error, "이미지 업로드 중 오류가 발생했습니다."),
@@ -172,7 +218,15 @@ export default function NewProductPage() {
     }
   }
 
-  const handleAddOption = () => {
+  const removeImage = (index: number) => {
+    setUploadedImages(uploadedImages.filter((_, i) => i !== index))
+  }
+
+  const removeDetailImage = (index: number) => {
+    setDetailImages(detailImages.filter((_, i) => i !== index))
+  }
+
+  const handleAddOption = async () => {
     if (!newOption.optionName || !newOption.optionValue) {
       toast({
         title: "입력 오류",
@@ -182,29 +236,70 @@ export default function NewProductPage() {
       return
     }
 
-    setOptions([...options, { ...newOption }])
-    setNewOption({
-      optionName: "",
-      optionValue: "",
-      additionalPrice: "0",
-      stock: "0",
-      isAvailable: true,
-    })
+    try {
+      await apiFetch(`/api/admin/products/${productId}/options`, {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({
+          optionName: newOption.optionName,
+          optionValue: newOption.optionValue,
+          additionalPrice: parseFloat(newOption.additionalPrice),
+          stock: parseInt(newOption.stock),
+          isAvailable: newOption.isAvailable,
+        }),
+        parseResponse: "none",
+      })
 
-    toast({
-      title: "옵션 추가됨",
-      description: "상품 등록 시 함께 저장됩니다.",
-    })
+      setNewOption({
+        optionName: "",
+        optionValue: "",
+        additionalPrice: "0",
+        stock: "0",
+        isAvailable: true,
+      })
+
+      toast({
+        title: "옵션 추가됨",
+        description: "옵션이 성공적으로 추가되었습니다.",
+      })
+
+      fetchOptions()
+    } catch (error) {
+      toast({
+        title: "오류",
+        description: getErrorMessage(error, "옵션 추가 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleRemoveOption = (index: number) => {
-    setOptions(options.filter((_, i) => i !== index))
+  const handleDeleteOption = async (optionId: number) => {
+    if (!confirm("이 옵션을 삭제하시겠습니까?")) return
+
+    try {
+      await apiFetch(`/api/admin/products/${productId}/options/${optionId}`, {
+        method: "DELETE",
+        auth: true,
+        parseResponse: "none",
+      })
+
+      toast({
+        title: "삭제 완료",
+        description: "옵션이 삭제되었습니다.",
+      })
+
+      fetchOptions()
+    } catch (error) {
+      toast({
+        title: "오류",
+        description: getErrorMessage(error, "옵션 삭제 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const token = localStorage.getItem("token")
-    if (!token) return
 
     setLoading(true)
 
@@ -230,45 +325,23 @@ export default function NewProductPage() {
     }
 
     try {
-      const createdProduct = await apiFetch<{ id: number }>("/api/admin/products", {
-        method: "POST",
+      await apiFetch(`/api/admin/products/${productId}`, {
+        method: "PUT",
         auth: true,
         body: JSON.stringify(productData),
-        parseResponse: "json",
+        parseResponse: "none",
       })
-
-      // 옵션 등록
-      if (options.length > 0 && createdProduct.id) {
-        for (const option of options) {
-          try {
-            await apiFetch(`/api/admin/products/${createdProduct.id}/options`, {
-              method: "POST",
-              auth: true,
-              body: JSON.stringify({
-                optionName: option.optionName,
-                optionValue: option.optionValue,
-                additionalPrice: parseFloat(option.additionalPrice),
-                stock: parseInt(option.stock),
-                isAvailable: option.isAvailable,
-              }),
-              parseResponse: "none",
-            })
-          } catch (error) {
-            console.error("Error saving option:", error)
-          }
-        }
-      }
 
       toast({
-        title: "등록 완료",
-        description: `상품이 성공적으로 등록되었습니다${options.length > 0 ? ` (옵션 ${options.length}개 포함)` : ""}.`,
+        title: "수정 완료",
+        description: "상품이 성공적으로 수정되었습니다.",
       })
+
       router.push("/admin/products")
     } catch (error) {
-      console.error("Error saving product:", error)
       toast({
         title: "오류",
-        description: getErrorMessage(error, "상품 저장 중 오류가 발생했습니다."),
+        description: getErrorMessage(error, "상품 수정 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -276,12 +349,15 @@ export default function NewProductPage() {
     }
   }
 
-  const removeImage = (index: number) => {
-    setUploadedImages(uploadedImages.filter((_, i) => i !== index))
-  }
-
-  const removeDetailImage = (index: number) => {
-    setDetailImages(detailImages.filter((_, i) => i !== index))
+  if (loadingProduct) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -294,8 +370,8 @@ export default function NewProductPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">새 상품 등록</h1>
-          <p className="text-sm text-gray-500 mt-1">판매할 상품 정보를 입력하세요</p>
+          <h1 className="text-2xl font-semibold text-gray-900">상품 수정</h1>
+          <p className="text-sm text-gray-500 mt-1">상품 정보와 옵션을 수정하세요</p>
         </div>
       </div>
 
@@ -315,7 +391,6 @@ export default function NewProductPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  placeholder="상품명을 입력하세요"
                 />
               </div>
 
@@ -327,7 +402,6 @@ export default function NewProductPage() {
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     required
-                    placeholder="예: 채소"
                   />
                 </div>
                 <div>
@@ -337,7 +411,6 @@ export default function NewProductPage() {
                     value={formData.origin}
                     onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
                     required
-                    placeholder="예: 국내산"
                   />
                 </div>
               </div>
@@ -349,7 +422,6 @@ export default function NewProductPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={4}
-                  placeholder="상품에 대한 자세한 설명을 입력하세요"
                 />
               </div>
 
@@ -363,7 +435,6 @@ export default function NewProductPage() {
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     required
                     min="0"
-                    placeholder="10000"
                   />
                 </div>
                 <div>
@@ -375,7 +446,6 @@ export default function NewProductPage() {
                     onChange={(e) => setFormData({ ...formData, discountRate: e.target.value })}
                     min="0"
                     max="100"
-                    placeholder="10"
                   />
                 </div>
               </div>
@@ -390,7 +460,6 @@ export default function NewProductPage() {
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                     required
                     min="0"
-                    placeholder="100"
                   />
                 </div>
                 <div>
@@ -413,25 +482,28 @@ export default function NewProductPage() {
 
               {/* Options in Left Column */}
               <div className="pt-4 border-t">
-                <Label className="text-base font-semibold">상품 옵션 (선택사항)</Label>
+                <Label className="text-base font-semibold">상품 옵션</Label>
                 <div className="mt-3 space-y-3">
-                  {/* Option List */}
+                  {/* Existing Options */}
                   {options.length > 0 && (
                     <div className="space-y-2">
-                      {options.map((option, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                      {options.map((option) => (
+                        <div key={option.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
                           <div className="flex-1">
                             <span className="font-medium">{option.optionName}:</span> {option.optionValue}
-                            <span className="text-gray-500 ml-2">+{option.additionalPrice}원</span>
+                            <span className="text-gray-500 ml-2">{option.additionalPrice >= 0 ? '+' : ''}{option.additionalPrice}원</span>
                             <span className="text-gray-500 ml-2">재고 {option.stock}개</span>
+                            <Badge variant={option.isAvailable ? "default" : "secondary"} className="ml-2 text-xs">
+                              {option.isAvailable ? "판매중" : "중지"}
+                            </Badge>
                           </div>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleRemoveOption(index)}
+                            onClick={() => handleDeleteOption(option.id)}
                           >
-                            <X className="h-3 w-3" />
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       ))}
@@ -470,7 +542,6 @@ export default function NewProductPage() {
                           type="number"
                           value={newOption.additionalPrice}
                           onChange={(e) => setNewOption({ ...newOption, additionalPrice: e.target.value })}
-                          placeholder="0"
                           className="h-8"
                         />
                       </div>
@@ -481,7 +552,6 @@ export default function NewProductPage() {
                           type="number"
                           value={newOption.stock}
                           onChange={(e) => setNewOption({ ...newOption, stock: e.target.value })}
-                          placeholder="0"
                           className="h-8"
                         />
                       </div>
@@ -616,7 +686,6 @@ export default function NewProductPage() {
                     onChange={(e) => setFormData({ ...formData, shippingFee: e.target.value })}
                     required
                     min="0"
-                    placeholder="3000"
                   />
                 </div>
                 <div>
@@ -625,7 +694,6 @@ export default function NewProductPage() {
                     id="courierCompany"
                     value={formData.courierCompany}
                     onChange={(e) => setFormData({ ...formData, courierCompany: e.target.value })}
-                    placeholder="CJ대한통운"
                   />
                 </div>
               </div>
@@ -650,7 +718,6 @@ export default function NewProductPage() {
                     value={formData.minOrderQuantity}
                     onChange={(e) => setFormData({ ...formData, minOrderQuantity: e.target.value })}
                     min="1"
-                    placeholder="1"
                   />
                 </div>
                 <div>
@@ -661,21 +728,8 @@ export default function NewProductPage() {
                     value={formData.maxOrderQuantity}
                     onChange={(e) => setFormData({ ...formData, maxOrderQuantity: e.target.value })}
                     min="1"
-                    placeholder="99"
                   />
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="supplyPrice">공급가 (원)</Label>
-                <Input
-                  id="supplyPrice"
-                  type="number"
-                  value={formData.supplyPrice}
-                  onChange={(e) => setFormData({ ...formData, supplyPrice: e.target.value })}
-                  min="0"
-                  placeholder="도매가 입력 (선택)"
-                />
               </div>
             </CardContent>
           </Card>
@@ -689,14 +743,7 @@ export default function NewProductPage() {
             </Button>
           </Link>
           <Button type="submit" disabled={loading}>
-            {loading ? (
-              <>
-                <span className="animate-spin mr-2">⏳</span>
-                등록 중...
-              </>
-            ) : (
-              "상품 등록"
-            )}
+            {loading ? "수정 중..." : "수정 완료"}
           </Button>
         </div>
       </form>

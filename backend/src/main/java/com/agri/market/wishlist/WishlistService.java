@@ -59,9 +59,6 @@ public class WishlistService {
             throw new RuntimeException("Product already in wishlist");
         }
 
-        // 이미지를 미리 로드 (LazyInitializationException 방지)
-        product.getImages().size();
-
         WishlistItem wishlistItem = new WishlistItem();
         wishlistItem.setUser(user);
         wishlistItem.setProduct(product);

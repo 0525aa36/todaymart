@@ -46,6 +46,8 @@ public class ProductController {
         dto.setDiscountRate(product.getDiscountRate());
         dto.setStock(product.getStock());
         dto.setImageUrl(product.getImageUrl());
+        dto.setImageUrls(product.getImageUrls());
+        dto.setDetailImageUrls(product.getDetailImageUrls());
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         dto.setDiscountedPrice(product.getDiscountedPrice());

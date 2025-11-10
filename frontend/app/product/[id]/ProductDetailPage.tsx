@@ -45,6 +45,8 @@ interface Product {
   discountRate: number | null
   stock: number
   imageUrl: string
+  imageUrls?: string
+  detailImageUrls?: string
   createdAt: string
   updatedAt: string
 }
@@ -675,6 +677,23 @@ export function ProductDetailPage() {
                     dangerouslySetInnerHTML={{ __html: descriptionHtml }}
                   />
                 </div>
+
+                {/* 상세페이지 이미지 */}
+                {product.detailImageUrls && product.detailImageUrls.trim() && (
+                  <div className="space-y-6 mt-8">
+                    <div className="space-y-6 flex flex-col items-center">
+                      {product.detailImageUrls.split(',').filter(url => url.trim()).map((url, index) => (
+                        <div key={index} className="max-w-xl w-full">
+                          <img
+                            src={url.trim()}
+                            alt={`${product.name} 상세 이미지 ${index + 1}`}
+                            className="w-full h-auto rounded-lg shadow-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
 

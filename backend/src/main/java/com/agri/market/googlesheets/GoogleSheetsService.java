@@ -21,9 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -301,9 +299,12 @@ public class GoogleSheetsService {
             log.info("Starting product sync for seller: {} (ID: {})", seller.getName(), sellerId);
             log.info("Spreadsheet ID: {}", seller.getSpreadsheetId());
 
-            // 판매자의 상품 목록 조회 (이미지와 옵션 포함)
+            // 판매자의 상품 목록 조회 (이미지 포함)
             List<Product> products = productRepository.findBySellerIdWithImagesAndOptions(sellerId);
             log.info("Found {} products for seller {}", products.size(), seller.getName());
+
+            // 옵션 LAZY loading 강제 초기화 (MultipleBagFetchException 방지)
+            products.forEach(p -> p.getOptions().size());
 
             // 3개의 시트에 데이터 준비
             List<List<Object>> productData = prepareProductData(products);
@@ -317,9 +318,9 @@ public class GoogleSheetsService {
             updateProductSpreadsheet(seller.getSpreadsheetId(), productData, optionData, imageData);
             log.info("Successfully updated product spreadsheet");
 
-            // 서식 적용
-            formatProductSheet(seller.getSpreadsheetId());
-            log.info("Successfully formatted product sheets");
+            // 서식 적용 (TODO: 시트 ID 동적 조회 후 활성화)
+            // formatProductSheet(seller.getSpreadsheetId());
+            log.info("Skipped formatting (sheet IDs need to be determined dynamically)");
 
             syncLog.setStatus(GoogleSheetsSyncLog.SyncStatus.SUCCESS);
             syncLog.setRowsUpdated(productData.size() - 1); // 헤더 제외
@@ -393,7 +394,7 @@ public class GoogleSheetsService {
                     p.getImageUrl() != null ? p.getImageUrl() : "",
                     p.getDescription() != null ? p.getDescription() : "",
                     p.getOptions() != null ? String.valueOf(p.getOptions().size()) : "0",
-                    p.getImages() != null ? String.valueOf(p.getImages().size()) : "0",
+                    p.getImageUrls() != null && !p.getImageUrls().isEmpty() ? String.valueOf(p.getImageUrls().split(",").length) : "0",
                     p.getCreatedAt() != null ? p.getCreatedAt().format(DATE_FORMATTER) : "",
                     p.getUpdatedAt() != null ? p.getUpdatedAt().format(DATE_FORMATTER) : "",
                     "동기화완료"
@@ -458,15 +459,16 @@ public class GoogleSheetsService {
 
         // 데이터 행
         for (Product p : products) {
-            if (p.getImages() != null && !p.getImages().isEmpty()) {
-                for (ProductImage image : p.getImages()) {
+            if (p.getImageUrls() != null && !p.getImageUrls().isEmpty()) {
+                String[] imageUrls = p.getImageUrls().split(",");
+                for (int i = 0; i < imageUrls.length; i++) {
                     values.add(Arrays.asList(
-                            image.getId() != null ? image.getId().toString() : "",
+                            "",  // No image ID anymore
                             p.getId() != null ? p.getId().toString() : "",
                             p.getName() != null ? p.getName() : "",
-                            image.getImageUrl() != null ? image.getImageUrl() : "",
-                            image.getImageType() != null ? image.getImageType().name() : "",
-                            image.getDisplayOrder() != null ? image.getDisplayOrder().toString() : "0"
+                            imageUrls[i].trim(),
+                            "MAIN",  // Image type
+                            String.valueOf(i)  // Display order
                     ));
                 }
             }
@@ -521,14 +523,40 @@ public class GoogleSheetsService {
      * 상품 시트 서식 적용
      */
     private void formatProductSheet(String spreadsheetId) throws IOException {
+        // 스프레드시트 메타데이터 가져오기
+        Spreadsheet spreadsheet = sheetsService.spreadsheets().get(spreadsheetId).execute();
+        Map<String, Integer> sheetIds = new HashMap<>();
+
+        for (Sheet sheet : spreadsheet.getSheets()) {
+            String title = sheet.getProperties().getTitle();
+            Integer sheetId = sheet.getProperties().getSheetId();
+            sheetIds.put(title, sheetId);
+            log.debug("Found sheet: {} with ID: {}", title, sheetId);
+        }
+
+        // 필요한 시트가 없으면 생성
+        ensureSheetsExist(spreadsheetId, sheetIds);
+
+        // 시트 ID를 다시 가져오기 (새로 생성된 경우)
+        spreadsheet = sheetsService.spreadsheets().get(spreadsheetId).execute();
+        sheetIds.clear();
+        for (Sheet sheet : spreadsheet.getSheets()) {
+            sheetIds.put(sheet.getProperties().getTitle(), sheet.getProperties().getSheetId());
+        }
+
         List<Request> requests = new ArrayList<>();
 
-        // 상품목록 시트 (sheetId = 1로 가정, 주문내역이 0)
-        // 헤더 행 배경색 및 굵게
+        Integer productListSheetId = sheetIds.get("상품목록");
+        if (productListSheetId == null) {
+            log.warn("상품목록 시트를 찾을 수 없습니다. 서식 적용을 건너뜁니다.");
+            return;
+        }
+
+        // 상품목록 시트 헤더 행 배경색 및 굵게
         requests.add(new Request()
                 .setRepeatCell(new RepeatCellRequest()
                         .setRange(new GridRange()
-                                .setSheetId(1)
+                                .setSheetId(productListSheetId)
                                 .setStartRowIndex(0)
                                 .setEndRowIndex(1))
                         .setCell(new CellData()
@@ -549,16 +577,18 @@ public class GoogleSheetsService {
         requests.add(new Request()
                 .setUpdateSheetProperties(new UpdateSheetPropertiesRequest()
                         .setProperties(new SheetProperties()
-                                .setSheetId(1)
+                                .setSheetId(productListSheetId)
                                 .setGridProperties(new GridProperties()
                                         .setFrozenRowCount(1)))
                         .setFields("gridProperties.frozenRowCount")));
 
-        // 상품옵션 시트 (sheetId = 2로 가정)
-        requests.add(new Request()
-                .setRepeatCell(new RepeatCellRequest()
-                        .setRange(new GridRange()
-                                .setSheetId(2)
+        Integer productOptionSheetId = sheetIds.get("상품옵션");
+        if (productOptionSheetId != null) {
+            // 상품옵션 시트 헤더
+            requests.add(new Request()
+                    .setRepeatCell(new RepeatCellRequest()
+                            .setRange(new GridRange()
+                                    .setSheetId(productOptionSheetId)
                                 .setStartRowIndex(0)
                                 .setEndRowIndex(1))
                         .setCell(new CellData()
@@ -575,46 +605,28 @@ public class GoogleSheetsService {
                                                         .setBlue(1.0f)))))
                         .setFields("userEnteredFormat(backgroundColor,textFormat)")));
 
-        requests.add(new Request()
-                .setUpdateSheetProperties(new UpdateSheetPropertiesRequest()
-                        .setProperties(new SheetProperties()
-                                .setSheetId(2)
-                                .setGridProperties(new GridProperties()
-                                        .setFrozenRowCount(1)))
-                        .setFields("gridProperties.frozenRowCount")));
+            requests.add(new Request()
+                    .setUpdateSheetProperties(new UpdateSheetPropertiesRequest()
+                            .setProperties(new SheetProperties()
+                                    .setSheetId(productOptionSheetId)
+                                    .setGridProperties(new GridProperties()
+                                            .setFrozenRowCount(1)))
+                            .setFields("gridProperties.frozenRowCount")));
+        }
 
-        // 상품이미지 시트 (sheetId = 3으로 가정)
-        requests.add(new Request()
-                .setRepeatCell(new RepeatCellRequest()
-                        .setRange(new GridRange()
-                                .setSheetId(3)
-                                .setStartRowIndex(0)
-                                .setEndRowIndex(1))
-                        .setCell(new CellData()
-                                .setUserEnteredFormat(new CellFormat()
-                                        .setBackgroundColor(new Color()
-                                                .setRed(0.8f)
-                                                .setGreen(0.5f)
-                                                .setBlue(0.2f))
-                                        .setTextFormat(new TextFormat()
-                                                .setBold(true)
-                                                .setForegroundColor(new Color()
-                                                        .setRed(1.0f)
-                                                        .setGreen(1.0f)
-                                                        .setBlue(1.0f)))))
-                        .setFields("userEnteredFormat(backgroundColor,textFormat)")));
+        // Apply formatting (execute requests)
+        if (!requests.isEmpty()) {
+            BatchUpdateSpreadsheetRequest batchRequest = new BatchUpdateSpreadsheetRequest()
+                    .setRequests(requests);
+            sheetsService.spreadsheets().batchUpdate(spreadsheetId, batchRequest).execute();
+        }
+    }
 
-        requests.add(new Request()
-                .setUpdateSheetProperties(new UpdateSheetPropertiesRequest()
-                        .setProperties(new SheetProperties()
-                                .setSheetId(3)
-                                .setGridProperties(new GridProperties()
-                                        .setFrozenRowCount(1)))
-                        .setFields("gridProperties.frozenRowCount")));
-
-        BatchUpdateSpreadsheetRequest batchRequest = new BatchUpdateSpreadsheetRequest()
-                .setRequests(requests);
-
-        sheetsService.spreadsheets().batchUpdate(spreadsheetId, batchRequest).execute();
+    /**
+     * 필요한 시트가 없으면 생성 (미구현 - TODO)
+     */
+    private void ensureSheetsExist(String spreadsheetId, Map<String, Integer> existingSheets) {
+        // TODO: 상품목록, 상품옵션, 상품이미지 시트가 없으면 생성
+        // 지금은 수동으로 시트를 만들어야 함
     }
 }

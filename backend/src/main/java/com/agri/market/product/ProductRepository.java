@@ -44,19 +44,18 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // 중복 체크용
     boolean existsByName(String name);
 
-    // Lazy loading 문제 해결: images와 seller를 fetch join으로 미리 로드
-    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images LEFT JOIN FETCH p.seller")
+    // Lazy loading 문제 해결: seller를 fetch join으로 미리 로드
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.seller")
     List<Product> findAllWithImages();
 
     // Pageable 지원 버전
-    @Query(value = "SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images LEFT JOIN FETCH p.seller",
+    @Query(value = "SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.seller",
            countQuery = "SELECT COUNT(DISTINCT p) FROM Product p")
     Page<Product> findAllWithImages(Pageable pageable);
 
-    // 개별 상품 조회 시 images와 seller를 fetch join으로 미리 로드
+    // 개별 상품 조회 시 seller를 fetch join으로 미리 로드
     // Note: options는 별도 API로 조회하거나 필요시 LAZY로 로드
     @Query("SELECT p FROM Product p " +
-           "LEFT JOIN FETCH p.images " +
            "LEFT JOIN FETCH p.seller " +
            "WHERE p.id = :id")
     Optional<Product> findByIdWithImagesAndOptions(@Param("id") Long id);
@@ -75,10 +74,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // 재고 부족 상품 목록 조회 (findByStockLessThan 메서드)
     List<Product> findByStockLessThan(int threshold);
 
-    // 판매자별 상품 조회 (이미지와 옵션 포함)
+    // 판매자별 상품 조회
+    // Note: options는 LAZY loading으로 자동 로드됨 (MultipleBagFetchException 방지)
     @Query("SELECT DISTINCT p FROM Product p " +
-           "LEFT JOIN FETCH p.images " +
-           "LEFT JOIN FETCH p.options " +
            "WHERE p.seller.id = :sellerId " +
            "ORDER BY p.createdAt DESC")
     List<Product> findBySellerIdWithImagesAndOptions(@Param("sellerId") Long sellerId);

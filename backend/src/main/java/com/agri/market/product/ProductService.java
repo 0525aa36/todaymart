@@ -118,6 +118,8 @@ public class ProductService {
         product.setDiscountRate(request.getDiscountRate());
         product.setStock(request.getStock());
         product.setImageUrl(request.getImageUrl());
+        product.setImageUrls(request.getImageUrls());
+        product.setDetailImageUrls(request.getDetailImageUrls());
 
         // 새로운 필드 설정
         product.setSupplyPrice(request.getSupplyPrice());
@@ -135,10 +137,7 @@ public class ProductService {
             product.setSeller(seller);
         }
 
-        Product saved = productRepository.save(product);
-        // LazyInitializationException 방지를 위해 images 컬렉션 초기화
-        saved.getImages().size();
-        return saved;
+        return productRepository.save(product);
     }
 
     @Transactional
@@ -154,6 +153,8 @@ public class ProductService {
         product.setDiscountRate(request.getDiscountRate());
         product.setStock(request.getStock());
         product.setImageUrl(request.getImageUrl());
+        product.setImageUrls(request.getImageUrls());
+        product.setDetailImageUrls(request.getDetailImageUrls());
 
         // 새로운 필드 설정
         product.setSupplyPrice(request.getSupplyPrice());
@@ -173,10 +174,7 @@ public class ProductService {
             product.setSeller(null);
         }
 
-        Product saved = productRepository.save(product);
-        // LazyInitializationException 방지를 위해 images 컬렉션 초기화
-        saved.getImages().size();
-        return saved;
+        return productRepository.save(product);
     }
 
     @Transactional

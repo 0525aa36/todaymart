@@ -111,8 +111,7 @@ public class CartService {
             cart.getCartItems().add(cartItem);
         }
 
-        // Manually initialize product images to avoid LazyInitializationException
-        cart.getCartItems().forEach(item -> item.getProduct().getImages().size());
+        // Product images no longer needed
 
         return cart;
     }
@@ -128,8 +127,7 @@ public class CartService {
             return cartRepository.save(newCart);
         });
 
-        // Manually initialize product images to avoid LazyInitializationException
-        cart.getCartItems().forEach(item -> item.getProduct().getImages().size());
+        // Product images no longer needed
 
         return cart;
     }
@@ -163,8 +161,7 @@ public class CartService {
         cartItem.setQuantity(newQuantity);
         CartItem savedItem = cartItemRepository.save(cartItem);
 
-        // Manually initialize product images to avoid LazyInitializationException
-        savedItem.getProduct().getImages().size();
+        // Product images no longer needed
 
         return savedItem;
     }

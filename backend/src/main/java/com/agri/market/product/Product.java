@@ -74,11 +74,13 @@ public class Product {
     // 하위 호환성과 성능을 위해 메인 이미지 URL 유지
     private String imageUrl;
 
-    // 정규화: 이미지들을 별도 테이블로 관리
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("displayOrder ASC")
-    @com.fasterxml.jackson.annotation.JsonManagedReference("product-images")
-    private List<ProductImage> images = new ArrayList<>();
+    // 여러 메인 이미지 URL들 (쉼표로 구분, 임시 필드)
+    @Column(length = 2000)
+    private String imageUrls;
+
+    // 상세페이지 이미지 URL들 (쉼표로 구분, 임시 필드)
+    @Column(length = 2000)
+    private String detailImageUrls;
 
     // 정규화: 옵션들을 별도 테이블로 관리
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -107,12 +109,6 @@ public class Product {
             return discountedPrice.setScale(0, RoundingMode.HALF_UP);
         }
         return price;
-    }
-
-    // 편의 메서드: 이미지 추가
-    public void addImage(ProductImage image) {
-        images.add(image);
-        image.setProduct(this);
     }
 
     // 편의 메서드: 옵션 추가

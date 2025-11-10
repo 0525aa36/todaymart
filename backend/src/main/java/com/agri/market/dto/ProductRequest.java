@@ -39,6 +39,12 @@ public class ProductRequest {
 
     private String imageUrl;
 
+    // 여러 메인 이미지 URL들 (쉼표로 구분, 선택)
+    private String imageUrls;
+
+    // 상세페이지 이미지 URL들 (쉼표로 구분, 선택)
+    private String detailImageUrls;
+
     // 공급가 (도매가, 선택)
     private BigDecimal supplyPrice;
 

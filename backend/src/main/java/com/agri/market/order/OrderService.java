@@ -252,9 +252,6 @@ public class OrderService {
             order.getOrderItems().size(); // OrderItems 초기화
             order.getOrderItems().forEach(item -> {
                 item.getProduct().getName(); // Product 초기화
-                if (item.getProduct().getImages() != null) {
-                    item.getProduct().getImages().size(); // Product images 초기화
-                }
             });
             // Initialize appliedCoupon if present
             if (order.getAppliedCoupon() != null) {
@@ -422,9 +419,6 @@ public class OrderService {
                 // Initialize seller
                 if (item.getProduct().getSeller() != null) {
                     item.getProduct().getSeller().getName(); // Initialize seller
-                }
-                if (item.getProduct().getImages() != null) {
-                    item.getProduct().getImages().size(); // Initialize product images
                 }
             });
             // Initialize appliedCoupon if present

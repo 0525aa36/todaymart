@@ -20,7 +20,8 @@ public class ProductDetailResponse {
     private BigDecimal discountedPrice;
     private Integer stock;
     private String imageUrl;
-    private List<ProductImageDto> images;
+    private String imageUrls;
+    private String detailImageUrls;
     private List<ProductOptionDto> options;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -37,13 +38,10 @@ public class ProductDetailResponse {
         dto.setDiscountedPrice(product.getDiscountedPrice());
         dto.setStock(product.getStock());
         dto.setImageUrl(product.getImageUrl());
+        dto.setImageUrls(product.getImageUrls());
+        dto.setDetailImageUrls(product.getDetailImageUrls());
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
-
-        // 이미지 변환
-        dto.setImages(product.getImages().stream()
-                .map(ProductImageDto::fromEntity)
-                .collect(Collectors.toList()));
 
         // 옵션 변환
         dto.setOptions(product.getOptions().stream()

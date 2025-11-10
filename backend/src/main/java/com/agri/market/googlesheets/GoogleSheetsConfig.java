@@ -13,8 +13,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
 import java.util.List;
@@ -29,21 +33,43 @@ public class GoogleSheetsConfig {
     @Value("${google.sheets.application-name}")
     private String applicationName;
 
-    @Value("${google.sheets.credentials.path}")
+    @Value("${google.sheets.credentials.path:#{null}}")
     private String credentialsPath;
+
+    @Value("${GOOGLE_SHEETS_CREDENTIALS:#{null}}")
+    private String credentialsJson;
 
     @Bean
     public Sheets googleSheetsClient() throws IOException, GeneralSecurityException {
         final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
 
-        GoogleCredentials credentials;
-        try (FileInputStream serviceAccountStream = new FileInputStream(credentialsPath)) {
-            credentials = GoogleCredentials.fromStream(serviceAccountStream)
-                    .createScoped(SCOPES);
-        }
+        GoogleCredentials credentials = loadCredentials();
 
         return new Sheets.Builder(httpTransport, JSON_FACTORY, new HttpCredentialsAdapter(credentials))
                 .setApplicationName(applicationName)
                 .build();
+    }
+
+    private GoogleCredentials loadCredentials() throws IOException {
+        InputStream credentialsStream;
+
+        // 1. 환경 변수에서 JSON 문자열로 로드 (배포 환경)
+        if (credentialsJson != null && !credentialsJson.isEmpty()) {
+            credentialsStream = new ByteArrayInputStream(credentialsJson.getBytes());
+        }
+        // 2. 파일 경로에서 로드 (로컬 개발 환경)
+        else if (credentialsPath != null && Files.exists(Paths.get(credentialsPath))) {
+            credentialsStream = new FileInputStream(credentialsPath);
+        }
+        // 3. 기본 경로에서 로드
+        else {
+            throw new IOException("Google Sheets credentials not found. " +
+                    "Set GOOGLE_SHEETS_CREDENTIALS environment variable or google.sheets.credentials.path property.");
+        }
+
+        try (credentialsStream) {
+            return GoogleCredentials.fromStream(credentialsStream)
+                    .createScoped(SCOPES);
+        }
     }
 }
