@@ -56,7 +56,22 @@
       "Bash(pnpm add:*)",
       "Bash(git log:*)",
       "Bash(find:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(/tmp/current-task-def.json)",
+      "Bash(jq:*)",
+      "Bash(/tmp/task-def-final.json)",
+      "Bash(/tmp/update-service-result.json)",
+      "Bash(/tmp/update-service2.json)",
+      "Bash(tree:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(./gradlew compileTestJava:*)",
+      "Bash(./gradlew clean test:*)",
+      "Bash(JWT_SECRET=\"TestSecretKeyForJUnitTestsThatIsAtLeast512BitsLongTestSecretKeyForJUnitTestsThatIsAtLeast512BitsLong\" ./gradlew test:*)",
+      "Bash(git rm:*)",
+      "Bash(./gradlew compileJava:*)",
+      "Bash(git reset:*)",
+      "Bash(netstat:*)",
+      "Bash(ss:*)"
     ],
     "deny": [],
     "ask": []
