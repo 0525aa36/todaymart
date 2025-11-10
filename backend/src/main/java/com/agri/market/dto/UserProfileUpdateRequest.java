@@ -29,6 +29,6 @@ public class UserProfileUpdateRequest {
 
     private LocalDate birthDate;
 
-    @Pattern(regexp = "^(male|female)$", message = "성별은 male 또는 female이어야 합니다.")
+    @Pattern(regexp = "^(male|female)?$", message = "성별은 male 또는 female이어야 합니다.")
     private String gender;
 }

@@ -28,6 +28,30 @@ import java.util.UUID;
 @Service
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
+    /**
+     * 전화번호를 하이픈 포함 형식으로 변환 (010-1234-5678)
+     */
+    private String formatPhoneNumber(String phone) {
+        if (phone == null || phone.isEmpty()) {
+            return phone;
+        }
+
+        // 숫자만 추출
+        String numbers = phone.replaceAll("[^0-9]", "");
+
+        // 11자리 휴대폰 번호 포맷팅
+        if (numbers.length() == 11) {
+            return numbers.substring(0, 3) + "-" + numbers.substring(3, 7) + "-" + numbers.substring(7);
+        }
+        // 10자리 전화번호 포맷팅
+        else if (numbers.length() == 10) {
+            return numbers.substring(0, 3) + "-" + numbers.substring(3, 6) + "-" + numbers.substring(6);
+        }
+
+        // 포맷팅할 수 없으면 원본 반환
+        return phone;
+    }
+
     private static final Logger logger = LoggerFactory.getLogger(CustomOAuth2UserService.class);
 
     private final UserRepository userRepository;
@@ -82,7 +106,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
             // 전화번호, 생년월일, 성별 업데이트
             if (phoneNumber != null && !phoneNumber.isEmpty()) {
-                user.setPhone(phoneNumber);
+                user.setPhone(formatPhoneNumber(phoneNumber));
             }
             if (birthDateStr != null && !birthDateStr.isEmpty()) {
                 try {
@@ -122,7 +146,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
             // OAuth2에서 가져온 정보 설정
             if (phoneNumber != null && !phoneNumber.isEmpty()) {
-                user.setPhone(phoneNumber);
+                user.setPhone(formatPhoneNumber(phoneNumber));
             } else {
                 user.setPhone("010-0000-0000"); // 기본값
             }
@@ -131,11 +155,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 try {
                     user.setBirthDate(java.time.LocalDate.parse(birthDateStr));
                 } catch (Exception e) {
-                    logger.warn("생년월일 파싱 실패: {}, 기본값 사용", birthDateStr);
-                    user.setBirthDate(java.time.LocalDate.of(1900, 1, 1));
+                    logger.warn("생년월일 파싱 실패: {}, null로 설정 (나중에 입력 가능)", birthDateStr);
+                    user.setBirthDate(null);
                 }
             } else {
-                user.setBirthDate(java.time.LocalDate.of(1900, 1, 1)); // 기본값
+                // 카카오는 birthyear를 제공하지 않을 수 있으므로 null 허용
+                logger.info("생년월일 정보 없음, 나중에 계정 설정에서 입력 가능");
+                user.setBirthDate(null);
             }
 
             if (gender != null && !gender.isEmpty()) {

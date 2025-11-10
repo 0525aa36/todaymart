@@ -74,6 +74,12 @@ export default function SettingsPage() {
 
   // 생년월일 검증 함수
   const validateBirthDate = () => {
+    // 카카오 사용자는 생년월일이 없을 수 있으므로 선택 사항으로 처리
+    if (profile?.provider === "KAKAO" && !profileForm.birthDate) {
+      setErrors(prev => ({ ...prev, birthDate: "" }))
+      return true
+    }
+
     if (!profileForm.birthDate) {
       setErrors(prev => ({ ...prev, birthDate: "생년월일을 입력해주세요." }))
       return false
@@ -162,10 +168,17 @@ export default function SettingsPage() {
     if (!token) return
 
     try {
+      // 빈 문자열인 필드는 null로 변환하거나 제거
+      const payload = {
+        ...profileForm,
+        birthDate: profileForm.birthDate || null,
+        gender: profileForm.gender || null,
+      }
+
       await apiFetch("/api/users/profile", {
         method: "PUT",
         auth: true,
-        body: JSON.stringify(profileForm),
+        body: JSON.stringify(payload),
         parseResponse: "none",
       })
 
@@ -312,8 +325,15 @@ export default function SettingsPage() {
                           id="name"
                           value={profileForm.name}
                           onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                          disabled={profile?.provider === "KAKAO" || profile?.provider === "NAVER"}
+                          className={profile?.provider === "KAKAO" || profile?.provider === "NAVER" ? "bg-muted" : ""}
                           required
                         />
+                        {(profile?.provider === "KAKAO" || profile?.provider === "NAVER") && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            소셜 로그인 회원은 이름을 변경할 수 없습니다.
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -326,8 +346,15 @@ export default function SettingsPage() {
                             setErrors(prev => ({ ...prev, phone: "" }))
                           }}
                           onBlur={validatePhone}
+                          disabled={profile?.provider === "KAKAO" || profile?.provider === "NAVER"}
+                          className={profile?.provider === "KAKAO" || profile?.provider === "NAVER" ? "bg-muted" : ""}
                           required
                         />
+                        {(profile?.provider === "KAKAO" || profile?.provider === "NAVER") && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            소셜 로그인 회원은 전화번호를 변경할 수 없습니다.
+                          </p>
+                        )}
                         {errors.phone && (
                           <p className="text-sm text-destructive mt-1">{errors.phone}</p>
                         )}
@@ -390,7 +417,12 @@ export default function SettingsPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="birthDate" className="mb-2 block">생년월일</Label>
+                        <Label htmlFor="birthDate" className="mb-2 block">
+                          생년월일
+                          {profile?.provider === "KAKAO" && !profile?.birthDate && (
+                            <span className="text-muted-foreground font-normal text-xs ml-2">(한 번만 설정 가능)</span>
+                          )}
+                        </Label>
                         <Input
                           id="birthDate"
                           type="text"
@@ -403,7 +435,28 @@ export default function SettingsPage() {
                             setErrors(prev => ({ ...prev, birthDate: "" }))
                           }}
                           onBlur={validateBirthDate}
+                          disabled={
+                            // 카카오 회원: DB에 생년월일이 이미 저장되어 있으면 비활성화
+                            (profile?.provider === "KAKAO" && !!profile?.birthDate) ||
+                            // 네이버, 로컬 회원: 항상 비활성화
+                            (profile?.provider !== "KAKAO")
+                          }
                         />
+                        {profile?.provider === "KAKAO" && !profile?.birthDate && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            카카오에서 생년월일 정보를 가져올 수 없어요. 직접 입력하시면 생일 쿠폰 등의 혜택을 받으실 수 있습니다. (한 번만 설정 가능)
+                          </p>
+                        )}
+                        {profile?.provider === "KAKAO" && profile?.birthDate && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            카카오 회원은 생년월일을 한 번만 설정할 수 있어요.
+                          </p>
+                        )}
+                        {profile?.provider !== "KAKAO" && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            생년월일은 수정할 수 없습니다.
+                          </p>
+                        )}
                         {errors.birthDate && (
                           <p className="text-sm text-destructive mt-1">{errors.birthDate}</p>
                         )}
@@ -416,17 +469,23 @@ export default function SettingsPage() {
                           onValueChange={(value) =>
                             setProfileForm({ ...profileForm, gender: value })
                           }
+                          disabled={profile?.provider === "KAKAO" || profile?.provider === "NAVER"}
                           className="flex gap-4"
                         >
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="male" id="male" />
-                            <Label htmlFor="male" className="cursor-pointer">남성</Label>
+                            <RadioGroupItem value="male" id="male" disabled={profile?.provider === "KAKAO" || profile?.provider === "NAVER"} />
+                            <Label htmlFor="male" className={profile?.provider === "KAKAO" || profile?.provider === "NAVER" ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer"}>남성</Label>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="female" id="female" />
-                            <Label htmlFor="female" className="cursor-pointer">여성</Label>
+                            <RadioGroupItem value="female" id="female" disabled={profile?.provider === "KAKAO" || profile?.provider === "NAVER"} />
+                            <Label htmlFor="female" className={profile?.provider === "KAKAO" || profile?.provider === "NAVER" ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer"}>여성</Label>
                           </div>
                         </RadioGroup>
+                        {(profile?.provider === "KAKAO" || profile?.provider === "NAVER") && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            소셜 로그인 회원은 성별을 변경할 수 없습니다.
+                          </p>
+                        )}
                       </div>
 
                       <div className="pt-4">

@@ -47,7 +47,7 @@ public class User {
     @Column(length = 10)
     private String postcode;
 
-    @Column(name = "birth_date", nullable = false)
+    @Column(name = "birth_date", nullable = true)
     private LocalDate birthDate;
 
     @Column(length = 10)
