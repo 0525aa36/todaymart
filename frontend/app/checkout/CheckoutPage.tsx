@@ -85,7 +85,7 @@ export function CheckoutPage() {
     }
 
     fetchCart()
-    prefillDefaultAddress()
+    prefillUserInfo()
   }, [])
 
   const fetchCart = async () => {
@@ -116,28 +116,37 @@ export function CheckoutPage() {
     }
   }
 
-  const prefillDefaultAddress = async () => {
+  const prefillUserInfo = async () => {
     const token = localStorage.getItem("token")
     if (!token || addressPrefilled) return
 
     try {
+      // Fetch user information
+      const user = await apiFetch<{ name: string; phone: string }>("/api/auth/me", { auth: true })
+
+      // Fetch user addresses
       const addresses = await apiFetch<UserAddress[]>("/api/addresses", { auth: true })
-      if (!addresses.length) return
-      const defaultAddress = addresses.find((addr) => addr.isDefault) ?? addresses[0]
+
+      // Find default address or use the first one
+      const defaultAddress = addresses.length > 0
+        ? (addresses.find((addr) => addr.isDefault) ?? addresses[0])
+        : null
+
+      // Pre-fill form with user info and address
       setFormData((prev) => ({
         ...prev,
-        recipientName: prev.recipientName || defaultAddress.recipient,
-        recipientPhone: prev.recipientPhone || defaultAddress.phone,
-        shippingPostcode: prev.shippingPostcode || defaultAddress.postcode,
-        shippingAddressLine1: prev.shippingAddressLine1 || defaultAddress.addressLine1,
-        shippingAddressLine2: prev.shippingAddressLine2 || defaultAddress.addressLine2 || "",
+        recipientName: prev.recipientName || (defaultAddress?.recipient || user.name),
+        recipientPhone: prev.recipientPhone || (defaultAddress?.phone || user.phone),
+        shippingPostcode: prev.shippingPostcode || (defaultAddress?.postcode || ""),
+        shippingAddressLine1: prev.shippingAddressLine1 || (defaultAddress?.addressLine1 || ""),
+        shippingAddressLine2: prev.shippingAddressLine2 || (defaultAddress?.addressLine2 || ""),
       }))
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        // 사용자 인증이 만료된 경우 주소 선입력을 건너뜁니다.
+        // 사용자 인증이 만료된 경우 정보 선입력을 건너뜁니다.
         return
       }
-      console.error("Error pre-filling address:", error)
+      console.error("Error pre-filling user info:", error)
     } finally {
       setAddressPrefilled(true)
     }

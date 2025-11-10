@@ -9,6 +9,8 @@ import com.agri.market.dto.RegisterRequest;
 import com.agri.market.security.JwtTokenProvider;
 import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
+import com.agri.market.user.address.UserAddress;
+import com.agri.market.user.address.UserAddressRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,19 +35,22 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final CouponRepository couponRepository;
     private final UserCouponRepository userCouponRepository;
+    private final UserAddressRepository userAddressRepository;
 
     @Value("${coupon.welcome.code:WELCOME}")
     private String welcomeCouponCode;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider,
-                       CouponRepository couponRepository, UserCouponRepository userCouponRepository) {
+                       CouponRepository couponRepository, UserCouponRepository userCouponRepository,
+                       UserAddressRepository userAddressRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtTokenProvider = jwtTokenProvider;
         this.couponRepository = couponRepository;
         this.userCouponRepository = userCouponRepository;
+        this.userAddressRepository = userAddressRepository;
     }
 
     public void register(RegisterRequest request) {
@@ -68,8 +73,39 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
+        // 회원가입 시 기본 배송지 자동 등록
+        createDefaultAddress(savedUser, request);
+
         // 회원가입 시 웰컴 쿠폰 자동 발급
         issueWelcomeCoupon(savedUser);
+    }
+
+    /**
+     * 회원가입 시 기본 배송지 자동 등록
+     */
+    private void createDefaultAddress(User user, RegisterRequest request) {
+        try {
+            // 주소 정보가 모두 있는 경우에만 배송지 등록
+            if (request.getPostcode() != null && !request.getPostcode().isEmpty() &&
+                request.getAddressLine1() != null && !request.getAddressLine1().isEmpty()) {
+
+                UserAddress address = new UserAddress();
+                address.setUser(user);
+                address.setLabel("기본 배송지");
+                address.setRecipient(user.getName());
+                address.setPhone(user.getPhone());
+                address.setPostcode(request.getPostcode());
+                address.setAddressLine1(request.getAddressLine1());
+                address.setAddressLine2(request.getAddressLine2());
+                address.setDefault(true);
+
+                userAddressRepository.save(address);
+                logger.info("사용자 {}({})의 기본 배송지를 등록했습니다.", user.getName(), user.getEmail());
+            }
+        } catch (Exception e) {
+            // 배송지 등록 실패 시 회원가입은 정상적으로 진행되도록 함
+            logger.error("기본 배송지 등록 중 오류 발생 (사용자: {}): {}", user.getEmail(), e.getMessage(), e);
+        }
     }
 
     /**
