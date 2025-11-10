@@ -49,8 +49,9 @@ dependencies {
 	implementation platform('software.amazon.awssdk:bom:2.20.26')
 	implementation 'software.amazon.awssdk:s3'
 
-	// AWS Secrets Manager
-	implementation 'io.awspring.cloud:spring-cloud-aws-secrets-manager-config:3.0.3'
+	// AWS Secrets Manager (Spring Cloud AWS 3.x)
+	implementation platform('io.awspring.cloud:spring-cloud-aws-dependencies:3.0.3')
+	implementation 'io.awspring.cloud:spring-cloud-aws-starter-secrets-manager'
 
 	// Jsoup for web crawling
 	implementation 'org.jsoup:jsoup:1.16.1'
@@ -67,6 +68,11 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// Testcontainers for integration tests
+	testImplementation 'org.testcontainers:testcontainers:1.19.3'
+	testImplementation 'org.testcontainers:mysql:1.19.3'
+	testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
 }
 
 tasks.named('test') {
