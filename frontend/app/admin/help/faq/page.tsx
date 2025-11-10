@@ -11,27 +11,18 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/loading-spinner"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 interface Faq {
   id: number
@@ -53,18 +44,10 @@ const FAQ_CATEGORIES = {
 }
 
 export default function AdminFaqPage() {
+  const router = useRouter()
   const [faqs, setFaqs] = useState<Faq[]>([])
   const [loading, setLoading] = useState(true)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingFaq, setEditingFaq] = useState<Faq | null>(null)
   const [filterCategory, setFilterCategory] = useState<string>("ALL")
-  const [formData, setFormData] = useState({
-    category: "ORDER_DELIVERY",
-    question: "",
-    answer: "",
-    displayOrder: 0,
-    isActive: true,
-  })
 
   useEffect(() => {
     fetchFaqs()
@@ -79,67 +62,6 @@ export default function AdminFaqPage() {
       toast.error("FAQ 목록을 불러오지 못했습니다")
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleOpenDialog = (faq?: Faq) => {
-    if (faq) {
-      setEditingFaq(faq)
-      setFormData({
-        category: faq.category,
-        question: faq.question,
-        answer: faq.answer,
-        displayOrder: faq.displayOrder,
-        isActive: faq.isActive,
-      })
-    } else {
-      setEditingFaq(null)
-      setFormData({
-        category: "ORDER_DELIVERY",
-        question: "",
-        answer: "",
-        displayOrder: 0,
-        isActive: true,
-      })
-    }
-    setDialogOpen(true)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!formData.question.trim()) {
-      toast.error("질문을 입력해주세요")
-      return
-    }
-
-    if (!formData.answer.trim()) {
-      toast.error("답변을 입력해주세요")
-      return
-    }
-
-    try {
-      if (editingFaq) {
-        await apiFetch(`/api/admin/faqs/${editingFaq.id}`, {
-          auth: true,
-          method: "PUT",
-          body: JSON.stringify(formData),
-        })
-        toast.success("FAQ가 수정되었습니다")
-      } else {
-        await apiFetch("/api/admin/faqs", {
-          auth: true,
-          method: "POST",
-          body: JSON.stringify(formData),
-        })
-        toast.success("FAQ가 생성되었습니다")
-      }
-
-      setDialogOpen(false)
-      fetchFaqs()
-    } catch (error) {
-      console.error("Error saving FAQ:", error)
-      toast.error("FAQ 저장에 실패했습니다")
     }
   }
 
@@ -187,10 +109,12 @@ export default function AdminFaqPage() {
             자주 묻는 질문을 카테고리별로 관리합니다
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="h-4 w-4 mr-2" />
-          FAQ 추가
-        </Button>
+        <Link href="/admin/help/faq/new">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            FAQ 추가
+          </Button>
+        </Link>
       </div>
 
       <div className="mb-4">
@@ -263,9 +187,11 @@ export default function AdminFaqPage() {
                     >
                       {faq.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(faq)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <Link href={`/admin/help/faq/${faq.id}/edit`}>
+                      <Button variant="ghost" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </Link>
                     <Button variant="ghost" size="sm" onClick={() => handleDelete(faq.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -276,90 +202,6 @@ export default function AdminFaqPage() {
           </TableBody>
         </Table>
       )}
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingFaq ? "FAQ 수정" : "FAQ 추가"}</DialogTitle>
-            <DialogDescription>FAQ 정보를 입력하세요</DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="category">카테고리 *</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(FAQ_CATEGORIES).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="question">질문 *</Label>
-              <Input
-                id="question"
-                value={formData.question}
-                onChange={(e) => setFormData({ ...formData, question: e.target.value })}
-                placeholder="예: 주문 후 배송까지 얼마나 걸리나요?"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="answer">답변 *</Label>
-              <Textarea
-                id="answer"
-                value={formData.answer}
-                onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
-                placeholder="질문에 대한 답변을 입력하세요"
-                rows={6}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="displayOrder">표시 순서</Label>
-                <Input
-                  id="displayOrder"
-                  type="number"
-                  value={formData.displayOrder}
-                  onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-
-              <div className="flex items-end">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4"
-                  />
-                  <span>활성화</span>
-                </label>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                취소
-              </Button>
-              <Button type="submit">
-                {editingFaq ? "수정" : "생성"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

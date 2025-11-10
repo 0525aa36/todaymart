@@ -14,17 +14,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, Plus } from "lucide-react";
+import { Ticket, Plus, Edit, Trash2, Power } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { CouponCreateDialog } from "@/components/admin/CouponCreateDialog";
+import Link from "next/link";
 
 export default function AdminCouponsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchCoupons();
@@ -69,6 +68,52 @@ export default function AdminCouponsPage() {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    if (!confirm("정말 삭제하시겠습니까?")) return;
+
+    try {
+      await apiFetch(`/api/admin/coupons/${id}`, {
+        method: "DELETE",
+        auth: true,
+        parseResponse: "none",
+      });
+
+      toast({
+        title: "삭제 완료",
+        description: "쿠폰이 삭제되었습니다.",
+      });
+      fetchCoupons();
+    } catch (error: any) {
+      toast({
+        title: "오류",
+        description: error.message || "쿠폰 삭제 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleStatus = async (id: number) => {
+    try {
+      await apiFetch(`/api/admin/coupons/${id}/toggle`, {
+        method: "PUT",
+        auth: true,
+        parseResponse: "none",
+      });
+
+      toast({
+        title: "상태 변경 완료",
+        description: "쿠폰 활성 상태가 변경되었습니다.",
+      });
+      fetchCoupons();
+    } catch (error: any) {
+      toast({
+        title: "오류",
+        description: error.message || "상태 변경 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -80,14 +125,19 @@ export default function AdminCouponsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Ticket className="h-8 w-8" />
-          쿠폰 관리
-        </h1>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          쿠폰 생성
-        </Button>
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
+            <Ticket className="h-8 w-8" />
+            쿠폰 관리
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">쿠폰을 생성하고 관리하세요</p>
+        </div>
+        <Link href="/admin/coupons/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            쿠폰 생성
+          </Button>
+        </Link>
       </div>
 
       <Card className="border-0 shadow-sm">
@@ -98,6 +148,7 @@ export default function AdminCouponsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[60px]">ID</TableHead>
                 <TableHead>코드</TableHead>
                 <TableHead>이름</TableHead>
                 <TableHead>할인</TableHead>
@@ -105,18 +156,20 @@ export default function AdminCouponsPage() {
                 <TableHead>유효기간</TableHead>
                 <TableHead>사용/전체</TableHead>
                 <TableHead>상태</TableHead>
+                <TableHead className="text-right">작업</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {coupons.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
                     등록된 쿠폰이 없습니다.
                   </TableCell>
                 </TableRow>
               ) : (
                 coupons.map((coupon) => (
                   <TableRow key={coupon.id}>
+                    <TableCell className="font-medium">{coupon.id}</TableCell>
                     <TableCell className="font-mono font-semibold">
                       {coupon.code}
                     </TableCell>
@@ -150,6 +203,35 @@ export default function AdminCouponsPage() {
                         <Badge variant="outline">소진</Badge>
                       )}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleToggleStatus(coupon.id)}
+                        className="mr-2"
+                        title={coupon.isActive ? "비활성화" : "활성화"}
+                      >
+                        <Power className="h-4 w-4" />
+                      </Button>
+                      <Link href={`/admin/coupons/${coupon.id}/edit`}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="mr-2"
+                          title="수정"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(coupon.id)}
+                        title="삭제"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -157,20 +239,6 @@ export default function AdminCouponsPage() {
           </Table>
         </CardContent>
       </Card>
-
-      <div className="mt-6 p-4 border rounded-lg bg-muted/50">
-        <h3 className="font-semibold mb-2">관리 기능 안내</h3>
-        <p className="text-sm text-muted-foreground">
-          쿠폰 생성 기능을 통해 새로운 쿠폰을 등록할 수 있습니다.
-          쿠폰 수정 및 삭제 기능은 추후 구현 예정입니다.
-        </p>
-      </div>
-
-      <CouponCreateDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        onSuccess={fetchCoupons}
-      />
     </div>
   );
 }
