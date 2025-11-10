@@ -44,6 +44,7 @@ interface Seller {
   commissionRate: number
   isActive: boolean
   memo: string
+  spreadsheetId: string
   createdAt: string
   updatedAt: string
 }
@@ -70,6 +71,7 @@ export default function AdminSellersPage() {
     commissionRate: "10.00",
     isActive: true,
     memo: "",
+    spreadsheetId: "",
   })
 
   useEffect(() => {
@@ -149,6 +151,7 @@ export default function AdminSellersPage() {
       commissionRate: parseFloat(formData.commissionRate),
       isActive: formData.isActive,
       memo: formData.memo,
+      spreadsheetId: formData.spreadsheetId,
     }
 
     try {
@@ -193,6 +196,7 @@ export default function AdminSellersPage() {
       commissionRate: seller.commissionRate.toString(),
       isActive: seller.isActive,
       memo: seller.memo || "",
+      spreadsheetId: seller.spreadsheetId || "",
     })
     setDialogOpen(true)
   }
@@ -266,6 +270,7 @@ export default function AdminSellersPage() {
       commissionRate: "10.00",
       isActive: true,
       memo: "",
+      spreadsheetId: "",
     })
   }
 
@@ -439,6 +444,20 @@ export default function AdminSellersPage() {
                           </Label>
                         </div>
                       </div>
+                    </div>
+
+                    {/* 구글 스프레드시트 ID */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="spreadsheetId">구글 스프레드시트 ID</Label>
+                      <Input
+                        id="spreadsheetId"
+                        value={formData.spreadsheetId}
+                        onChange={(e) => setFormData({ ...formData, spreadsheetId: e.target.value })}
+                        placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        주문/상품 동기화에 사용될 구글 스프레드시트 ID (URL의 /d/ 다음 부분)
+                      </p>
                     </div>
 
                     {/* 메모 */}

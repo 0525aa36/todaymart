@@ -23,10 +23,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Edit, Trash2, ArrowLeft, Settings } from "lucide-react"
+import { Plus, Edit, Trash2, ArrowLeft, Settings, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, API_BASE_URL, getErrorMessage } from "@/lib/api-client"
 
@@ -35,6 +42,7 @@ interface Seller {
   name: string
   businessNumber: string
   representative: string
+  spreadsheetId?: string
 }
 
 interface Product {
@@ -109,6 +117,12 @@ export default function AdminProductsPage() {
     isAvailable: true,
   })
 
+  // Google Sheets sync state
+  const [syncing, setSyncing] = useState(false)
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
+  const [googleSheetsEnabled, setGoogleSheetsEnabled] = useState(false)
+  const [selectedSellerId, setSelectedSellerId] = useState<string>("ALL")
+
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -123,6 +137,7 @@ export default function AdminProductsPage() {
 
     fetchProducts()
     fetchActiveSellers()
+    checkGoogleSheetsEnabled()
   }, [])
 
   const fetchProducts = async () => {
@@ -154,6 +169,56 @@ export default function AdminProductsPage() {
         description: getErrorMessage(error, "판매자 목록을 불러오는 중 오류가 발생했습니다."),
         variant: "destructive",
       })
+    }
+  }
+
+  const checkGoogleSheetsEnabled = async () => {
+    try {
+      const response = await apiFetch<{ success: boolean; data: { lastSyncTime: string | null } }>("/api/admin/sheets/last-sync", { auth: true })
+      setGoogleSheetsEnabled(true)
+      if (response.data && response.data.lastSyncTime) {
+        setLastSyncTime(response.data.lastSyncTime)
+      }
+    } catch (error) {
+      // Google Sheets가 비활성화되어 있음
+      setGoogleSheetsEnabled(false)
+      console.log("Google Sheets sync not available")
+    }
+  }
+
+  const handleSyncProductsToGoogleSheets = async () => {
+    if (selectedSellerId === "ALL") {
+      toast({
+        title: "판매자 선택 필요",
+        description: "상품을 동기화할 판매자를 선택해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSyncing(true)
+    try {
+      await apiFetch(`/api/admin/sheets/products/sync/${selectedSellerId}`, {
+        method: "POST",
+        auth: true,
+        parseResponse: "json",
+      })
+
+      toast({
+        title: "동기화 완료",
+        description: "구글 스프레드시트에 상품 목록이 동기화되었습니다.",
+      })
+
+      checkGoogleSheetsEnabled()
+    } catch (error) {
+      console.error("Error syncing to Google Sheets:", error)
+      toast({
+        title: "동기화 실패",
+        description: getErrorMessage(error, "구글 스프레드시트 동기화 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -547,12 +612,39 @@ export default function AdminProductsPage() {
             <p className="text-sm text-gray-500 mt-1">등록된 상품을 관리하고 새 상품을 추가하세요</p>
           </div>
 
-          <Link href="/admin/products/new">
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
-              상품 등록
-            </Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            {googleSheetsEnabled && (
+              <>
+                <Select value={selectedSellerId} onValueChange={setSelectedSellerId}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="판매자 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">판매자 선택</SelectItem>
+                    {activeSellers.map((seller) => (
+                      <SelectItem key={seller.id} value={seller.id.toString()}>
+                        {seller.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleSyncProductsToGoogleSheets}
+                  disabled={syncing || selectedSellerId === "ALL"}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "동기화 중..." : "구글 시트 동기화"}
+                </Button>
+              </>
+            )}
+            <Link href="/admin/products/new">
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                상품 등록
+              </Button>
+            </Link>
+          </div>
 
           <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
               <DialogContent className="sm:max-w-[625px]">
