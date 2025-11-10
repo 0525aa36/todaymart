@@ -158,4 +158,24 @@ public class GoogleSheetsController {
                     .body(ApiResponse.error("이력 조회 실패: " + e.getMessage()));
         }
     }
+
+    /**
+     * 특정 판매자의 상품 목록 동기화 (DB → Sheet)
+     */
+    @PostMapping("/products/sync/{sellerId}")
+    public ResponseEntity<?> syncSellerProducts(@PathVariable Long sellerId) {
+        if (googleSheetsService == null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Google Sheets 서비스가 활성화되어 있지 않습니다."));
+        }
+
+        try {
+            googleSheetsService.syncSellerProducts(sellerId, GoogleSheetsSyncLog.TriggerType.ADMIN);
+            return ResponseEntity.ok(ApiResponse.success("판매자의 상품 목록이 동기화되었습니다.", null));
+        } catch (Exception e) {
+            log.error("Failed to sync seller products: " + sellerId, e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("상품 동기화 실패: " + e.getMessage()));
+        }
+    }
 }

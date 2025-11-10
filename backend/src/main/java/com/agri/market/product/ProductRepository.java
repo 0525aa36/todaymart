@@ -74,4 +74,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // 재고 부족 상품 목록 조회 (findByStockLessThan 메서드)
     List<Product> findByStockLessThan(int threshold);
+
+    // 판매자별 상품 조회 (이미지와 옵션 포함)
+    @Query("SELECT DISTINCT p FROM Product p " +
+           "LEFT JOIN FETCH p.images " +
+           "LEFT JOIN FETCH p.options " +
+           "WHERE p.seller.id = :sellerId " +
+           "ORDER BY p.createdAt DESC")
+    List<Product> findBySellerIdWithImagesAndOptions(@Param("sellerId") Long sellerId);
 }
