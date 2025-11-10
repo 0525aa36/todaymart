@@ -18,7 +18,6 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/admin/sheets")
 @PreAuthorize("hasRole('ADMIN')")
-@ConditionalOnProperty(name = "google.sheets.enabled", havingValue = "true")
 public class GoogleSheetsController {
 
     @Autowired(required = false)

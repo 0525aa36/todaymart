@@ -363,35 +363,8 @@ export default function AdminProductsPage() {
   }
 
   const handleEdit = (product: any) => {
-    setEditingProduct(product)
-    setFormData({
-      name: product.name,
-      category: product.category,
-      origin: product.origin,
-      description: product.description,
-      price: product.price.toString(),
-      discountRate: product.discountRate?.toString() || "",
-      stock: product.stock.toString(),
-      imageUrl: product.imageUrl || "",
-      sellerId: product.seller?.id.toString() || "",
-      // 새로 추가된 필드 (백엔드에서 안 오면 기본값)
-      supplyPrice: product.supplyPrice?.toString() || "",
-      shippingFee: product.shippingFee?.toString() || "3000",
-      canCombineShipping: product.canCombineShipping || false,
-      combineShippingUnit: product.combineShippingUnit?.toString() || "",
-      courierCompany: product.courierCompany || "",
-      minOrderQuantity: product.minOrderQuantity?.toString() || "1",
-      maxOrderQuantity: product.maxOrderQuantity?.toString() || "",
-    })
-
-    // 기존 이미지 URL들을 uploadedImages에 설정
-    if (product.imageUrls) {
-      setUploadedImages(product.imageUrls.split(','))
-    } else if (product.imageUrl) {
-      setUploadedImages([product.imageUrl])
-    }
-
-    setDialogOpen(true)
+    // 수정 페이지로 이동
+    router.push(`/admin/products/${product.id}/edit`)
   }
 
   const handleDelete = async (id: number) => {
@@ -613,31 +586,27 @@ export default function AdminProductsPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {googleSheetsEnabled && (
-              <>
-                <Select value={selectedSellerId} onValueChange={setSelectedSellerId}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="판매자 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">판매자 선택</SelectItem>
-                    {activeSellers.map((seller) => (
-                      <SelectItem key={seller.id} value={seller.id.toString()}>
-                        {seller.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  onClick={handleSyncProductsToGoogleSheets}
-                  disabled={syncing || selectedSellerId === "ALL"}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-                  {syncing ? "동기화 중..." : "구글 시트 동기화"}
-                </Button>
-              </>
-            )}
+            <Select value={selectedSellerId} onValueChange={setSelectedSellerId}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="판매자 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">판매자 선택</SelectItem>
+                {activeSellers.map((seller) => (
+                  <SelectItem key={seller.id} value={seller.id.toString()}>
+                    {seller.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={handleSyncProductsToGoogleSheets}
+              disabled={syncing || selectedSellerId === "ALL"}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "동기화 중..." : "구글 시트 동기화"}
+            </Button>
             <Link href="/admin/products/new">
               <Button className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="h-4 w-4 mr-2" />
@@ -992,15 +961,6 @@ export default function AdminProductsPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleManageOptions(product)}
-                                className="h-8 w-8 p-0"
-                                title="옵션 관리"
-                              >
-                                <Settings className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
                                 onClick={() => handleEdit(product)}
                                 className="h-8 w-8 p-0"
                                 title="수정"
@@ -1028,161 +988,6 @@ export default function AdminProductsPage() {
           </Card>
       </div>
 
-      {/* Options Management Dialog */}
-      <Dialog open={optionsDialogOpen} onOpenChange={setOptionsDialogOpen}>
-        <DialogContent className="sm:max-w-[800px]">
-          <DialogHeader>
-            <DialogTitle>상품 옵션 관리: {selectedProduct?.name}</DialogTitle>
-            <DialogDescription>
-              이 상품의 옵션을 추가하거나 수정할 수 있습니다.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold">옵션 목록 ({productOptions.length}개)</h3>
-              <Button onClick={handleAddOption} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                옵션 추가
-              </Button>
-            </div>
-            {productOptions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                등록된 옵션이 없습니다. 새 옵션을 추가해보세요!
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>옵션명</TableHead>
-                    <TableHead>옵션값</TableHead>
-                    <TableHead>추가금액</TableHead>
-                    <TableHead>재고</TableHead>
-                    <TableHead>사용가능</TableHead>
-                    <TableHead className="text-right">작업</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {productOptions.map((option) => (
-                    <TableRow key={option.id}>
-                      <TableCell>{option.optionName}</TableCell>
-                      <TableCell>{option.optionValue}</TableCell>
-                      <TableCell>
-                        {option.additionalPrice === 0
-                          ? "-"
-                          : `${option.additionalPrice > 0 ? "+" : ""}${option.additionalPrice.toLocaleString()}원`}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={option.stock > 0 ? "default" : "destructive"}>
-                          {option.stock}개
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={option.isAvailable ? "default" : "secondary"}>
-                          {option.isAvailable ? "가능" : "불가"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditOption(option)}
-                          className="mr-2"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteOption(option.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Option Form Dialog */}
-      <Dialog open={optionFormOpen} onOpenChange={setOptionFormOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <form onSubmit={handleSubmitOption}>
-            <DialogHeader>
-              <DialogTitle>{editingOption ? "옵션 수정" : "옵션 추가"}</DialogTitle>
-              <DialogDescription>
-                {editingOption ? "옵션 정보를 수정하세요" : "새 옵션 정보를 입력하세요"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="optionName">옵션명 *</Label>
-                <Input
-                  id="optionName"
-                  value={optionFormData.optionName}
-                  onChange={(e) => setOptionFormData({ ...optionFormData, optionName: e.target.value })}
-                  required
-                  placeholder="예: 중량/용량, 색상"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="optionValue">옵션값 *</Label>
-                <Input
-                  id="optionValue"
-                  value={optionFormData.optionValue}
-                  onChange={(e) => setOptionFormData({ ...optionFormData, optionValue: e.target.value })}
-                  required
-                  placeholder="예: 1kg, 빨강"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="additionalPrice">추가금액 (원)</Label>
-                  <Input
-                    id="additionalPrice"
-                    type="number"
-                    value={optionFormData.additionalPrice}
-                    onChange={(e) => setOptionFormData({ ...optionFormData, additionalPrice: e.target.value })}
-                    placeholder="0"
-                  />
-                  <p className="text-xs text-muted-foreground">기본 가격과의 차액</p>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="optionStock">재고 *</Label>
-                  <Input
-                    id="optionStock"
-                    type="number"
-                    value={optionFormData.stock}
-                    onChange={(e) => setOptionFormData({ ...optionFormData, stock: e.target.value })}
-                    required
-                    min="0"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isAvailable"
-                  checked={optionFormData.isAvailable}
-                  onChange={(e) => setOptionFormData({ ...optionFormData, isAvailable: e.target.checked })}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="isAvailable">판매 가능</Label>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOptionFormOpen(false)}>
-                취소
-              </Button>
-              <Button type="submit">{editingOption ? "수정" : "추가"}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }
