@@ -3,7 +3,15 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Search, ShoppingCart, User, LogOut, Heart, ChevronDown, ArrowUp } from 'lucide-react';
+import {
+  Search,
+  ShoppingCart,
+  User,
+  LogOut,
+  Heart,
+  ChevronDown,
+  ArrowUp,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -87,7 +95,10 @@ export function Header() {
   // 드롭다운 외부 클릭 감지
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (helpMenuRef.current && !helpMenuRef.current.contains(event.target as Node)) {
+      if (
+        helpMenuRef.current &&
+        !helpMenuRef.current.contains(event.target as Node)
+      ) {
         setIsHelpMenuOpen(false);
       }
     };
@@ -130,7 +141,7 @@ export function Header() {
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
-      behavior: 'smooth'
+      behavior: 'smooth',
     });
   };
 
@@ -190,11 +201,21 @@ export function Header() {
                     onClick={() => setIsHelpMenuOpen(!isHelpMenuOpen)}
                   >
                     고객센터
-                    <ChevronDown className={`h-3 w-3 transition-transform ${isHelpMenuOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown
+                      className={`h-3 w-3 transition-transform ${
+                        isHelpMenuOpen ? 'rotate-180' : ''
+                      }`}
+                    />
                   </button>
                   {isHelpMenuOpen && (
                     <div className="absolute left-0 top-full mt-1 z-[9999]">
-                      <div className="w-36 rounded-md shadow-lg overflow-hidden" style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb' }}>
+                      <div
+                        className="w-36 rounded-md shadow-lg overflow-hidden"
+                        style={{
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e5e7eb',
+                        }}
+                      >
                         <Link
                           href="/help?tab=notices"
                           className="block px-4 py-2.5 text-sm hover:bg-muted transition-colors"
@@ -248,7 +269,10 @@ export function Header() {
 
               {/* Search Bar - 중앙 영역 */}
               <div className="flex justify-center">
-                <form onSubmit={handleSearch} className="relative w-full max-w-4xl">
+                <form
+                  onSubmit={handleSearch}
+                  className="relative w-full max-w-4xl"
+                >
                   <Input
                     type="search"
                     placeholder="신선한 농수산물을 검색해보세요"
@@ -363,7 +387,7 @@ export function Header() {
             <CategoryNav />
 
             {/* 신상품, 베스트 링크 */}
-            <div className="flex items-center gap-8">
+            {/* <div className="flex items-center gap-8">
               <Link
                 href="/new-arrivals"
                 className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
@@ -376,7 +400,7 @@ export function Header() {
               >
                 베스트
               </Link>
-            </div>
+            </div> */}
           </div>
         </div>
       </nav>
@@ -386,7 +410,7 @@ export function Header() {
         <div className="fixed top-0 left-0 right-0 z-[100] bg-white border-b shadow-md animate-in slide-in-from-top duration-200">
           <div className="container mx-auto px-4 max-w-6xl">
             <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-6">
+              {/* <div className="flex items-center gap-6">
                 <CategoryNav />
                 <Link
                   href="/new-arrivals"
@@ -400,12 +424,15 @@ export function Header() {
                 >
                   베스트
                 </Link>
-              </div>
+              </div> */}
 
               {/* 우측 아이콘 및 검색창 */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 {/* 미니 검색창 */}
-                <form onSubmit={handleSearch} className="relative hidden md:block">
+                <form
+                  onSubmit={handleSearch}
+                  className="relative hidden md:block"
+                >
                   <Input
                     type="search"
                     placeholder="검색"
