@@ -1,5 +1,6 @@
 package com.agri.market.product;
 
+import com.agri.market.category.Category;
 import com.agri.market.seller.Seller;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -25,8 +26,15 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    // 기존 String 카테고리 (Deprecated - 하위 호환성을 위해 유지)
+    @Column
     private String category;
+
+    // 새로운 Category 엔티티와의 관계
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Category categoryEntity;
 
     @Column(nullable = false)
     private String origin;
@@ -70,6 +78,10 @@ public class Product {
     // 최대 주문 수량 (null이면 제한 없음, 재고 수량까지만)
     @Column
     private Integer maxOrderQuantity;
+
+    // 이벤트 상품 여부
+    @Column(name = "is_event_product", nullable = false)
+    private Boolean isEventProduct = false;
 
     // 하위 호환성과 성능을 위해 메인 이미지 URL 유지
     private String imageUrl;

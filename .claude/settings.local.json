@@ -71,7 +71,11 @@
       "Bash(./gradlew compileJava:*)",
       "Bash(git reset:*)",
       "Bash(netstat:*)",
-      "Bash(ss:*)"
+      "Bash(ss:*)",
+      "Bash(JWT_SECRET=\"l+M2HT323RdnuAjRZB/KsXeREnG47s70ff/m1nty6fZK3dLSrXOgKek14a1Lzl+6twRjlfs4lShBy6MveP9yuA==\" NAVER_CLIENT_ID=\"mclMxOndgnb3NwKPSLcx\" NAVER_CLIENT_SECRET=\"bdkPlBthqK\" KAKAO_CLIENT_ID=\"56380206602abece46af0dabc59a7c66\" KAKAO_CLIENT_SECRET=\"b06HyFFbPBgEndovP5UGf3uLPkYPaTFv\" GOOGLE_SHEETS_ENABLED=true GOOGLE_SHEETS_CREDENTIALS_PATH=./google-credentials.json ./gradlew:*)",
+      "Bash(python3:*)",
+      "Bash(ps:*)",
+      "Bash(env)"
     ],
     "deny": [],
     "ask": []

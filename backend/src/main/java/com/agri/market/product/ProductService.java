@@ -1,6 +1,8 @@
 package com.agri.market.product;
 
 import com.agri.market.cart.CartItemRepository;
+import com.agri.market.category.Category;
+import com.agri.market.category.CategoryRepository;
 import com.agri.market.dto.ProductListDto;
 import com.agri.market.dto.ProductOptionRequest;
 import com.agri.market.dto.ProductRequest;
@@ -32,6 +34,7 @@ public class ProductService {
     private final WishlistRepository wishlistRepository;
     private final ReviewRepository reviewRepository;
     private final SellerRepository sellerRepository;
+    private final CategoryRepository categoryRepository;
 
     public ProductService(ProductRepository productRepository,
                           ProductOptionRepository productOptionRepository,
@@ -39,7 +42,8 @@ public class ProductService {
                           CartItemRepository cartItemRepository,
                           WishlistRepository wishlistRepository,
                           ReviewRepository reviewRepository,
-                          SellerRepository sellerRepository) {
+                          SellerRepository sellerRepository,
+                          CategoryRepository categoryRepository) {
         this.productRepository = productRepository;
         this.productOptionRepository = productOptionRepository;
         this.orderItemRepository = orderItemRepository;
@@ -47,6 +51,7 @@ public class ProductService {
         this.wishlistRepository = wishlistRepository;
         this.reviewRepository = reviewRepository;
         this.sellerRepository = sellerRepository;
+        this.categoryRepository = categoryRepository;
     }
 
     public Page<Product> getAllProducts(Pageable pageable) {
@@ -111,7 +116,7 @@ public class ProductService {
     public Product createProduct(ProductRequest request) {
         Product product = new Product();
         product.setName(request.getName());
-        product.setCategory(request.getCategory());
+        product.setCategory(request.getCategory()); // 하위 호환성을 위해 유지
         product.setOrigin(request.getOrigin());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
@@ -129,6 +134,12 @@ public class ProductService {
         product.setCourierCompany(request.getCourierCompany());
         product.setMinOrderQuantity(request.getMinOrderQuantity());
         product.setMaxOrderQuantity(request.getMaxOrderQuantity());
+        product.setIsEventProduct(request.getIsEventProduct());
+        // Category 엔티티 설정 (category code로 조회)
+        if (request.getCategory() != null && !request.getCategory().isEmpty()) {
+            categoryRepository.findByCode(request.getCategory())
+                    .ifPresent(product::setCategoryEntity);
+        }
 
         // Seller 설정
         if (request.getSellerId() != null) {
@@ -146,7 +157,7 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("Product not found for this id :: " + id));
 
         product.setName(request.getName());
-        product.setCategory(request.getCategory());
+        product.setCategory(request.getCategory()); // 하위 호환성을 위해 유지
         product.setOrigin(request.getOrigin());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
@@ -164,6 +175,21 @@ public class ProductService {
         product.setCourierCompany(request.getCourierCompany());
         product.setMinOrderQuantity(request.getMinOrderQuantity());
         product.setMaxOrderQuantity(request.getMaxOrderQuantity());
+        product.setIsEventProduct(request.getIsEventProduct());
+
+        // Category 엔티티 설정 (category code로 조회)
+        if (request.getCategory() != null && !request.getCategory().isEmpty()) {
+            System.out.println("[ProductService] Looking for category with code: " + request.getCategory());
+            var categoryOpt = categoryRepository.findByCode(request.getCategory());
+            if (categoryOpt.isPresent()) {
+                System.out.println("[ProductService] Found category: " + categoryOpt.get().getName());
+                product.setCategoryEntity(categoryOpt.get());
+            } else {
+                System.out.println("[ProductService] Category not found for code: " + request.getCategory());
+            }
+        } else {
+            product.setCategoryEntity(null);
+        }
 
         // Seller 설정 (null이면 판매자 제거 - 직매로 전환)
         if (request.getSellerId() != null) {
@@ -229,6 +255,23 @@ public class ProductService {
     // 카테고리로 검색
     public Page<Product> getProductsByCategory(String category, Pageable pageable) {
         return productRepository.findByCategory(category, pageable);
+    }
+
+    // 카테고리 코드로 상품 조회 (새로운 Category 엔티티 사용)
+    @Transactional(readOnly = true)
+    public Page<ProductListDto> getProductsByCategoryCode(String categoryCode, Pageable pageable) {
+        Page<Product> products = productRepository.findByCategoryCode(categoryCode, pageable);
+
+        // 리뷰 통계 추가
+        List<ProductListDto> productDtos = products.getContent().stream()
+                .map(product -> {
+                    Double avgRating = reviewRepository.findAverageRatingByProductId(product.getId());
+                    Long reviewCount = reviewRepository.countByProductId(product.getId());
+                    return new ProductListDto(product, avgRating, reviewCount);
+                })
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(productDtos, pageable, products.getTotalElements());
     }
 
     // 상품명으로 검색

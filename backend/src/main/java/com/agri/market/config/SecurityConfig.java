@@ -87,6 +87,8 @@ public class SecurityConfig {
                         .requestMatchers("/oauth2/**").permitAll() // OAuth2 endpoints
                         .requestMatchers("/login/oauth2/code/**").permitAll() // OAuth2 callback
                         .requestMatchers("/api/products/**").permitAll()
+                        .requestMatchers("/api/categories/**").permitAll() // Public category endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/categories").permitAll() // Public category list
                         .requestMatchers("/api/reviews/product/**").permitAll() // Public review endpoints
                         .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll() // Public file download (images)
                         .requestMatchers("/api/banners").permitAll() // Public banner endpoints

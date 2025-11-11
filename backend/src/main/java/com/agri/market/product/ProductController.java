@@ -82,4 +82,14 @@ public class ProductController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
+
+    /**
+     * 카테고리별 상품 조회
+     */
+    @GetMapping("/category/{categoryCode}")
+    public ResponseEntity<Page<ProductListDto>> getProductsByCategory(
+            @PathVariable String categoryCode,
+            Pageable pageable) {
+        return ResponseEntity.ok(productService.getProductsByCategoryCode(categoryCode, pageable));
+    }
 }

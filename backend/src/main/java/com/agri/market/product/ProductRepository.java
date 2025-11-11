@@ -15,8 +15,16 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    // 카테고리로 검색
+    // 카테고리로 검색 (기존 String 카테고리)
     Page<Product> findByCategory(String category, Pageable pageable);
+
+    // 카테고리 엔티티로 검색
+    @Query("SELECT p FROM Product p WHERE p.categoryEntity.id = :categoryId")
+    Page<Product> findByCategoryEntityId(@Param("categoryId") Long categoryId, Pageable pageable);
+
+    // 카테고리 코드로 검색 (Category 엔티티 사용)
+    @Query("SELECT p FROM Product p WHERE p.categoryEntity.code = :categoryCode")
+    Page<Product> findByCategoryCode(@Param("categoryCode") String categoryCode, Pageable pageable);
 
     // 상품명으로 검색 (부분 일치)
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);

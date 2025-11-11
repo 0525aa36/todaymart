@@ -115,6 +115,13 @@ export default function PaymentPage() {
         // Calculate final payment amount
         const paymentAmount = order.finalAmount || (order.totalAmount - (order.couponDiscountAmount || 0) + (order.shippingFee || 0))
 
+        // 0원 주문은 위젯 렌더링 건너뛰기
+        if (paymentAmount === 0) {
+          console.log("[Payment] Skipping widget rendering for 0 won order")
+          setWidgetReady(true)
+          return
+        }
+
         // 위젯 렌더링
         console.log("[Payment] Rendering payment methods...")
         console.log("[Payment] Payment amount:", paymentAmount)
@@ -143,7 +150,27 @@ export default function PaymentPage() {
   }, [order, clientKey, toast])
 
   const handlePayment = async () => {
-    if (!paymentWidgetRef.current || !order || !widgetReady) {
+    if (!order) {
+      toast({
+        title: "오류",
+        description: "주문 정보를 찾을 수 없습니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 0원 주문은 결제 없이 바로 완료 처리
+    const paymentAmount = order.finalAmount ?? order.totalAmount
+    if (paymentAmount === 0) {
+      toast({
+        title: "주문 완료",
+        description: "0원 주문이 완료되었습니다.",
+      })
+      router.push(`/mypage/orders/${order.id}`)
+      return
+    }
+
+    if (!paymentWidgetRef.current || !widgetReady) {
       toast({
         title: "결제 준비 중",
         description: "결제 위젯이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.",
@@ -153,11 +180,12 @@ export default function PaymentPage() {
     }
 
     try {
+      const orderNumber = order.orderNumber || `ORDER_${order.id}_${Date.now()}`
       await paymentWidgetRef.current.requestPayment({
-        orderId: order.orderNumber || `ORDER_${order.id}_${Date.now()}`,
+        orderId: orderNumber,
         orderName: `주문 ${order.id}`,
         customerName: order.recipientName,
-        successUrl: `${window.location.origin}/payment/success?orderId=${order.id}`,
+        successUrl: `${window.location.origin}/payment/success?orderDbId=${order.id}`,
         failUrl: `${window.location.origin}/payment/fail`,
       })
     } catch (error) {
@@ -235,72 +263,105 @@ export default function PaymentPage() {
             </CardContent>
           </Card>
 
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>결제 수단 선택</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div id="payment-widget" className="min-h-[300px]">
-                {!widgetReady && (
-                  <div className="flex items-center justify-center h-[300px]">
-                    <div className="text-center space-y-4">
-                      <div className="text-yellow-600 dark:text-yellow-400">
-                        <p className="font-semibold mb-2">⚠️ 결제 기능 준비 중</p>
-                        <p className="text-sm text-muted-foreground">
-                          토스페이먼츠 API 키가 설정되지 않았습니다.
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          개발 모드에서는 아래 버튼으로 테스트하실 수 있습니다.
-                        </p>
+          {paymentAmount > 0 ? (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>결제 수단 선택</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div id="payment-widget" className="min-h-[300px]">
+                  {!widgetReady && (
+                    <div className="flex items-center justify-center h-[300px]">
+                      <div className="text-center space-y-4">
+                        <div className="text-yellow-600 dark:text-yellow-400">
+                          <p className="font-semibold mb-2">⚠️ 결제 기능 준비 중</p>
+                          <p className="text-sm text-muted-foreground">
+                            토스페이먼츠 API 키가 설정되지 않았습니다.
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            개발 모드에서는 아래 버튼으로 테스트하실 수 있습니다.
+                          </p>
+                        </div>
                       </div>
                     </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>결제 정보</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-center min-h-[200px]">
+                  <div className="text-center space-y-4">
+                    <div className="text-green-600 dark:text-green-400">
+                      <p className="text-lg font-semibold mb-2">✓ 결제 금액이 0원입니다</p>
+                      <p className="text-sm text-muted-foreground">
+                        할인이 적용되어 결제할 금액이 없습니다.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        아래 버튼을 눌러 주문을 완료해주세요.
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          {widgetReady ? (
+          {paymentAmount > 0 ? (
+            widgetReady ? (
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handlePayment}
+              >
+                {`${paymentAmount.toLocaleString()}원 결제하기`}
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <Button
+                  className="w-full"
+                  size="lg"
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await apiFetch(`/api/orders/${order.id}/complete`, {
+                        method: "POST",
+                        auth: true,
+                        parseResponse: "none",
+                      })
+                      toast({
+                        title: "테스트 결제 완료",
+                        description: "개발 모드에서 주문이 완료 처리되었습니다.",
+                      })
+                      router.push(`/mypage/orders/${order.id}`)
+                    } catch (error) {
+                      toast({
+                        title: "오류",
+                        description: "주문 완료 처리 중 오류가 발생했습니다.",
+                        variant: "destructive",
+                      })
+                    }
+                  }}
+                >
+                  🧪 개발 모드: 결제 없이 주문 완료
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  * 실제 결제를 위해서는 토스페이먼츠 API 키 설정이 필요합니다
+                </p>
+              </div>
+            )
+          ) : (
             <Button
               className="w-full"
               size="lg"
               onClick={handlePayment}
             >
-              {`${paymentAmount.toLocaleString()}원 결제하기`}
+              주문 완료하기
             </Button>
-          ) : (
-            <div className="space-y-3">
-              <Button
-                className="w-full"
-                size="lg"
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    await apiFetch(`/api/orders/${order.id}/complete`, {
-                      method: "POST",
-                      auth: true,
-                      parseResponse: "none",
-                    })
-                    toast({
-                      title: "테스트 결제 완료",
-                      description: "개발 모드에서 주문이 완료 처리되었습니다.",
-                    })
-                    router.push(`/mypage/orders/${order.id}`)
-                  } catch (error) {
-                    toast({
-                      title: "오류",
-                      description: "주문 완료 처리 중 오류가 발생했습니다.",
-                      variant: "destructive",
-                    })
-                  }
-                }}
-              >
-                🧪 개발 모드: 결제 없이 주문 완료
-              </Button>
-              <p className="text-xs text-center text-muted-foreground">
-                * 실제 결제를 위해서는 토스페이먼츠 API 키 설정이 필요합니다
-              </p>
-            </div>
           )}
         </div>
       </main>

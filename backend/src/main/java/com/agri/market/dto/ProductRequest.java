@@ -28,7 +28,7 @@ public class ProductRequest {
     private String description;
 
     @NotNull(message = "가격은 필수입니다")
-    @DecimalMin(value = "0.0", inclusive = false, message = "가격은 0보다 커야 합니다")
+    @DecimalMin(value = "0.0", inclusive = true, message = "가격은 0 이상이어야 합니다")
     private BigDecimal price;
 
     private BigDecimal discountRate; // 할인율 (선택)
@@ -73,4 +73,7 @@ public class ProductRequest {
 
     // 판매자 ID (선택 - null이면 직매)
     private Long sellerId;
+
+    // 이벤트 상품 여부 (기본값 false)
+    private Boolean isEventProduct = false;
 }

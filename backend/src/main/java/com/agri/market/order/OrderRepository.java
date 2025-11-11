@@ -16,6 +16,9 @@ import java.util.List;
 public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUser(User user);
 
+    // orderNumber로 주문 조회 (토스페이먼츠 결제 승인용)
+    java.util.Optional<Order> findByOrderNumber(String orderNumber);
+
     // 관리자용: 모든 주문 조회 (페이징)
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
 

@@ -159,13 +159,25 @@ public class PaymentService {
     /**
      * 토스페이먼츠 결제 승인 요청
      * @param paymentKey 결제 키
-     * @param orderId 주문 ID (orderId)
+     * @param orderId 주문 번호 (orderNumber, 토스페이먼츠에서 리다이렉트한 값)
      * @param amount 결제 금액
      * @return 승인 결과
      */
     @Transactional
     public Map<String, Object> confirmTossPayment(String paymentKey, String orderId, BigDecimal amount) {
         try {
+            System.out.println("[PaymentService] Received orderId from Toss: " + orderId);
+            System.out.println("[PaymentService] Payment Key: " + paymentKey);
+            System.out.println("[PaymentService] Amount: " + amount);
+
+            // orderId는 orderNumber 형식 (ORDER_1234567890)
+            // OrderRepository에서 orderNumber로 조회
+            Order order = orderRepository.findByOrderNumber(orderId)
+                    .orElseThrow(() -> new RuntimeException("Order not found with orderNumber: " + orderId));
+
+            System.out.println("[PaymentService] Found order with ID: " + order.getId());
+            System.out.println("[PaymentService] Confirming payment with Toss...");
+
             // Basic Auth 헤더 생성 (Secret Key:)
             String auth = tossPaymentsConfig.getSecretKey() + ":";
             String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
@@ -174,26 +186,24 @@ public class PaymentService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", "Basic " + encodedAuth);
 
-            // 요청 바디
+            // 요청 바디 - orderId (orderNumber) 사용
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("paymentKey", paymentKey);
-            requestBody.put("orderId", orderId);
+            requestBody.put("orderId", orderId);  // 토스가 준 orderId 그대로 사용
             requestBody.put("amount", amount.intValue());
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
             // 토스페이먼츠 API 호출
             String url = tossPaymentsConfig.getApiUrl() + "/v1/payments/confirm";
+            System.out.println("[PaymentService] Calling Toss API: " + url);
             ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 Map<String, Object> result = response.getBody();
+                System.out.println("[PaymentService] Payment confirmed successfully");
 
                 // DB에 결제 정보 저장
-                Long orderIdLong = Long.parseLong(orderId);
-                Order order = orderRepository.findById(orderIdLong)
-                        .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
-
                 Payment payment = new Payment();
                 payment.setOrder(order);
                 payment.setUser(order.getUser());
@@ -213,6 +223,7 @@ public class PaymentService {
                 throw new RuntimeException("Payment confirmation failed");
             }
         } catch (Exception e) {
+            System.err.println("[PaymentService] Payment confirmation error: " + e.getMessage());
             throw new RuntimeException("Failed to confirm payment: " + e.getMessage(), e);
         }
     }

@@ -12,10 +12,27 @@ import { ArrowLeft, Upload, X, Plus, Edit, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, API_BASE_URL, getErrorMessage } from "@/lib/api-client"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface Seller {
   id: number
   name: string
+}
+
+interface Category {
+  id: number
+  code: string
+  name: string
+  iconName: string
+  children: Category[]
+  isVisible: boolean
+  isEvent: boolean
 }
 
 interface ProductOption {
@@ -34,6 +51,10 @@ export default function EditProductPage() {
   const productId = params.id as string
 
   const [activeSellers, setActiveSellers] = useState<Seller[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedParentCategory, setSelectedParentCategory] = useState<string>("")
+  const [childCategories, setChildCategories] = useState<Category[]>([])
+  const [eventCategories, setEventCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingProduct, setLoadingProduct] = useState(true)
 
@@ -55,6 +76,7 @@ export default function EditProductPage() {
     courierCompany: "",
     minOrderQuantity: "1",
     maxOrderQuantity: "",
+    isEventProduct: false,
   })
 
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
@@ -86,9 +108,45 @@ export default function EditProductPage() {
     }
 
     fetchActiveSellers()
+    fetchCategories()
     fetchProduct()
     fetchOptions()
   }, [productId])
+
+  // Update child categories when parent category changes
+  useEffect(() => {
+    if (selectedParentCategory) {
+      const parentCat = categories.find(cat => cat.code === selectedParentCategory)
+      if (parentCat && parentCat.children) {
+        setChildCategories(parentCat.children)
+      } else {
+        setChildCategories([])
+      }
+    } else {
+      setChildCategories([])
+    }
+  }, [selectedParentCategory, categories])
+
+  // Initialize parent category when both categories and formData are loaded
+  useEffect(() => {
+    if (formData.category && categories.length > 0 && !selectedParentCategory) {
+      // Check if category is a child category
+      for (const parentCat of categories) {
+        if (parentCat.children) {
+          const childCat = parentCat.children.find(c => c.code === formData.category)
+          if (childCat) {
+            setSelectedParentCategory(parentCat.code)
+            return
+          }
+        }
+        // Check if category is a parent category
+        if (parentCat.code === formData.category) {
+          setSelectedParentCategory(formData.category)
+          return
+        }
+      }
+    }
+  }, [formData.category, categories, selectedParentCategory])
 
   const fetchActiveSellers = async () => {
     try {
@@ -96,6 +154,39 @@ export default function EditProductPage() {
       setActiveSellers(data)
     } catch (error) {
       console.error("Error fetching sellers:", error)
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      const data = await apiFetch<Category[]>("/api/admin/categories", {
+        auth: true,
+      })
+      setCategories(data)
+
+      // 이벤트 카테고리 필터링 (isEvent가 true인 모든 카테고리)
+      const events: Category[] = []
+      data.forEach(category => {
+        if (category.isEvent) {
+          events.push(category)
+        }
+        // 자식 카테고리 중 이벤트 카테고리도 포함
+        if (category.children) {
+          category.children.forEach(child => {
+            if (child.isEvent) {
+              events.push(child)
+            }
+          })
+        }
+      })
+      setEventCategories(events)
+    } catch (error) {
+      console.error("Error fetching categories:", error)
+      toast({
+        title: "오류",
+        description: getErrorMessage(error, "카테고리 목록을 불러오는 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
     }
   }
 
@@ -119,6 +210,7 @@ export default function EditProductPage() {
         courierCompany: product.courierCompany || "",
         minOrderQuantity: product.minOrderQuantity?.toString() || "1",
         maxOrderQuantity: product.maxOrderQuantity?.toString() || "",
+        isEventProduct: product.isEventProduct || false,
       })
 
       if (product.imageUrls) {
@@ -322,6 +414,7 @@ export default function EditProductPage() {
       courierCompany: formData.courierCompany || null,
       minOrderQuantity: parseInt(formData.minOrderQuantity),
       maxOrderQuantity: formData.maxOrderQuantity ? parseInt(formData.maxOrderQuantity) : null,
+      isEventProduct: formData.isEventProduct,
     }
 
     try {
@@ -396,23 +489,80 @@ export default function EditProductPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="category">카테고리 *</Label>
-                  <Input
-                    id="category"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    required
-                  />
+                  <Label htmlFor="parentCategory">대카테고리 *</Label>
+                  <Select
+                    value={selectedParentCategory}
+                    onValueChange={(value) => {
+                      setSelectedParentCategory(value)
+                      setFormData({ ...formData, category: value })
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="대카테고리 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.code} value={category.code}>
+                          {category.iconName} {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <Label htmlFor="origin">원산지 *</Label>
-                  <Input
-                    id="origin"
-                    value={formData.origin}
-                    onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-                    required
-                  />
+                  <Label htmlFor="childCategory">소카테고리</Label>
+                  <Select
+                    value={
+                      // formData.category가 childCategories에 있으면 그 값, 아니면 빈 문자열
+                      childCategories.some(c => c.code === formData.category) ? formData.category : ""
+                    }
+                    onValueChange={(value) => setFormData({ ...formData, category: value })}
+                    disabled={!selectedParentCategory || childCategories.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={childCategories.length === 0 ? "하위 카테고리 없음" : "소카테고리 선택"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {childCategories.map((category) => (
+                        <SelectItem key={category.code} value={category.code}>
+                          {category.iconName} {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    선택하지 않으면 대카테고리로 등록됩니다
+                  </p>
                 </div>
+              </div>
+
+              {/* 이벤트 상품 체크박스 */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isEventProduct"
+                  checked={formData.isEventProduct}
+                  onChange={(e) => setFormData({ ...formData, isEventProduct: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <Label htmlFor="isEventProduct" className="cursor-pointer">
+                  이벤트 상품으로 등록
+                  {eventCategories.length > 0 && (
+                    <span className="text-xs text-muted-foreground ml-2">
+                      ({eventCategories.map(c => c.name).join(", ")}에 표시)
+                    </span>
+                  )}
+                </Label>
+              </div>
+
+              <div>
+                <Label htmlFor="origin">원산지 *</Label>
+                <Input
+                  id="origin"
+                  value={formData.origin}
+                  onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
+                  required
+                />
               </div>
 
               <div>

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { useNotifications } from '@/hooks/use-notifications';
+import { CategoryNav } from '@/components/category-nav';
 
 export function Header() {
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -231,7 +232,7 @@ export function Header() {
         <div className="w-full py-4 relative">
           <div className="container mx-auto px-4 max-w-6xl">
             <div className="hidden md:grid md:grid-cols-[15%_70%_15%] items-center gap-4">
-              {/* Logo - 왼쪽 영역 중앙 정렬 */}
+              {/* 로고 - 왼쪽 영역 중앙 정렬 */}
               <div className="flex justify-center">
                 <Link href="/" className="flex items-center gap-2">
                   <Image
@@ -357,64 +358,26 @@ export function Header() {
       {/* Navigation - 고정하지 않음 */}
       <nav className="w-full border-t bg-white shadow-sm">
         <div className="container mx-auto px-4 max-w-6xl">
-          <ul className="flex items-center gap-8 py-3 overflow-x-auto scrollbar-hide">
-            <li>
+          <div className="flex items-center py-3 gap-8">
+            {/* 카테고리 버튼 */}
+            <CategoryNav />
+
+            {/* 신상품, 베스트 링크 */}
+            <div className="flex items-center gap-8">
               <Link
-                href="/deals"
-                className="text-sm font-medium text-accent hover:text-accent/80 transition-colors whitespace-nowrap"
-              >
-                특가/할인
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/category/vegetables"
-                className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-              >
-                채소
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/category/fruits"
-                className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-              >
-                과일
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/category/seafood"
-                className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-              >
-                수산물
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/category/meat"
-                className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-              >
-                축산물
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/category/rice"
-                className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-              >
-                쌀/잡곡
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/new"
+                href="/new-arrivals"
                 className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
               >
                 신상품
               </Link>
-            </li>
-          </ul>
+              <Link
+                href="/best"
+                className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
+              >
+                베스트
+              </Link>
+            </div>
+          </div>
         </div>
       </nav>
 
@@ -423,64 +386,21 @@ export function Header() {
         <div className="fixed top-0 left-0 right-0 z-[100] bg-white border-b shadow-md animate-in slide-in-from-top duration-200">
           <div className="container mx-auto px-4 max-w-6xl">
             <div className="flex items-center justify-between py-2">
-              <ul className="flex items-center gap-6 overflow-x-auto scrollbar-hide">
-                <li>
-                  <Link
-                    href="/deals"
-                    className="text-sm font-medium text-accent hover:text-accent/80 transition-colors whitespace-nowrap"
-                  >
-                    특가/할인
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/category/vegetables"
-                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-                  >
-                    채소
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/category/fruits"
-                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-                  >
-                    과일
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/category/seafood"
-                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-                  >
-                    수산물
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/category/meat"
-                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-                  >
-                    축산물
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/category/grain"
-                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-                  >
-                    쌀/잡곡
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/new-arrivals"
-                    className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-                  >
-                    신상품
-                  </Link>
-                </li>
-              </ul>
+              <div className="flex items-center gap-6">
+                <CategoryNav />
+                <Link
+                  href="/new-arrivals"
+                  className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
+                >
+                  신상품
+                </Link>
+                <Link
+                  href="/best"
+                  className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
+                >
+                  베스트
+                </Link>
+              </div>
 
               {/* 우측 아이콘 및 검색창 */}
               <div className="flex items-center gap-2 flex-shrink-0">

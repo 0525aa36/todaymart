@@ -19,7 +19,8 @@ function PaymentSuccessContent() {
   const [success, setSuccess] = useState(false)
 
   const paymentKey = searchParams.get("paymentKey")
-  const orderId = searchParams.get("orderId")
+  const orderId = searchParams.get("orderId") // 토스가 준 orderNumber
+  const orderDbId = searchParams.get("orderDbId") // DB의 order.id
   const amount = searchParams.get("amount")
 
   useEffect(() => {
@@ -34,7 +35,7 @@ function PaymentSuccessContent() {
       return
     }
 
-    if (!paymentKey || !orderId || !amount) {
+    if (!paymentKey || !orderId || !amount || !orderDbId) {
       toast({
         title: "잘못된 요청",
         description: "결제 정보가 올바르지 않습니다.",
@@ -45,25 +46,28 @@ function PaymentSuccessContent() {
     }
 
     confirmPayment()
-  }, [paymentKey, orderId, amount])
+  }, [paymentKey, orderId, amount, orderDbId])
 
   const confirmPayment = async () => {
-    if (!paymentKey || !orderId || !amount) return
+    if (!paymentKey || !orderId || !amount || !orderDbId) return
 
     try {
+      // 토스페이먼츠 결제 승인 - orderId는 orderNumber 사용
       await apiFetch("/api/payments/toss/confirm", {
         method: "POST",
         auth: true,
         body: JSON.stringify({
           paymentKey,
-          orderId,
+          orderId, // orderNumber (ORDER_1234567890)
           amount: Number(amount),
         }),
       })
 
-      await apiFetch(`/api/orders/${orderId}/complete`, {
+      // 주문 완료 처리 - DB의 order.id 사용
+      await apiFetch(`/api/orders/${orderDbId}/complete`, {
         method: "POST",
         auth: true,
+        parseResponse: "text", // 백엔드가 문자열 반환
       })
 
       setSuccess(true)
@@ -120,7 +124,7 @@ function PaymentSuccessContent() {
               <Button variant="outline" className="flex-1" onClick={() => router.push("/")}>
                 홈으로
               </Button>
-              <Button className="flex-1" onClick={() => router.push(`/mypage/orders/${orderId}`)}>
+              <Button className="flex-1" onClick={() => router.push(`/mypage/orders/${orderDbId}`)}>
                 주문 상세보기
               </Button>
             </div>

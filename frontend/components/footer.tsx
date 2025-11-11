@@ -99,11 +99,11 @@ export function Footer() {
         {/* Bottom */}
         <div className="border-t mt-8 pt-8 text-sm text-muted-foreground">
           <p className="leading-relaxed">
-            (주)오늘마트 | 대표이사: 고현진 | 사업자등록번호: 380-11-03350
+            상호: KROOTS | 대표: 고현진 | 사업자등록번호: 380-11-03350
             <br />
-            {/* 통신판매업신고: 2024-서울강남-00000 | 주소: 서울특별시 강남구 테헤란로 123 */}
+            주소: 경기도 평택시 고덕국제5로 160
             <br />
-            이메일: help.todaymart@gmail.com
+            전화번호: 010-5560-1470 | 이메일: help.todaymart@gmail.com
           </p>
           <p className="mt-4">© 2025 오늘마트. All rights reserved.</p>
         </div>
