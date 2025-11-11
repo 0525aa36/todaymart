@@ -26,7 +26,7 @@ export function Footer() {
           </div>
 
           {/* Shopping Info */}
-          <div>
+          {/* <div>
             <h4 className="font-semibold mb-4">쇼핑 정보</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
@@ -62,7 +62,7 @@ export function Footer() {
                 </Link>
               </li>
             </ul>
-          </div>
+          </div> */}
 
           {/* Legal */}
           <div>
@@ -84,14 +84,14 @@ export function Footer() {
                   개인정보처리방침
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link
                   href="/business"
                   className="hover:text-foreground transition-colors"
                 >
                   사업자 정보
                 </Link>
-              </li>
+              </li> */}
             </ul>
           </div>
         </div>
