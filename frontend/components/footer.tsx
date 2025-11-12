@@ -101,7 +101,7 @@ export function Footer() {
           <p className="leading-relaxed">
             상호: KROOTS | 대표: 고현진 | 사업자등록번호: 380-11-03350
             <br />
-            주소: 경기도 평택시 고덕국제5로 160
+            주소: 경기도 평택시 고덕국제5로 160, 1203동 810호(고덕동, 평택고덕 LH 12단지)
             <br />
             전화번호: 010-5560-1470 | 이메일: help.todaymart@gmail.com
           </p>
