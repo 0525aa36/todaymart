@@ -23,9 +23,9 @@ public class ProductNoticeService {
      */
     @Transactional(readOnly = true)
     public ProductNoticeResponse getByProductId(Long productId) {
-        ProductNotice notice = productNoticeRepository.findByProductId(productId)
-                .orElseThrow(() -> new BusinessException("해당 상품의 고시 정보가 없습니다.", "NOTICE_NOT_FOUND"));
-        return ProductNoticeResponse.from(notice);
+        return productNoticeRepository.findByProductId(productId)
+                .map(ProductNoticeResponse::from)
+                .orElse(null);
     }
 
     /**

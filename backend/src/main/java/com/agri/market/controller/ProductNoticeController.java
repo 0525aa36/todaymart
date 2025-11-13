@@ -24,6 +24,9 @@ public class ProductNoticeController {
     @GetMapping
     public ResponseEntity<ProductNoticeResponse> getProductNotice(@PathVariable Long productId) {
         ProductNoticeResponse response = productNoticeService.getByProductId(productId);
+        if (response == null) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntity.ok(response);
     }
 
