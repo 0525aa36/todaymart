@@ -33,6 +33,7 @@ import { useParams, useRouter } from "next/navigation"
 import { ShoppingCart, Heart, Share2, Minus, Plus, Star, Truck, Shield, RefreshCw } from "lucide-react"
 import { ApiError, apiFetch, getErrorMessage } from "@/lib/api-client"
 import { marked } from "marked"
+import { ProductNoticeDisplay, ProductNoticeData } from "@/components/product/ProductNoticeDisplay"
 
 interface Product {
   id: number
@@ -93,6 +94,7 @@ export function ProductDetailPage() {
   const [isInWishlist, setIsInWishlist] = useState(false)
   const [productOptions, setProductOptions] = useState<ProductOption[]>([])
   const [selectedOption, setSelectedOption] = useState<ProductOption | null>(null)
+  const [productNotice, setProductNotice] = useState<ProductNoticeData | null>(null)
 
   // Review form state
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false)
@@ -116,6 +118,15 @@ export function ProductDetailPage() {
       const data = await apiFetch<Product>(`/api/products/${productId}`)
       setProduct(data)
       setMainImage(data.imageUrl)
+
+      // 상품 고시 정보 불러오기
+      try {
+        const noticeData = await apiFetch<ProductNoticeData>(`/api/products/${productId}/notice`)
+        setProductNotice(noticeData)
+      } catch (error) {
+        // 고시 정보가 없으면 null 유지
+        console.log("No product notice found")
+      }
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         toast({
@@ -692,6 +703,13 @@ export function ProductDetailPage() {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* 상품 고시 정보 */}
+                {productNotice && (
+                  <div className="mt-8">
+                    <ProductNoticeDisplay notice={productNotice} />
                   </div>
                 )}
               </div>

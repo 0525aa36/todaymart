@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { ProductNoticeForm, ProductNoticeData } from "@/components/admin/ProductNoticeForm"
 
 interface Seller {
   id: number
@@ -84,6 +85,21 @@ export default function EditProductPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadingDetail, setUploadingDetail] = useState(false)
 
+  // Product notice state
+  const [productNotice, setProductNotice] = useState<ProductNoticeData>({
+    productName: "",
+    foodType: "",
+    manufacturer: "",
+    expirationInfo: "",
+    capacity: "",
+    ingredients: "",
+    nutritionFacts: "",
+    gmoInfo: "",
+    safetyWarnings: "",
+    importDeclaration: "",
+    customerServicePhone: "",
+  })
+
   // Options state
   const [options, setOptions] = useState<ProductOption[]>([])
   const [newOption, setNewOption] = useState({
@@ -111,6 +127,7 @@ export default function EditProductPage() {
     fetchCategories()
     fetchProduct()
     fetchOptions()
+    fetchProductNotice()
   }, [productId])
 
   // Update child categories when parent category changes
@@ -239,6 +256,16 @@ export default function EditProductPage() {
       setOptions(data)
     } catch (error) {
       console.error("Error fetching options:", error)
+    }
+  }
+
+  const fetchProductNotice = async () => {
+    try {
+      const noticeData = await apiFetch<ProductNoticeData>(`/api/products/${productId}/notice`, { auth: true })
+      setProductNotice(noticeData)
+    } catch (error) {
+      // 고시 정보가 없으면 빈 객체 유지
+      console.log("No product notice found")
     }
   }
 
@@ -424,6 +451,19 @@ export default function EditProductPage() {
         body: JSON.stringify(productData),
         parseResponse: "none",
       })
+
+      // 상품 고시 정보 저장
+      if (Object.values(productNotice).some(v => v)) {
+        try {
+          await apiFetch(`/api/products/${productId}/notice`, {
+            method: "POST",
+            auth: true,
+            body: JSON.stringify(productNotice),
+          })
+        } catch (error) {
+          console.error("Error saving product notice:", error)
+        }
+      }
 
       toast({
         title: "수정 완료",
@@ -883,6 +923,14 @@ export default function EditProductPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Product Notice Form */}
+        <div className="mt-6">
+          <ProductNoticeForm
+            data={productNotice}
+            onChange={setProductNotice}
+          />
         </div>
 
         {/* Submit Buttons */}

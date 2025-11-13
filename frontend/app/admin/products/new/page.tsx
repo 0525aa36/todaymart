@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { ProductNoticeForm, ProductNoticeData } from "@/components/admin/ProductNoticeForm"
 
 interface Seller {
   id: number
@@ -83,6 +84,21 @@ export default function NewProductPage() {
     additionalPrice: "0",
     stock: "0",
     isAvailable: true,
+  })
+
+  // Product Notice state
+  const [productNotice, setProductNotice] = useState<ProductNoticeData>({
+    productName: "",
+    foodType: "",
+    manufacturer: "",
+    expirationInfo: "",
+    capacity: "",
+    ingredients: "",
+    nutritionFacts: "",
+    gmoInfo: "",
+    safetyWarnings: "",
+    importDeclaration: "",
+    customerServicePhone: "",
   })
 
   useEffect(() => {
@@ -326,6 +342,19 @@ export default function NewProductPage() {
           } catch (error) {
             console.error("Error saving option:", error)
           }
+        }
+      }
+
+      // 상품 고시 정보 등록
+      if (Object.values(productNotice).some(v => v)) {
+        try {
+          await apiFetch(`/api/products/${createdProduct.id}/notice`, {
+            method: "POST",
+            auth: true,
+            body: JSON.stringify(productNotice),
+          })
+        } catch (error) {
+          console.error("Error saving product notice:", error)
         }
       }
 
@@ -806,6 +835,14 @@ export default function NewProductPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Product Notice Form */}
+        <div className="mt-6">
+          <ProductNoticeForm
+            data={productNotice}
+            onChange={setProductNotice}
+          />
         </div>
 
         {/* Submit Buttons */}
