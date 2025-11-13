@@ -99,6 +99,11 @@ public class Product {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<ProductOption> options = new ArrayList<>();
 
+    // 상품 고시 정보 (전자상거래법 준수)
+    @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonManagedReference
+    private ProductNotice productNotice;
+
     // 판매자 정보
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "seller_id")
