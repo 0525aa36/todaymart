@@ -22,6 +22,8 @@ public class OrderItemAdminResponse {
     private String productName;
     private Integer quantity;
     private BigDecimal price; // 주문 당시 가격
+    private Long sellerId;
+    private String sellerName;
 
     /**
      * OrderItem 엔티티로부터 DTO 생성
@@ -33,6 +35,8 @@ public class OrderItemAdminResponse {
                 .productName(orderItem.getProduct().getName())
                 .quantity(orderItem.getQuantity())
                 .price(orderItem.getPrice())
+                .sellerId(orderItem.getProduct().getSeller() != null ? orderItem.getProduct().getSeller().getId() : null)
+                .sellerName(orderItem.getProduct().getSeller() != null ? orderItem.getProduct().getSeller().getName() : null)
                 .build();
     }
 }

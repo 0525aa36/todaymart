@@ -34,14 +34,15 @@ interface OrderItem {
 }
 
 interface Order {
-  id: number
+  orderId: number
+  orderNumber: string
   createdAt: string
   totalAmount: number
   orderStatus: string
   paymentStatus: string
   orderItems: OrderItem[]
-  user: {
-    id: number
+  customer: {
+    userId: number
     name: string
     email: string
     phone: string
@@ -269,15 +270,15 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {orders.slice(0, 5).map((order) => (
+                {orders.slice(0, 5).map((order, index) => (
                   <Link
-                    key={order.id}
+                    key={order.orderId ?? order.orderNumber ?? `order-${index}`}
                     href={`/admin/orders`}
                     className="flex items-center justify-between py-2 px-3 rounded hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {order.user.name}
+                        {order.customer.name}
                       </p>
                       <p className="text-xs text-gray-500">
                         {new Date(order.createdAt).toLocaleDateString('ko-KR')}

@@ -37,26 +37,23 @@ import { apiFetch, getErrorMessage } from "@/lib/api-client"
 
 interface OrderItem {
   id: number
-  product: {
-    id: number
-    name: string
-    seller?: {
-      id: number
-      name: string
-    }
-  }
+  productId: number
+  productName: string
   quantity: number
   price: number
+  sellerId: number | null
+  sellerName: string | null
 }
 
 interface Order {
-  id: number
+  orderId: number
+  orderNumber: string
   createdAt: string
   totalAmount: number
   orderStatus: string
   orderItems: OrderItem[]
-  user: {
-    id: number
+  customer: {
+    userId: number
     name: string
     email: string
   }
@@ -320,9 +317,9 @@ export default function AdminOrdersPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       return (        order.id.toString().includes(query) ||
-        order.user.name.toLowerCase().includes(query) ||
+        order.customer.name.toLowerCase().includes(query) ||
         order.recipientName.toLowerCase().includes(query) ||
-        order.orderItems.some((item) => item.product.name.toLowerCase().includes(query))
+        order.orderItems.some((item) => item.productName.toLowerCase().includes(query))
       )
     }
 
@@ -456,19 +453,19 @@ export default function AdminOrdersPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredOrders.map((order) => (
-                        <TableRow key={order.id} className="hover:bg-gray-50/50 transition-colors">
-                          <TableCell className="font-medium text-gray-900">#{order.id}</TableCell>
+                      {filteredOrders.map((order, index) => (
+                        <TableRow key={order.orderId ?? order.orderNumber ?? `order-${index}`} className="hover:bg-gray-50/50 transition-colors">
+                          <TableCell className="font-medium text-gray-900">#{order.orderId}</TableCell>
                           <TableCell className="text-sm text-gray-600">{formatDate(order.createdAt)}</TableCell>
                           <TableCell>
                             <div>
-                              <p className="font-medium text-gray-900">{order.user.name}</p>
-                              <p className="text-xs text-gray-500">{order.user.email}</p>
+                              <p className="font-medium text-gray-900">{order.customer.name}</p>
+                              <p className="text-xs text-gray-500">{order.customer.email}</p>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="max-w-xs">
-                              <p className="text-sm text-gray-900 truncate">{order.orderItems[0]?.product.name}</p>
+                              <p className="text-sm text-gray-900 truncate">{order.orderItems[0]?.productName}</p>
                               {order.orderItems.length > 1 && (
                                 <p className="text-xs text-gray-500">
                                   외 {order.orderItems.length - 1}개
@@ -478,7 +475,7 @@ export default function AdminOrdersPage() {
                           </TableCell>
                           <TableCell>
                             <span className="text-sm text-gray-600">
-                              {order.orderItems[0]?.product.seller?.name || "-"}
+                              {order.orderItems[0]?.sellerName || "-"}
                             </span>
                           </TableCell>
                           <TableCell className="font-semibold text-gray-900">{order.totalAmount.toLocaleString()}원</TableCell>
