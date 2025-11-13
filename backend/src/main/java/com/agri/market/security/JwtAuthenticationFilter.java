@@ -34,12 +34,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
+        // 상품 고시 정보 엔드포인트 체크
+        boolean isProductNotice = path.matches(".*/products/\\d+/notice");
+
         // OAuth2 경로는 필터 제외
         return path.startsWith("/oauth2/") ||
                path.startsWith("/login/oauth2/code/") ||
                path.equals("/api/auth/login") ||
                path.equals("/api/auth/register") ||
-               (path.startsWith("/api/products") && !path.matches(".*/products/\\d+/notice")) || // 상품 고시는 필터 적용
+               (path.startsWith("/api/products") && !(isProductNotice && !"GET".equals(method))) || // POST/PUT/DELETE는 필터 적용
                path.startsWith("/api/reviews/product/") ||
                (path.startsWith("/api/files/") && "GET".equals(method)) || // GET 요청만 필터 제외
                path.startsWith("/api/banners") ||
