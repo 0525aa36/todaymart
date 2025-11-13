@@ -86,6 +86,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/oauth2/**").permitAll() // OAuth2 endpoints
                         .requestMatchers("/login/oauth2/code/**").permitAll() // OAuth2 callback
+                        .requestMatchers(HttpMethod.GET, "/api/products/*/notice").permitAll() // Public product notice read
+                        .requestMatchers(HttpMethod.POST, "/api/products/*/notice").hasRole("ADMIN") // Admin product notice create
+                        .requestMatchers(HttpMethod.PUT, "/api/products/*/notice").hasRole("ADMIN") // Admin product notice update
+                        .requestMatchers(HttpMethod.DELETE, "/api/products/*/notice").hasRole("ADMIN") // Admin product notice delete
                         .requestMatchers("/api/products/**").permitAll()
                         .requestMatchers("/api/categories/**").permitAll() // Public category endpoints
                         .requestMatchers(HttpMethod.GET, "/api/categories").permitAll() // Public category list
