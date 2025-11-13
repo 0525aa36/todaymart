@@ -39,7 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                path.startsWith("/login/oauth2/code/") ||
                path.equals("/api/auth/login") ||
                path.equals("/api/auth/register") ||
-               path.startsWith("/api/products") ||
+               (path.startsWith("/api/products") && !path.matches(".*/products/\\d+/notice")) || // 상품 고시는 필터 적용
                path.startsWith("/api/reviews/product/") ||
                (path.startsWith("/api/files/") && "GET".equals(method)) || // GET 요청만 필터 제외
                path.startsWith("/api/banners") ||

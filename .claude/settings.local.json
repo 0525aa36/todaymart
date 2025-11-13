@@ -76,7 +76,8 @@
       "Bash(python3:*)",
       "Bash(ps:*)",
       "Bash(env)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "WebFetch(domain:www.law.go.kr)"
     ],
     "deny": [],
     "ask": []
