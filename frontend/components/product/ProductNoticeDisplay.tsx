@@ -1,7 +1,5 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
 export interface ProductNoticeData {
   productName?: string
   foodType?: string
@@ -35,57 +33,66 @@ const NOTICE_FIELDS = [
 ] as const
 
 export function ProductNoticeDisplay({ notice }: ProductNoticeDisplayProps) {
-  // 11개 필드를 6개 / 5개로 나누기
-  const firstColumnFields = NOTICE_FIELDS.slice(0, 6)
-  const secondColumnFields = NOTICE_FIELDS.slice(6)
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">상품 고시 정보</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          전자상거래법에 따른 상품 정보 제공 고시
-        </p>
-      </CardHeader>
-      <CardContent>
-        {Object.values(notice).every((v) => !v) ? (
-          <div className="text-center text-muted-foreground py-8">
-            등록된 상품 고시 정보가 없습니다.
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* 첫 번째 열 (6개) */}
-            <ul className="space-y-4">
-              {firstColumnFields.map((field) => {
-                const value = notice[field.key as keyof ProductNoticeData]
-                if (!value) return null
+    <div className="border-t pt-9">
+      {/* Kurly-style heading */}
+      <h2
+        className="text-center text-[28px] font-bold mb-9"
+        style={{ letterSpacing: '-0.5px' }}
+      >
+        상품 고시 정보
+      </h2>
 
-                return (
-                  <li key={field.key} className="border-b pb-4 last:border-b-0 last:pb-0">
-                    <div className="font-medium text-sm text-muted-foreground mb-1">{field.label}</div>
-                    <div className="text-sm whitespace-pre-wrap break-words">{value}</div>
-                  </li>
-                )
-              })}
-            </ul>
+      {Object.values(notice).every((v) => !v) ? (
+        <div className="text-center py-8" style={{ color: '#666', fontSize: '13px' }}>
+          등록된 상품 고시 정보가 없습니다.
+        </div>
+      ) : (
+        <div className="space-y-0">
+          {NOTICE_FIELDS.map((field) => {
+            const value = notice[field.key as keyof ProductNoticeData]
+            if (!value) return null
 
-            {/* 두 번째 열 (5개) */}
-            <ul className="space-y-4">
-              {secondColumnFields.map((field) => {
-                const value = notice[field.key as keyof ProductNoticeData]
-                if (!value) return null
+            return (
+              <div
+                key={field.key}
+                className="flex border-t first:border-t-0"
+                style={{ minHeight: '48px' }}
+              >
+                {/* Label with gray background */}
+                <div
+                  className="flex items-center px-4 py-[18px] break-words"
+                  style={{
+                    backgroundColor: '#f7f7f7',
+                    width: '30%',
+                    minWidth: '200px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#333',
+                    letterSpacing: '-0.5px',
+                    lineHeight: '18px'
+                  }}
+                >
+                  {field.label}
+                </div>
 
-                return (
-                  <li key={field.key} className="border-b pb-4 last:border-b-0 last:pb-0">
-                    <div className="font-medium text-sm text-muted-foreground mb-1">{field.label}</div>
-                    <div className="text-sm whitespace-pre-wrap break-words">{value}</div>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                {/* Value */}
+                <div
+                  className="flex-1 px-4 py-[18px] break-words whitespace-pre-wrap"
+                  style={{
+                    fontSize: '13px',
+                    color: '#333',
+                    letterSpacing: '-0.5px',
+                    lineHeight: '18px'
+                  }}
+                >
+                  {value}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
