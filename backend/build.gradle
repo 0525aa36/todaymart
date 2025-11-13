@@ -45,9 +45,10 @@ dependencies {
 	implementation 'org.apache.poi:poi:5.2.3'
 	implementation 'org.apache.poi:poi-ooxml:5.2.3'
 
-	// AWS SDK for S3
+	// AWS SDK for S3 and SES
 	implementation platform('software.amazon.awssdk:bom:2.20.26')
 	implementation 'software.amazon.awssdk:s3'
+	implementation 'software.amazon.awssdk:ses'
 
 	// AWS Secrets Manager (Spring Cloud AWS 3.x)
 	implementation platform('io.awspring.cloud:spring-cloud-aws-dependencies:3.0.3')

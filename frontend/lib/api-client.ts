@@ -116,7 +116,12 @@ async function extractPayload(response: Response): Promise<unknown> {
 
 export function getErrorMessage(error: unknown, fallback = "오류가 발생했습니다."): string {
   if (error instanceof ApiError) {
-    // 특정 HTTP 상태 코드에 따른 메시지
+    // 백엔드에서 온 구체적인 메시지가 있으면 우선 표시
+    if (error.message && error.message.length > 0 && !error.message.startsWith("요청이 실패했습니다")) {
+      return error.message
+    }
+
+    // 구체적인 메시지가 없을 때만 상태 코드별 기본 메시지 사용
     switch (error.status) {
       case 401:
         return "로그인이 필요합니다."

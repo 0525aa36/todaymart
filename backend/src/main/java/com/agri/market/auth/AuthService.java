@@ -7,6 +7,7 @@ import com.agri.market.coupon.UserCouponRepository;
 import com.agri.market.dto.LoginRequest;
 import com.agri.market.dto.RegisterRequest;
 import com.agri.market.security.JwtTokenProvider;
+import com.agri.market.service.EmailService;
 import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
 import com.agri.market.user.address.UserAddress;
@@ -36,6 +37,7 @@ public class AuthService {
     private final CouponRepository couponRepository;
     private final UserCouponRepository userCouponRepository;
     private final UserAddressRepository userAddressRepository;
+    private final EmailService emailService;
 
     @Value("${coupon.welcome.code:WELCOME}")
     private String welcomeCouponCode;
@@ -43,7 +45,7 @@ public class AuthService {
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider,
                        CouponRepository couponRepository, UserCouponRepository userCouponRepository,
-                       UserAddressRepository userAddressRepository) {
+                       UserAddressRepository userAddressRepository, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
@@ -51,6 +53,7 @@ public class AuthService {
         this.couponRepository = couponRepository;
         this.userCouponRepository = userCouponRepository;
         this.userAddressRepository = userAddressRepository;
+        this.emailService = emailService;
     }
 
     public void register(RegisterRequest request) {
@@ -150,10 +153,59 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        return jwtTokenProvider.generateJwtToken(authentication);
+
+        // 로그인 상태 유지 여부에 따라 JWT 만료 시간 설정
+        // rememberMe가 true면 30일, false면 1일
+        long expirationMs = Boolean.TRUE.equals(loginRequest.getRememberMe())
+                ? 30L * 24 * 60 * 60 * 1000  // 30일
+                : 24L * 60 * 60 * 1000;       // 1일
+
+        return jwtTokenProvider.generateJwtToken(authentication, expirationMs);
     }
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    /**
+     * 비밀번호 재설정 요청 처리
+     * 임시 비밀번호를 생성하고 사용자 비밀번호를 변경한 후 이메일로 전송합니다.
+     */
+    public void resetPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("해당 이메일로 가입된 계정이 없습니다."));
+
+        // 임시 비밀번호 생성 (8자리 랜덤)
+        String tempPassword = generateTempPassword();
+
+        // 비밀번호 변경
+        user.setPasswordHash(passwordEncoder.encode(tempPassword));
+        userRepository.save(user);
+
+        logger.info("사용자 {}({})의 비밀번호가 재설정되었습니다.", user.getName(), user.getEmail());
+
+        // 이메일로 임시 비밀번호 전송
+        try {
+            emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), tempPassword);
+            logger.info("임시 비밀번호 이메일 전송 완료: {}", user.getEmail());
+        } catch (Exception e) {
+            logger.error("임시 비밀번호 이메일 전송 실패: {} - {}", user.getEmail(), e.getMessage(), e);
+            throw new RuntimeException("이메일 전송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        }
+    }
+
+    /**
+     * 임시 비밀번호 생성 (영문 대소문자 + 숫자 조합, 8자리)
+     */
+    private String generateTempPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sb = new StringBuilder();
+        java.util.Random random = new java.util.Random();
+
+        for (int i = 0; i < 8; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+
+        return sb.toString();
     }
 }

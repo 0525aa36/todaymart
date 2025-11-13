@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -15,7 +15,6 @@ import { apiFetch, getErrorMessage, API_BASE_URL } from "@/lib/api-client"
 
 export function LoginPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -32,11 +31,7 @@ export function LoginPage() {
     e.preventDefault()
 
     if (!formData.email || !formData.password) {
-      toast({
-        title: "입력 오류",
-        description: "이메일과 비밀번호를 모두 입력해주세요.",
-        variant: "destructive",
-      })
+      toast.error("이메일과 비밀번호를 모두 입력해주세요.")
       return
     }
 
@@ -54,6 +49,7 @@ export function LoginPage() {
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
+          rememberMe: formData.rememberMe,
         }),
       })
 
@@ -68,19 +64,12 @@ export function LoginPage() {
         }),
       )
 
-      toast({
-        title: "로그인 성공",
-        description: `${data.name}님, 환영합니다!`,
-      })
+      toast.success(`${data.name}님, 환영합니다!`)
 
       router.push("/")
       setTimeout(() => (window.location.href = "/"), 100)
     } catch (error) {
-      toast({
-        title: "로그인 실패",
-        description: getErrorMessage(error, "로그인 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
+      toast.error(getErrorMessage(error, "로그인 중 오류가 발생했습니다."))
     } finally {
       setLoading(false)
     }

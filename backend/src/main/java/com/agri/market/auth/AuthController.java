@@ -3,6 +3,7 @@ package com.agri.market.auth;
 import com.agri.market.dto.JwtResponse;
 import com.agri.market.dto.LoginRequest;
 import com.agri.market.dto.RegisterRequest;
+import com.agri.market.dto.ForgotPasswordRequest;
 import com.agri.market.user.User;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -72,6 +73,16 @@ public class AuthController {
         response.put("phone", user.getPhone());
         response.put("role", roles.isEmpty() ? null : roles.get(0));
         response.put("roles", roles);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.resetPassword(request.getEmail());
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "임시 비밀번호가 이메일로 전송되었습니다. 이메일을 확인해주세요.");
 
         return ResponseEntity.ok(response);
     }

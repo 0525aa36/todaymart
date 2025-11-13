@@ -52,8 +52,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthentication(AuthenticationException e) {
         logger.warn("Authentication error: {}", e.getMessage());
+
+        // 로그인 실패 시 더 명확한 메시지 제공
+        String message = "이메일 또는 비밀번호가 일치하지 않습니다";
+        if (e.getMessage() != null && !e.getMessage().contains("Bad credentials")) {
+            message = e.getMessage();
+        }
+
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error("인증이 필요합니다", "AUTHENTICATION_REQUIRED"));
+                .body(ApiResponse.error(message, "AUTHENTICATION_FAILED"));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

@@ -20,6 +20,7 @@ import { AddressSearch } from "@/components/address-search"
 import { PhoneInput } from "@/components/phone-input"
 import CouponSelector from "@/components/coupon/CouponSelector"
 import { UserCoupon } from "@/types/coupon"
+import { AddressSelectorModal } from "@/components/address-selector-modal"
 
 interface CartItem {
   id: number
@@ -58,6 +59,7 @@ export function CheckoutPage() {
   const [cart, setCart] = useState<Cart | null>(null)
   const [addressPrefilled, setAddressPrefilled] = useState(false)
   const [selectedCoupon, setSelectedCoupon] = useState<UserCoupon | null>(null)
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -178,6 +180,17 @@ export function CheckoutPage() {
   const couponDiscount = calculateCouponDiscount();
   const finalTotal = totalProductPrice - couponDiscount + shippingFee
 
+  const handleSelectAddress = (address: UserAddress) => {
+    setFormData({
+      ...formData,
+      recipientName: address.recipient,
+      recipientPhone: address.phone,
+      shippingPostcode: address.postcode,
+      shippingAddressLine1: address.addressLine1,
+      shippingAddressLine2: address.addressLine2,
+    })
+  }
+
   const handleCreateOrder = async () => {
     const token = localStorage.getItem("token")
     if (!token) return
@@ -284,158 +297,109 @@ export function CheckoutPage() {
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Shipping Address */}
+              {/* Order Information */}
               <Card>
-                    <CardHeader>
-                      <CardTitle>배송지 정보</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="recipient-name">받는 사람 *</Label>
-                          <Input
-                            id="recipient-name"
-                            placeholder="홍길동"
-                            value={formData.recipientName}
-                            onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="recipient-phone">휴대폰 번호 *</Label>
-                          <PhoneInput
-                            id="recipient-phone"
-                            value={formData.recipientPhone}
-                            onChange={(value) => setFormData({ ...formData, recipientPhone: value })}
-                          />
-                        </div>
-                      </div>
+                <CardHeader>
+                  <CardTitle>주문자 정보</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="recipient-name">이름 *</Label>
+                      <Input
+                        id="recipient-name"
+                        placeholder="홍길동"
+                        value={formData.recipientName}
+                        onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="recipient-phone">휴대폰 번호 *</Label>
+                      <PhoneInput
+                        id="recipient-phone"
+                        value={formData.recipientPhone}
+                        onChange={(value) => setFormData({ ...formData, recipientPhone: value })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="address">주소 *</Label>
-                        <div className="flex gap-2 mb-2">
-                          <Input
-                            id="zipcode"
-                            placeholder="우편번호"
-                            className="w-32"
-                            value={formData.shippingPostcode}
-                            onChange={(e) => setFormData({ ...formData, shippingPostcode: e.target.value })}
-                            readOnly
-                          />
-                          <AddressSearch
-                            onComplete={(data) => {
-                              setFormData({
-                                ...formData,
-                                shippingPostcode: data.zonecode,
-                                shippingAddressLine1: data.address,
-                              })
-                            }}
-                            buttonText="주소검색"
-                          />
-                        </div>
-                        <Input
-                          id="address"
-                          placeholder="기본주소"
-                          className="mb-2"
-                          value={formData.shippingAddressLine1}
-                          onChange={(e) => setFormData({ ...formData, shippingAddressLine1: e.target.value })}
-                          readOnly
-                        />
-                        <Input
-                          id="address-detail"
-                          placeholder="상세주소를 입력하세요"
-                          value={formData.shippingAddressLine2}
-                          onChange={(e) => setFormData({ ...formData, shippingAddressLine2: e.target.value })}
-                        />
-                      </div>
+              {/* 배송지 정보 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>배송지 정보</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address">주소 *</Label>
+                    <div className="flex gap-2 mb-2">
+                      <Input
+                        id="zipcode"
+                        placeholder="우편번호"
+                        className="w-32"
+                        value={formData.shippingPostcode}
+                        onChange={(e) => setFormData({ ...formData, shippingPostcode: e.target.value })}
+                        readOnly
+                      />
+                      <AddressSearch
+                        onComplete={(data) => {
+                          setFormData({
+                            ...formData,
+                            shippingPostcode: data.zonecode,
+                            shippingAddressLine1: data.address,
+                          })
+                        }}
+                        buttonText="주소검색"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsAddressModalOpen(true)}
+                      >
+                        변경
+                      </Button>
+                    </div>
+                    <Input
+                      id="address"
+                      placeholder="기본주소"
+                      className="mb-2"
+                      value={formData.shippingAddressLine1}
+                      onChange={(e) => setFormData({ ...formData, shippingAddressLine1: e.target.value })}
+                      readOnly
+                    />
+                    <Input
+                      id="address-detail"
+                      placeholder="상세주소를 입력하세요"
+                      value={formData.shippingAddressLine2}
+                      onChange={(e) => setFormData({ ...formData, shippingAddressLine2: e.target.value })}
+                    />
+                  </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="delivery-request">배송 요청사항</Label>
-                        <Textarea
-                          id="delivery-request"
-                          placeholder="배송 시 요청사항을 입력해주세요"
-                          rows={3}
-                          value={formData.deliveryRequest}
-                          onChange={(e) => setFormData({ ...formData, deliveryRequest: e.target.value })}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="space-y-2">
+                    <Label htmlFor="delivery-request">배송 요청사항</Label>
+                    <Textarea
+                      id="delivery-request"
+                      placeholder="배송 시 요청사항을 입력해주세요"
+                      rows={3}
+                      value={formData.deliveryRequest}
+                      onChange={(e) => setFormData({ ...formData, deliveryRequest: e.target.value })}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-                  {/* Sender Information */}
+                  {/* 쿠폰 선택 */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>송하인 정보</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="text-sm text-gray-600 mb-4">
-                        송하인 정보를 입력하지 않으면 주문자 정보로 자동 설정됩니다.
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="sender-name">송하인 이름</Label>
-                          <Input
-                            id="sender-name"
-                            placeholder="송하인 이름 (선택사항)"
-                            value={formData.senderName}
-                            onChange={(e) => setFormData({ ...formData, senderName: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="sender-phone">송하인 연락처</Label>
-                          <PhoneInput
-                            id="sender-phone"
-                            placeholder="010-0000-0000 (선택사항)"
-                            value={formData.senderPhone}
-                            onChange={(value) => setFormData({ ...formData, senderPhone: value })}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="delivery-message">배송 메시지</Label>
-                        <Textarea
-                          id="delivery-message"
-                          placeholder="배송 메시지를 입력해주세요 (선택사항)"
-                          rows={3}
-                          value={formData.deliveryMessage}
-                          onChange={(e) => setFormData({ ...formData, deliveryMessage: e.target.value })}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Shipping Method */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>배송 방법</CardTitle>
+                      <CardTitle>쿠폰 / 할인</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <RadioGroup value={shippingMethod} onValueChange={setShippingMethod}>
-                        <div className="flex items-center justify-between p-4 border rounded-lg mb-3">
-                          <div className="flex items-center space-x-3">
-                            <RadioGroupItem value="standard" id="standard" />
-                            <div>
-                              <Label htmlFor="standard" className="font-semibold cursor-pointer">
-                                일반배송
-                              </Label>
-                              <p className="text-sm text-muted-foreground">2-3일 소요</p>
-                            </div>
-                          </div>
-                          <span className="font-semibold">무료</span>
-                        </div>
-
-                        <div className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <RadioGroupItem value="dawn" id="dawn" />
-                            <div>
-                              <Label htmlFor="dawn" className="font-semibold cursor-pointer">
-                                새벽배송
-                              </Label>
-                              <p className="text-sm text-muted-foreground">다음날 오전 7시 전 도착</p>
-                            </div>
-                          </div>
-                          <span className="font-semibold">+3,000원</span>
-                        </div>
-                      </RadioGroup>
+                      <CouponSelector
+                        orderAmount={totalProductPrice}
+                        onCouponSelect={setSelectedCoupon}
+                        selectedCoupon={selectedCoupon}
+                      />
                     </CardContent>
                   </Card>
 
@@ -447,20 +411,6 @@ export function CheckoutPage() {
             {/* Order Summary Sidebar */}
             <div className="lg:col-span-1">
               <div className="sticky top-24 space-y-4">
-                {/* 쿠폰 선택 */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>쿠폰 / 할인</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CouponSelector
-                      orderAmount={totalProductPrice}
-                      onCouponSelect={setSelectedCoupon}
-                      selectedCoupon={selectedCoupon}
-                    />
-                  </CardContent>
-                </Card>
-
                 {/* 주문 요약 */}
                 <Card>
                   <CardHeader>
@@ -523,6 +473,12 @@ export function CheckoutPage() {
       </main>
 
       <Footer />
+
+      <AddressSelectorModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        onSelectAddress={handleSelectAddress}
+      />
     </div>
   )
 }
