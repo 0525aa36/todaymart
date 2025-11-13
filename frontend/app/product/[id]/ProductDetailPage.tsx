@@ -454,7 +454,7 @@ export function ProductDetailPage() {
             {/* Product Details */}
             <div className="md:col-span-3">
               <div className="mb-4">
-                <Badge className="mb-2" variant="secondary">
+                <Badge className="mb-2 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100 border-emerald-300" variant="outline">
                   {product.origin}
                 </Badge>
                 <h1 className="text-3xl font-bold mb-2">{product.name}</h1>

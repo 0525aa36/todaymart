@@ -182,7 +182,7 @@ export function OrdersPage() {
                       className="flex-1 min-w-[100px]"
                     >
                       {filter.label}
-                      <Badge variant="secondary" className="ml-2">
+                      <Badge className="ml-2 bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100 border-slate-300">
                         {filter.count}
                       </Badge>
                     </Button>
