@@ -1,5 +1,8 @@
 package com.agri.market.admin;
 
+import com.agri.market.admin.audit.ActionType;
+import com.agri.market.admin.audit.AdminAuditLogService;
+import com.agri.market.dto.admin.OrderAdminResponse;
 import com.agri.market.order.Order;
 import com.agri.market.order.OrderService;
 import com.agri.market.order.OrderStatus;
@@ -33,11 +36,14 @@ public class AdminOrderController {
     private final ExcelService excelService;
     private final OrderService orderService;
     private final SellerRepository sellerRepository;
+    private final AdminAuditLogService auditLogService;
 
-    public AdminOrderController(ExcelService excelService, OrderService orderService, SellerRepository sellerRepository) {
+    public AdminOrderController(ExcelService excelService, OrderService orderService,
+                                SellerRepository sellerRepository, AdminAuditLogService auditLogService) {
         this.excelService = excelService;
         this.orderService = orderService;
         this.sellerRepository = sellerRepository;
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping("/export")
@@ -78,8 +84,12 @@ public class AdminOrderController {
                 .body(resource);
     }
 
+    /**
+     * 주문 목록 조회 (관리자용)
+     * PII 필드는 마스킹 처리됨
+     */
     @GetMapping
-    public ResponseEntity<Page<Order>> getOrders(
+    public ResponseEntity<Page<OrderAdminResponse>> getOrders(
             @RequestParam(required = false) OrderStatus orderStatus,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
@@ -89,19 +99,46 @@ public class AdminOrderController {
 
         Pageable pageable = PageRequest.of(page, size);
         Page<Order> orders = orderService.getAllOrders(orderStatus, startDate, endDate, sellerId, pageable);
-        return ResponseEntity.ok(orders);
+
+        // Order 엔티티를 OrderAdminResponse DTO로 변환 (마스킹 적용)
+        Page<OrderAdminResponse> response = orders.map(OrderAdminResponse::from);
+
+        return ResponseEntity.ok(response);
     }
 
+    /**
+     * 주문 상태 변경 (감사 로그 기록됨)
+     */
     @PutMapping("/{orderId}/status")
     public ResponseEntity<?> updateOrderStatus(
             @PathVariable Long orderId,
             @RequestBody Map<String, String> request) {
         try {
             String statusStr = request.get("status");
+            String reason = request.get("reason"); // 상태 변경 사유
             OrderStatus newStatus = OrderStatus.valueOf(statusStr);
 
+            // 기존 주문 조회 (old value 기록용)
+            Order order = orderService.getOrderById(orderId)
+                    .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다."));
+            OrderStatus oldStatus = order.getOrderStatus();
+
+            // 주문 상태 업데이트
             Order updatedOrder = orderService.updateOrderStatus(orderId, newStatus);
-            return ResponseEntity.ok(updatedOrder);
+
+            // 감사 로그 기록
+            auditLogService.log(
+                    ActionType.ORDER_STATUS_CHANGE,
+                    "ORDER",
+                    orderId,
+                    oldStatus.toString(),
+                    newStatus.toString(),
+                    reason
+            );
+
+            // DTO로 변환하여 반환
+            OrderAdminResponse response = OrderAdminResponse.from(updatedOrder);
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Invalid status value");
         } catch (RuntimeException e) {
@@ -109,6 +146,9 @@ public class AdminOrderController {
         }
     }
 
+    /**
+     * 송장번호 업데이트 (감사 로그 기록됨)
+     */
     @PutMapping("/{orderId}/tracking")
     public ResponseEntity<?> updateTrackingNumber(
             @PathVariable Long orderId,
@@ -119,8 +159,26 @@ public class AdminOrderController {
                 return ResponseEntity.badRequest().body("Tracking number is required");
             }
 
+            // 기존 주문 조회 (old value 기록용)
+            Order order = orderService.getOrderById(orderId)
+                    .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다."));
+            String oldTrackingNumber = order.getTrackingNumber();
+
+            // 송장번호 업데이트
             Order updatedOrder = orderService.updateTrackingNumber(orderId, trackingNumber);
-            return ResponseEntity.ok(updatedOrder);
+
+            // 감사 로그 기록
+            auditLogService.log(
+                    ActionType.ORDER_TRACKING_UPDATE,
+                    "ORDER",
+                    orderId,
+                    oldTrackingNumber != null ? oldTrackingNumber : "null",
+                    trackingNumber
+            );
+
+            // DTO로 변환하여 반환
+            OrderAdminResponse response = OrderAdminResponse.from(updatedOrder);
+            return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

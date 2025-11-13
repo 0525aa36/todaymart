@@ -100,6 +100,42 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "관리자 권한 검증", description = "JWT 토큰을 사용하여 현재 로그인한 사용자가 관리자 권한을 가지고 있는지 검증합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "관리자 권한 보유"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "403", description = "관리자 권한 없음")
+    })
+    @GetMapping("/validate-admin")
+    public ResponseEntity<?> validateAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body(Map.of("message", "인증되지 않은 사용자입니다.", "isAdmin", false));
+        }
+
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+        // ROLE_ADMIN 권한 확인
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals("ROLE_ADMIN"));
+
+        if (!isAdmin) {
+            return ResponseEntity.status(403).body(Map.of("message", "관리자 권한이 없습니다.", "isAdmin", false));
+        }
+
+        User user = authService.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("isAdmin", true);
+        response.put("email", user.getEmail());
+        response.put("name", user.getName());
+
+        return ResponseEntity.ok(response);
+    }
+
     @Operation(summary = "비밀번호 찾기", description = "이메일로 임시 비밀번호를 발송합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "임시 비밀번호 발송 성공"),

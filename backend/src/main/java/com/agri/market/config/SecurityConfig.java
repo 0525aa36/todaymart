@@ -83,6 +83,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/").permitAll() // Root path
+                        .requestMatchers("/api/auth/validate-admin").authenticated() // Requires JWT authentication
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/oauth2/**").permitAll() // OAuth2 endpoints
                         .requestMatchers("/login/oauth2/code/**").permitAll() // OAuth2 callback

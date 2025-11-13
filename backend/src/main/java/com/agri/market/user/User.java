@@ -1,5 +1,6 @@
 package com.agri.market.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -23,12 +24,14 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
+    @JsonIgnore // 절대 직렬화하지 않음 - 보안상 중요
     @Column
     private String passwordHash; // 소셜 로그인 사용자는 null 가능
 
     @Column(length = 20)
     private String provider = "LOCAL"; // LOCAL, NAVER, KAKAO
 
+    @JsonIgnore // 절대 직렬화하지 않음 - 개인정보 보호
     @Column(name = "provider_id")
     private String providerId; // 소셜 로그인 제공자의 고유 ID
 
@@ -69,4 +72,7 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt; // 마지막 로그인 시각 (보안 모니터링용)
 }

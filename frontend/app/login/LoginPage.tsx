@@ -12,6 +12,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { apiFetch, getErrorMessage, API_BASE_URL } from "@/lib/api-client"
+import { setAuthToken } from "@/lib/token-manager"
 
 export function LoginPage() {
   const router = useRouter()
@@ -53,7 +54,8 @@ export function LoginPage() {
         }),
       })
 
-      localStorage.setItem("token", data.token)
+      // Store token in both localStorage and cookie for middleware
+      setAuthToken(data.token)
       localStorage.setItem(
         "user",
         JSON.stringify({
