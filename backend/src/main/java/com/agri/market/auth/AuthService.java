@@ -12,6 +12,7 @@ import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
 import com.agri.market.user.address.UserAddress;
 import com.agri.market.user.address.UserAddressRepository;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,6 +57,7 @@ public class AuthService {
         this.emailService = emailService;
     }
 
+    @RateLimiter(name = "auth")
     public void register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Error: Email is already in use!");
@@ -148,6 +150,7 @@ public class AuthService {
         }
     }
 
+    @RateLimiter(name = "auth")
     public String authenticateUser(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));

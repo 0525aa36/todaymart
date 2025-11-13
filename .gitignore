@@ -54,3 +54,10 @@ yarn-error.log*
 # Uploaded files
 backend/uploads/
 uploads/
+
+# Credentials and sensitive files
+**/google-credentials.json
+**/*credentials*.json
+*.pem
+*.key
+*.p12

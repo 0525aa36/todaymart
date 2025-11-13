@@ -1,6 +1,7 @@
 package com.agri.market.exception;
 
 import com.agri.market.dto.ApiResponse;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -89,6 +90,13 @@ public class GlobalExceptionHandler {
         logger.warn("Forbidden: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error(e.getMessage(), "FORBIDDEN"));
+    }
+
+    @ExceptionHandler(RequestNotPermitted.class)
+    public ResponseEntity<ApiResponse<Void>> handleRateLimitExceeded(RequestNotPermitted e) {
+        logger.warn("Rate limit exceeded: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ApiResponse.error("너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.", "RATE_LIMIT_EXCEEDED"));
     }
 
     @ExceptionHandler(RuntimeException.class)

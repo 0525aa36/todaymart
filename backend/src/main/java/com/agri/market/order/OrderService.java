@@ -17,6 +17,7 @@ import com.agri.market.product.Product;
 import com.agri.market.product.ProductRepository;
 import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -57,6 +58,7 @@ public class OrderService {
         this.userCouponService = userCouponService;
     }
 
+    @RateLimiter(name = "order")
     @Transactional
     public Order createOrder(String userEmail, OrderRequest orderRequest) {
         User user = userRepository.findByEmail(userEmail)

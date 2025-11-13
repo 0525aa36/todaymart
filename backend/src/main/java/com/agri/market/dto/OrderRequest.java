@@ -1,8 +1,10 @@
 package com.agri.market.dto;
 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -39,7 +41,14 @@ public class OrderRequest {
     public static class OrderItemRequest {
         @NotNull(message = "상품 ID는 필수입니다.")
         private Long productId;
+
+        @NotNull(message = "수량은 필수입니다.")
         @Min(value = 1, message = "수량은 최소 1개 이상이어야 합니다.")
+        @Max(value = 9999, message = "수량은 최대 9999개까지 가능합니다.")
         private Integer quantity;
+
+        // 상품 옵션 ID (선택사항, 있으면 양수여야 함)
+        @Positive(message = "상품 옵션 ID는 양수여야 합니다")
+        private Long productOptionId;
     }
 }

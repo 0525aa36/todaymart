@@ -11,6 +11,9 @@ import com.agri.market.order.OrderStatus;
 import com.agri.market.order.PaymentStatus;
 import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
@@ -18,8 +21,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HashMap;
@@ -29,6 +37,8 @@ import java.util.Map;
 @Service
 public class PaymentService {
 
+    private static final Logger logger = LoggerFactory.getLogger(PaymentService.class);
+
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final OrderService orderService;
@@ -36,8 +46,11 @@ public class PaymentService {
     private final TossPaymentsConfig tossPaymentsConfig;
     private final RestTemplate restTemplate;
 
-    @Value("${payment.webhook.secret:default-secret-key}")
+    @Value("${payment.webhook.secret}")
     private String webhookSecret;
+
+    private static final String HMAC_ALGORITHM = "HmacSHA256";
+    private static final long WEBHOOK_TIMESTAMP_TOLERANCE_MS = 300000; // 5 minutes
 
     public PaymentService(PaymentRepository paymentRepository, OrderRepository orderRepository,
                          OrderService orderService, UserRepository userRepository,
@@ -50,6 +63,61 @@ public class PaymentService {
         this.restTemplate = restTemplate;
     }
 
+    /**
+     * HMAC-SHA256 서명 검증
+     * @param payload 원본 요청 본문
+     * @param providedSignature 클라이언트가 제공한 서명
+     * @param timestamp 타임스탬프 (밀리초)
+     * @return 검증 성공 여부
+     */
+    private boolean verifyWebhookSignature(String payload, String providedSignature, Long timestamp) {
+        // 1. Timestamp 검증 (Replay Attack 방지)
+        if (timestamp != null) {
+            long currentTime = System.currentTimeMillis();
+            long timeDiff = Math.abs(currentTime - timestamp);
+
+            if (timeDiff > WEBHOOK_TIMESTAMP_TOLERANCE_MS) {
+                throw new UnauthorizedException("Webhook timestamp is too old. Possible replay attack.");
+            }
+        }
+
+        // 2. HMAC-SHA256 서명 계산
+        try {
+            Mac hmac = Mac.getInstance(HMAC_ALGORITHM);
+            SecretKeySpec secretKey = new SecretKeySpec(
+                webhookSecret.getBytes(StandardCharsets.UTF_8),
+                HMAC_ALGORITHM
+            );
+            hmac.init(secretKey);
+
+            // Payload + Timestamp를 포함한 서명 계산
+            String signaturePayload = timestamp != null ? payload + timestamp : payload;
+            byte[] signatureBytes = hmac.doFinal(signaturePayload.getBytes(StandardCharsets.UTF_8));
+            String calculatedSignature = bytesToHex(signatureBytes);
+
+            // 3. Constant-time 비교 (Timing Attack 방지)
+            return MessageDigest.isEqual(
+                calculatedSignature.getBytes(StandardCharsets.UTF_8),
+                providedSignature.getBytes(StandardCharsets.UTF_8)
+            );
+
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            throw new RuntimeException("Failed to verify webhook signature", e);
+        }
+    }
+
+    /**
+     * 바이트 배열을 16진수 문자열로 변환
+     */
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
+    }
+
+    @RateLimiter(name = "payment")
     @Transactional
     public Payment requestPayment(Long orderId, String userEmail) {
         Order order = orderRepository.findById(orderId)
@@ -74,11 +142,24 @@ public class PaymentService {
         return payment;
     }
 
+    /**
+     * Webhook 처리 (HMAC-SHA256 서명 검증 포함)
+     * @param webhookRequest Webhook 요청 데이터
+     * @param requestBody 원본 요청 본문 (JSON 문자열)
+     * @param providedSignature 클라이언트가 제공한 HMAC 서명
+     * @param timestamp Webhook 타임스탬프 (밀리초)
+     */
     @Transactional
-    public void handleWebhook(WebhookRequest webhookRequest, String providedSecret) {
-        // 웹훅 서명 검증
-        if (providedSecret == null || !webhookSecret.equals(providedSecret)) {
-            throw new UnauthorizedException("Invalid webhook secret");
+    public void handleWebhook(WebhookRequest webhookRequest, String requestBody,
+                             String providedSignature, Long timestamp) {
+        // HMAC-SHA256 서명 검증
+        if (providedSignature == null || providedSignature.trim().isEmpty()) {
+            throw new UnauthorizedException("Missing webhook signature");
+        }
+
+        boolean isValid = verifyWebhookSignature(requestBody, providedSignature, timestamp);
+        if (!isValid) {
+            throw new UnauthorizedException("Invalid webhook signature");
         }
 
         Order order = orderRepository.findById(webhookRequest.getOrderId())
@@ -163,20 +244,20 @@ public class PaymentService {
      * @param amount 결제 금액
      * @return 승인 결과
      */
+    @RateLimiter(name = "payment")
     @Transactional
     public Map<String, Object> confirmTossPayment(String paymentKey, String orderId, BigDecimal amount) {
         try {
-            System.out.println("[PaymentService] Received orderId from Toss: " + orderId);
-            System.out.println("[PaymentService] Payment Key: " + paymentKey);
-            System.out.println("[PaymentService] Amount: " + amount);
+            logger.info("Processing payment confirmation for orderId: {}", orderId);
+            logger.debug("Payment amount: {}", amount);
+            // SECURITY: Never log payment keys or sensitive payment information
 
             // orderId는 orderNumber 형식 (ORDER_1234567890)
             // OrderRepository에서 orderNumber로 조회
             Order order = orderRepository.findByOrderNumber(orderId)
                     .orElseThrow(() -> new RuntimeException("Order not found with orderNumber: " + orderId));
 
-            System.out.println("[PaymentService] Found order with ID: " + order.getId());
-            System.out.println("[PaymentService] Confirming payment with Toss...");
+            logger.debug("Found order with ID: {}", order.getId());
 
             // Basic Auth 헤더 생성 (Secret Key:)
             String auth = tossPaymentsConfig.getSecretKey() + ":";
@@ -196,12 +277,12 @@ public class PaymentService {
 
             // 토스페이먼츠 API 호출
             String url = tossPaymentsConfig.getApiUrl() + "/v1/payments/confirm";
-            System.out.println("[PaymentService] Calling Toss API: " + url);
+            logger.debug("Calling Toss API: {}", url);
             ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 Map<String, Object> result = response.getBody();
-                System.out.println("[PaymentService] Payment confirmed successfully");
+                logger.info("Payment confirmed successfully for orderId: {}", orderId);
 
                 // DB에 결제 정보 저장
                 Payment payment = new Payment();
@@ -223,7 +304,7 @@ public class PaymentService {
                 throw new RuntimeException("Payment confirmation failed");
             }
         } catch (Exception e) {
-            System.err.println("[PaymentService] Payment confirmation error: " + e.getMessage());
+            logger.error("Payment confirmation failed for orderId: {}", orderId, e);
             throw new RuntimeException("Failed to confirm payment: " + e.getMessage(), e);
         }
     }
