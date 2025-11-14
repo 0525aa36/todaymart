@@ -57,6 +57,9 @@ dependencies {
 	implementation 'software.amazon.awssdk:s3'
 	implementation 'software.amazon.awssdk:ses'
 
+	// SendGrid for email sending
+	implementation 'com.sendgrid:sendgrid-java:4.10.2'
+
 	// AWS Secrets Manager (Spring Cloud AWS 3.x)
 	implementation platform('io.awspring.cloud:spring-cloud-aws-dependencies:3.0.3')
 	implementation 'io.awspring.cloud:spring-cloud-aws-starter-secrets-manager'

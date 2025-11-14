@@ -1,33 +1,34 @@
 package com.agri.market.service;
 
+import com.sendgrid.Method;
+import com.sendgrid.Request;
+import com.sendgrid.Response;
+import com.sendgrid.SendGrid;
+import com.sendgrid.helpers.mail.Mail;
+import com.sendgrid.helpers.mail.objects.Content;
+import com.sendgrid.helpers.mail.objects.Email;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.ses.SesClient;
-import software.amazon.awssdk.services.ses.model.*;
+
+import java.io.IOException;
 
 @Service
 public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
 
-    @Value("${aws.ses.region:ap-northeast-1}")
-    private String sesRegion;
+    private final SendGrid sendGrid;
 
-    @Value("${aws.ses.sender-email}")
+    @Value("${sendgrid.sender-email}")
     private String senderEmail;
 
-    @Value("${aws.ses.sender-name:오늘마트}")
+    @Value("${sendgrid.sender-name:오늘마트}")
     private String senderName;
 
-    private SesClient getSesClient() {
-        return SesClient.builder()
-                .region(Region.of(sesRegion))
-                .credentialsProvider(DefaultCredentialsProvider.create())
-                .build();
+    public EmailService(SendGrid sendGrid) {
+        this.sendGrid = sendGrid;
     }
 
     /**
@@ -45,36 +46,32 @@ public class EmailService {
      * 이메일 전송 (HTML + Text 버전)
      */
     private void sendEmail(String recipient, String subject, String htmlBody, String textBody) {
-        try (SesClient sesClient = getSesClient()) {
-            SendEmailRequest request = SendEmailRequest.builder()
-                    .source(senderName + " <" + senderEmail + ">")
-                    .destination(Destination.builder()
-                            .toAddresses(recipient)
-                            .build())
-                    .message(Message.builder()
-                            .subject(Content.builder()
-                                    .charset("UTF-8")
-                                    .data(subject)
-                                    .build())
-                            .body(Body.builder()
-                                    .html(Content.builder()
-                                            .charset("UTF-8")
-                                            .data(htmlBody)
-                                            .build())
-                                    .text(Content.builder()
-                                            .charset("UTF-8")
-                                            .data(textBody)
-                                            .build())
-                                    .build())
-                            .build())
-                    .build();
+        Email from = new Email(senderEmail, senderName);
+        Email to = new Email(recipient);
+        Content htmlContent = new Content("text/html", htmlBody);
 
-            SendEmailResponse response = sesClient.sendEmail(request);
-            logger.info("이메일 전송 성공: {} (MessageId: {})", recipient, response.messageId());
+        Mail mail = new Mail(from, subject, to, htmlContent);
+        mail.addContent(new Content("text/plain", textBody));
 
-        } catch (SesException e) {
+        Request request = new Request();
+        try {
+            request.setMethod(Method.POST);
+            request.setEndpoint("mail/send");
+            request.setBody(mail.build());
+
+            Response response = sendGrid.api(request);
+
+            if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
+                logger.info("이메일 전송 성공: {} (Status: {})", recipient, response.getStatusCode());
+            } else {
+                logger.error("이메일 전송 실패: {} - Status: {}, Body: {}",
+                        recipient, response.getStatusCode(), response.getBody());
+                throw new RuntimeException("이메일 전송에 실패했습니다. Status: " + response.getStatusCode());
+            }
+
+        } catch (IOException e) {
             logger.error("이메일 전송 실패: {} - {}", recipient, e.getMessage(), e);
-            throw new RuntimeException("이메일 전송에 실패했습니다: " + e.awsErrorDetails().errorMessage());
+            throw new RuntimeException("이메일 전송에 실패했습니다: " + e.getMessage());
         }
     }
 
@@ -91,43 +88,43 @@ public class EmailService {
                 </head>
                 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
                     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                        <div style="background: linear-gradient(135deg, %%23667eea 0%%, %%23764ba2 100%%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
                             <h1 style="color: white; margin: 0; font-size: 24px;">오늘마트</h1>
                             <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">임시 비밀번호 안내</p>
                         </div>
 
-                        <div style="background: %%23ffffff; padding: 40px; border: 1px solid %%23e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
-                            <p style="color: %%23374151; font-size: 16px; margin: 0 0 20px 0;">
+                        <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+                            <p style="color: #374151; font-size: 16px; margin: 0 0 20px 0;">
                                 안녕하세요, <strong>%s</strong>님
                             </p>
 
-                            <p style="color: %%236b7280; font-size: 14px; line-height: 1.6; margin: 0 0 30px 0;">
+                            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0 0 30px 0;">
                                 비밀번호 재설정 요청에 따라 임시 비밀번호를 발급해드렸습니다.<br>
                                 아래 임시 비밀번호로 로그인하신 후, 반드시 비밀번호를 변경해주세요.
                             </p>
 
-                            <div style="background: %%23f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin: 0 0 30px 0;">
-                                <p style="color: %%236b7280; font-size: 12px; margin: 0 0 10px 0;">임시 비밀번호</p>
-                                <p style="color: %%23667eea; font-size: 32px; font-weight: bold; letter-spacing: 4px; margin: 0; font-family: 'Courier New', monospace;">
+                            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin: 0 0 30px 0;">
+                                <p style="color: #6b7280; font-size: 12px; margin: 0 0 10px 0;">임시 비밀번호</p>
+                                <p style="color: #667eea; font-size: 32px; font-weight: bold; letter-spacing: 4px; margin: 0; font-family: 'Courier New', monospace;">
                                     %s
                                 </p>
                             </div>
 
-                            <div style="background: %%23fef3c7; border-left: 4px solid %%23f59e0b; padding: 15px; margin: 0 0 30px 0; border-radius: 4px;">
-                                <p style="color: %%2392400e; font-size: 13px; margin: 0; line-height: 1.5;">
+                            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 0 0 30px 0; border-radius: 4px;">
+                                <p style="color: #92400e; font-size: 13px; margin: 0; line-height: 1.5;">
                                     ⚠️ <strong>보안 안내</strong><br>
                                     로그인 후 마이페이지에서 반드시 비밀번호를 변경해주세요.
                                 </p>
                             </div>
 
                             <div style="text-align: center;">
-                                <a href="https://todaymart.co.kr/login" style="display: inline-block; background: linear-gradient(135deg, %%23667eea 0%%, %%23764ba2 100%%); color: white; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 14px;">
+                                <a href="https://todaymart.co.kr/login" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 14px;">
                                     로그인하기
                                 </a>
                             </div>
                         </div>
 
-                        <div style="text-align: center; padding: 20px; color: %%239ca3af; font-size: 12px;">
+                        <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
                             <p style="margin: 0 0 5px 0;">본 메일은 비밀번호 재설정 요청 시 자동으로 발송됩니다.</p>
                             <p style="margin: 0;">문의사항이 있으시면 고객센터로 연락해주세요.</p>
                         </div>
