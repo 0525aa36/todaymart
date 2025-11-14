@@ -48,10 +48,10 @@ public class EmailService {
     private void sendEmail(String recipient, String subject, String htmlBody, String textBody) {
         Email from = new Email(senderEmail, senderName);
         Email to = new Email(recipient);
-        Content htmlContent = new Content("text/html", htmlBody);
+        Content textContent = new Content("text/plain", textBody);
 
-        Mail mail = new Mail(from, subject, to, htmlContent);
-        mail.addContent(new Content("text/plain", textBody));
+        Mail mail = new Mail(from, subject, to, textContent);
+        mail.addContent(new Content("text/html", htmlBody));
 
         Request request = new Request();
         try {
