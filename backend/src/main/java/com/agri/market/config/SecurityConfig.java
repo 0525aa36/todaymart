@@ -84,6 +84,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/").permitAll() // Root path
                         .requestMatchers("/api/auth/validate-admin").authenticated() // Requires JWT authentication
+                        .requestMatchers("/api/auth/refresh").permitAll() // Public refresh token endpoint
+                        .requestMatchers("/api/auth/logout").permitAll() // Public logout endpoint (cookie-based)
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/oauth2/**").permitAll() // OAuth2 endpoints
                         .requestMatchers("/login/oauth2/code/**").permitAll() // OAuth2 callback
@@ -125,9 +127,18 @@ public class SecurityConfig {
         // 환경변수에서 CORS allowed origins 가져오기 (쉼표로 구분)
         List<String> origins = Arrays.asList(allowedOrigins.split(","));
         configuration.setAllowedOrigins(origins);
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        // credentials를 true로 설정할 때는 와일드카드를 사용할 수 없음
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With",
+                "Cache-Control"
+        ));
+        configuration.setExposedHeaders(Arrays.asList("Set-Cookie", "Authorization"));
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L); // 1시간
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

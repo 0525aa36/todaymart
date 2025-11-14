@@ -129,13 +129,25 @@ export function Header() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    setCartCount(0);
-    router.push('/');
-    window.location.href = '/';
+  const handleLogout = async () => {
+    try {
+      // 백엔드 로그아웃 API 호출 (리프레시 토큰 삭제)
+      await apiFetch('/api/auth/logout', {
+        method: 'POST',
+        parseResponse: 'none',
+      });
+    } catch (error) {
+      console.error('로그아웃 API 호출 실패:', error);
+      // 에러가 발생해도 로컬 로그아웃은 진행
+    } finally {
+      // 로컬 스토리지 정리
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+      setCartCount(0);
+      router.push('/');
+      window.location.href = '/';
+    }
   };
 
   const scrollToTop = () => {

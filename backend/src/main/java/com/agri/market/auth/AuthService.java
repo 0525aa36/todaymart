@@ -6,8 +6,11 @@ import com.agri.market.coupon.UserCoupon;
 import com.agri.market.coupon.UserCouponRepository;
 import com.agri.market.dto.LoginRequest;
 import com.agri.market.dto.RegisterRequest;
+import com.agri.market.exception.InvalidTokenException;
 import com.agri.market.security.JwtTokenProvider;
 import com.agri.market.service.EmailService;
+import com.agri.market.token.RefreshToken;
+import com.agri.market.token.RefreshTokenService;
 import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
 import com.agri.market.user.address.UserAddress;
@@ -35,6 +38,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenService refreshTokenService;
     private final CouponRepository couponRepository;
     private final UserCouponRepository userCouponRepository;
     private final UserAddressRepository userAddressRepository;
@@ -45,12 +49,14 @@ public class AuthService {
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider,
+                       RefreshTokenService refreshTokenService,
                        CouponRepository couponRepository, UserCouponRepository userCouponRepository,
                        UserAddressRepository userAddressRepository, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.refreshTokenService = refreshTokenService;
         this.couponRepository = couponRepository;
         this.userCouponRepository = userCouponRepository;
         this.userAddressRepository = userAddressRepository;
@@ -164,6 +170,81 @@ public class AuthService {
                 : 24L * 60 * 60 * 1000;       // 1일
 
         return jwtTokenProvider.generateJwtToken(authentication, expirationMs);
+    }
+
+    /**
+     * 리프레시 토큰을 포함한 인증 처리 (새 버전)
+     * 액세스 토큰과 리프레시 토큰을 함께 생성합니다
+     */
+    @RateLimiter(name = "auth")
+    public AuthTokens authenticateWithRefreshToken(LoginRequest loginRequest) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // 액세스 토큰 생성 (1시간)
+        String accessToken = jwtTokenProvider.generateAccessToken(authentication);
+
+        // 사용자 정보 가져오기
+        User user = findByEmail(loginRequest.getEmail())
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        // 리프레시 토큰 생성 및 DB 저장 (30일)
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return new AuthTokens(accessToken, refreshToken.getToken(),
+                jwtTokenProvider.getAccessTokenExpirationMs(),
+                jwtTokenProvider.getRefreshTokenExpirationMs());
+    }
+
+    /**
+     * 리프레시 토큰으로 새로운 액세스 토큰 발급
+     */
+    public String refreshAccessToken(String refreshTokenStr) {
+        // 리프레시 토큰 검증
+        RefreshToken refreshToken = refreshTokenService.validateRefreshToken(refreshTokenStr);
+
+        // 새로운 액세스 토큰 생성
+        String newAccessToken = jwtTokenProvider.generateAccessToken(refreshToken.getUser().getEmail());
+
+        logger.info("액세스 토큰 갱신 성공: 사용자 {}", refreshToken.getUser().getEmail());
+
+        return newAccessToken;
+    }
+
+    /**
+     * 로그아웃 처리 - 리프레시 토큰 삭제
+     */
+    public void logout(User user) {
+        refreshTokenService.revokeRefreshToken(user);
+        logger.info("로그아웃 완료: 사용자 {}", user.getEmail());
+    }
+
+    /**
+     * 로그아웃 처리 - 리프레시 토큰 문자열로 삭제
+     */
+    public void logoutByToken(String refreshToken) {
+        refreshTokenService.revokeRefreshToken(refreshToken);
+        logger.info("로그아웃 완료: 리프레시 토큰");
+    }
+
+    /**
+     * 액세스 토큰과 리프레시 토큰을 함께 담는 내부 클래스
+     */
+    public static class AuthTokens {
+        public final String accessToken;
+        public final String refreshToken;
+        public final long accessTokenExpiresIn;
+        public final long refreshTokenExpiresIn;
+
+        public AuthTokens(String accessToken, String refreshToken,
+                          long accessTokenExpiresIn, long refreshTokenExpiresIn) {
+            this.accessToken = accessToken;
+            this.refreshToken = refreshToken;
+            this.accessTokenExpiresIn = accessTokenExpiresIn;
+            this.refreshTokenExpiresIn = refreshTokenExpiresIn;
+        }
     }
 
     public Optional<User> findByEmail(String email) {

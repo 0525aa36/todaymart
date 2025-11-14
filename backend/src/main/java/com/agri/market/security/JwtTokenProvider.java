@@ -26,6 +26,12 @@ public class JwtTokenProvider {
     @Value("${app.jwtExpirationMs}")
     private int jwtExpirationMs;
 
+    @Value("${app.jwtAccessTokenExpirationMs}")
+    private long accessTokenExpirationMs;
+
+    @Value("${app.jwtRefreshTokenExpirationMs}")
+    private long refreshTokenExpirationMs;
+
     @PostConstruct
     public void init() {
         if (jwtSecret == null || jwtSecret.trim().isEmpty()) {
@@ -68,6 +74,27 @@ public class JwtTokenProvider {
                 .setExpiration(new Date((new Date()).getTime() + expirationMs))
                 .signWith(key(), SignatureAlgorithm.HS512)
                 .compact();
+    }
+
+    public String generateAccessToken(Authentication authentication) {
+        return generateJwtToken(authentication, accessTokenExpirationMs);
+    }
+
+    public String generateAccessToken(String username) {
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date((new Date()).getTime() + accessTokenExpirationMs))
+                .signWith(key(), SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    public long getAccessTokenExpirationMs() {
+        return accessTokenExpirationMs;
+    }
+
+    public long getRefreshTokenExpirationMs() {
+        return refreshTokenExpirationMs;
     }
 
     private Key key() {

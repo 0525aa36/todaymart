@@ -9,6 +9,7 @@ type ApiParseMode = "json" | "text" | "none" | "blob"
 export interface ApiFetchOptions extends RequestInit {
   auth?: boolean
   parseResponse?: ApiParseMode
+  skipRefresh?: boolean // 리프레시 재시도 방지
 }
 
 export class ApiError extends Error {
@@ -22,8 +23,12 @@ export class ApiError extends Error {
   }
 }
 
+// 리프레시 토큰 갱신 상태 관리
+let isRefreshing = false
+let refreshPromise: Promise<string | null> | null = null
+
 export async function apiFetch<T = unknown>(path: string, options: ApiFetchOptions = {}): Promise<T> {
-  const { auth = false, parseResponse = "json", headers, ...rest } = options
+  const { auth = false, parseResponse = "json", skipRefresh = false, headers, ...rest } = options
 
   const url = buildUrl(path)
   const finalHeaders = new Headers(headers ?? {})
@@ -50,7 +55,28 @@ export async function apiFetch<T = unknown>(path: string, options: ApiFetchOptio
   const response = await fetch(url, {
     ...rest,
     headers: finalHeaders,
+    credentials: "include", // 쿠키를 포함하여 전송 (리프레시 토큰)
   })
+
+  // 401 에러 발생 시 자동 토큰 갱신 시도
+  if (response.status === 401 && auth && !skipRefresh && typeof window !== "undefined") {
+    console.log("[API Client] 401 Unauthorized - 토큰 갱신 시도")
+
+    const newToken = await refreshAccessToken()
+
+    if (newToken) {
+      // 새 토큰으로 원래 요청 재시도
+      console.log("[API Client] 토큰 갱신 성공 - 요청 재시도")
+      return apiFetch<T>(path, { ...options, skipRefresh: true }) // 무한 루프 방지
+    } else {
+      // 리프레시 실패 - 로그아웃 처리
+      console.log("[API Client] 토큰 갱신 실패 - 로그아웃")
+      handleLogout()
+      const payload = await extractPayload(response)
+      const message = extractErrorMessage(response.status, payload)
+      throw new ApiError(response.status, message, payload)
+    }
+  }
 
   if (!response.ok) {
     const payload = await extractPayload(response)
@@ -76,6 +102,67 @@ export async function apiFetch<T = unknown>(path: string, options: ApiFetchOptio
   }
 
   return (await response.json()) as T
+}
+
+/**
+ * 리프레시 토큰으로 새로운 액세스 토큰 발급
+ * 동시에 여러 요청이 401을 받아도 한 번만 리프레시 요청
+ */
+async function refreshAccessToken(): Promise<string | null> {
+  // 이미 리프레시 중이면 대기
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise
+  }
+
+  isRefreshing = true
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include", // httpOnly 쿠키 포함
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        console.error("[API Client] 리프레시 토큰 갱신 실패:", response.status)
+        return null
+      }
+
+      const data = await response.json()
+      const newToken = data.token
+
+      if (newToken && typeof window !== "undefined") {
+        // 새 액세스 토큰 저장
+        localStorage.setItem("token", newToken)
+        console.log("[API Client] 새 액세스 토큰 저장 완료")
+        return newToken
+      }
+
+      return null
+    } catch (error) {
+      console.error("[API Client] 리프레시 토큰 갱신 중 에러:", error)
+      return null
+    } finally {
+      isRefreshing = false
+      refreshPromise = null
+    }
+  })()
+
+  return refreshPromise
+}
+
+/**
+ * 로그아웃 처리 (토큰 삭제 및 로그인 페이지 이동)
+ */
+function handleLogout() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    // 로그인 페이지로 리다이렉트
+    window.location.href = "/login"
+  }
 }
 
 function buildUrl(path: string): string {
