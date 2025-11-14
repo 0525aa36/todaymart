@@ -20,6 +20,9 @@ public class ProductWithOptionsDto {
     private LocalDateTime updatedAt;
     private BigDecimal discountedPrice;
     private List<ProductOptionResponse> options;
+    private BigDecimal shippingFee;
+    private Boolean canCombineShipping;
+    private Integer combineShippingUnit;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -66,4 +69,13 @@ public class ProductWithOptionsDto {
 
     public List<ProductOptionResponse> getOptions() { return options; }
     public void setOptions(List<ProductOptionResponse> options) { this.options = options; }
+
+    public BigDecimal getShippingFee() { return shippingFee; }
+    public void setShippingFee(BigDecimal shippingFee) { this.shippingFee = shippingFee; }
+
+    public Boolean getCanCombineShipping() { return canCombineShipping; }
+    public void setCanCombineShipping(Boolean canCombineShipping) { this.canCombineShipping = canCombineShipping; }
+
+    public Integer getCombineShippingUnit() { return combineShippingUnit; }
+    public void setCombineShippingUnit(Integer combineShippingUnit) { this.combineShippingUnit = combineShippingUnit; }
 }

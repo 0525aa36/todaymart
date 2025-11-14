@@ -29,6 +29,9 @@ interface CartItem {
     name: string
     price: number
     imageUrl: string
+    shippingFee: number
+    canCombineShipping: boolean
+    combineShippingUnit: number | null
   }
   quantity: number
   price: number
@@ -156,7 +159,23 @@ export function CheckoutPage() {
 
   const orderItems = cart?.cartItems || []
   const totalProductPrice = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const shippingFee = totalProductPrice >= 30000 ? 0 : 3000
+
+  // 합포장 배송비 계산 함수
+  const calculateShipping = (item: CartItem): number => {
+    const product = item.product
+    if (!product.shippingFee) return 0
+
+    // 합포장 가능한 경우
+    if (product.canCombineShipping && product.combineShippingUnit) {
+      const boxes = Math.ceil(item.quantity / product.combineShippingUnit)
+      return boxes * product.shippingFee
+    }
+
+    // 합포장 불가능한 경우 - 각 개별로 배송비
+    return item.quantity * product.shippingFee
+  }
+
+  const shippingFee = orderItems.reduce((sum, item) => sum + calculateShipping(item), 0)
 
   // 쿠폰 할인 계산
   const calculateCouponDiscount = () => {

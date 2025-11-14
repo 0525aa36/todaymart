@@ -71,7 +71,10 @@ public class ProductController {
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         dto.setDiscountedPrice(product.getDiscountedPrice());
-        
+        dto.setShippingFee(product.getShippingFee());
+        dto.setCanCombineShipping(product.getCanCombineShipping());
+        dto.setCombineShippingUnit(product.getCombineShippingUnit());
+
         // 옵션 정보 추가
         List<ProductOptionResponse> options = product.getOptions().stream()
                 .map(ProductOptionResponse::new)

@@ -50,6 +50,9 @@ interface Product {
   detailImageUrls?: string
   createdAt: string
   updatedAt: string
+  shippingFee: number
+  canCombineShipping: boolean
+  combineShippingUnit: number | null
 }
 
 interface Review {
@@ -624,7 +627,18 @@ export function ProductDetailPage() {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Truck className="h-4 w-4" />
-                  <span>배송비 3,000원 (3만원 이상 무료배송)</span>
+                  <div className="flex flex-col">
+                    <span>
+                      배송비 {product?.shippingFee && product.shippingFee > 0
+                        ? `${product.shippingFee.toLocaleString()}원`
+                        : '무료'}
+                    </span>
+                    {product?.canCombineShipping && product?.combineShippingUnit && (
+                      <span className="text-xs text-muted-foreground mt-0.5">
+                        ({product.combineShippingUnit}개까지 합포장 가능)
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Shield className="h-4 w-4" />

@@ -83,6 +83,7 @@ public class OrderService {
         order.setOrderStatus(OrderStatus.PENDING_PAYMENT);
 
         BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal totalShippingFee = BigDecimal.ZERO;
         Set<OrderItem> orderItems = new HashSet<>();
 
         for (OrderRequest.OrderItemRequest itemRequest : orderRequest.getItems()) {
@@ -103,11 +104,26 @@ public class OrderService {
 
             totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
 
+            // 합포장 배송비 계산
+            BigDecimal itemShippingFee = BigDecimal.ZERO;
+            if (product.getShippingFee() != null && product.getShippingFee().compareTo(BigDecimal.ZERO) > 0) {
+                if (product.getCanCombineShipping() && product.getCombineShippingUnit() != null && product.getCombineShippingUnit() > 0) {
+                    // 합포장 가능한 경우: 박스 수 계산
+                    int boxes = (int) Math.ceil((double) itemRequest.getQuantity() / product.getCombineShippingUnit());
+                    itemShippingFee = product.getShippingFee().multiply(BigDecimal.valueOf(boxes));
+                } else {
+                    // 합포장 불가능한 경우: 각 개별로 배송비
+                    itemShippingFee = product.getShippingFee().multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
+                }
+            }
+            totalShippingFee = totalShippingFee.add(itemShippingFee);
+
             // 재고 차감은 결제 완료 후에 수행 (주문 생성 시에는 하지 않음)
         }
 
         order.setOrderItems(orderItems);
         order.setTotalAmount(totalAmount);
+        order.setShippingFee(totalShippingFee);
 
         // 쿠폰 적용 로직
         BigDecimal couponDiscountAmount = BigDecimal.ZERO;

@@ -21,6 +21,9 @@ interface Product {
   price: number
   imageUrl: string
   stock: number
+  shippingFee: number
+  canCombineShipping: boolean
+  combineShippingUnit: number | null
 }
 
 interface ProductOption {
@@ -177,7 +180,23 @@ export function CartPage() {
   const cartItems = cart?.cartItems || []
   const selectedCartItems = cartItems.filter((item) => selectedItems.includes(item.id))
   const totalProductPrice = selectedCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const totalShipping = totalProductPrice >= 30000 ? 0 : 3000
+
+  // 합포장 배송비 계산 함수
+  const calculateShipping = (item: CartItem): number => {
+    const product = item.product
+    if (!product.shippingFee) return 0
+
+    // 합포장 가능한 경우
+    if (product.canCombineShipping && product.combineShippingUnit) {
+      const boxes = Math.ceil(item.quantity / product.combineShippingUnit)
+      return boxes * product.shippingFee
+    }
+
+    // 합포장 불가능한 경우 - 각 개별로 배송비
+    return item.quantity * product.shippingFee
+  }
+
+  const totalShipping = selectedCartItems.reduce((sum, item) => sum + calculateShipping(item), 0)
   const finalTotal = totalProductPrice + totalShipping
 
   return (
@@ -313,7 +332,18 @@ export function CartPage() {
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Truck className="h-4 w-4" />
-                          <span>배송비 3,000원</span>
+                          <div className="flex flex-col">
+                            <span>
+                              배송비 {calculateShipping(item) > 0
+                                ? `${calculateShipping(item).toLocaleString()}원`
+                                : '무료'}
+                            </span>
+                            {item.product.canCombineShipping && item.product.combineShippingUnit && (
+                              <span className="text-xs text-muted-foreground mt-0.5">
+                                ({Math.ceil(item.quantity / item.product.combineShippingUnit)}박스)
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <span className="font-bold text-lg">{(item.price * item.quantity).toLocaleString()}원</span>
                       </div>
@@ -346,17 +376,6 @@ export function CartPage() {
                         <span className="text-lg font-semibold">총 결제금액</span>
                         <span className="text-2xl font-bold text-primary">{finalTotal.toLocaleString()}원</span>
                       </div>
-
-                      {totalProductPrice < 30000 && totalProductPrice > 0 && (
-                        <div className="bg-muted/50 rounded-lg p-4 mb-4 text-sm text-center">
-                          <p className="text-muted-foreground">
-                            <span className="font-semibold text-primary">
-                              {(30000 - totalProductPrice).toLocaleString()}원
-                            </span>{" "}
-                            더 담으면 무료배송!
-                          </p>
-                        </div>
-                      )}
 
                       <Button className="w-full mb-3" size="lg" disabled={selectedItems.length === 0} asChild>
                         <Link href="/checkout">주문하기</Link>

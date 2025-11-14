@@ -797,6 +797,23 @@ export default function NewProductPage() {
                 <Label htmlFor="canCombineShipping">합포장 가능</Label>
               </div>
 
+              {formData.canCombineShipping && (
+                <div>
+                  <Label htmlFor="combineShippingUnit">합포장 개수 (개)</Label>
+                  <Input
+                    id="combineShippingUnit"
+                    type="number"
+                    value={formData.combineShippingUnit}
+                    onChange={(e) => setFormData({ ...formData, combineShippingUnit: e.target.value })}
+                    min="1"
+                    placeholder="예: 5 (5개까지 합포장)"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    몇 개까지 한 박스에 합포장이 가능한지 입력하세요
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="minOrderQuantity">최소 주문수량</Label>
