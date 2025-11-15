@@ -4,6 +4,7 @@ import com.agri.market.dto.ProductListDto;
 import com.agri.market.dto.ProductOptionDto;
 import com.agri.market.dto.ProductOptionResponse;
 import com.agri.market.dto.ProductWithOptionsDto;
+import com.agri.market.dto.StockStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -65,6 +66,17 @@ public class ProductController {
         dto.setPrice(product.getPrice());
         dto.setDiscountRate(product.getDiscountRate());
         dto.setStock(product.getStock());
+        dto.setLowStockThreshold(product.getLowStockThreshold());
+
+        // 재고 상태 계산
+        if (product.getStock() == 0) {
+            dto.setStockStatus(StockStatus.SOLD_OUT);
+        } else if (product.getStock() <= product.getLowStockThreshold()) {
+            dto.setStockStatus(StockStatus.LOW_STOCK);
+        } else {
+            dto.setStockStatus(StockStatus.IN_STOCK);
+        }
+
         dto.setImageUrl(product.getImageUrl());
         dto.setImageUrls(product.getImageUrls());
         dto.setDetailImageUrls(product.getDetailImageUrls());

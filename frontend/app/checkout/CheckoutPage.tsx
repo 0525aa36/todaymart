@@ -253,11 +253,23 @@ export function CheckoutPage() {
       router.push(`/payment/${order.id}`)
     } catch (error) {
       console.error("Error creating order:", error)
-      toast({
-        title: "주문 실패",
-        description: getErrorMessage(error, "주문 처리 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
+
+      // 재고 부족 에러 처리
+      const errorMessage = getErrorMessage(error, "주문 처리 중 오류가 발생했습니다.")
+      if (errorMessage.includes("Not enough stock for product:")) {
+        const productName = errorMessage.split("Not enough stock for product:")[1]?.trim() || "상품"
+        toast({
+          title: "재고 부족",
+          description: `'${productName}'의 재고가 부족합니다. 장바구니로 돌아가서 수량을 조정해주세요.`,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "주문 실패",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
     } finally {
       setSubmitting(false)
     }

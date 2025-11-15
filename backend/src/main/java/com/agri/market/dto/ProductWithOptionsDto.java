@@ -13,6 +13,8 @@ public class ProductWithOptionsDto {
     private BigDecimal price;
     private BigDecimal discountRate;
     private Integer stock;
+    private Integer lowStockThreshold;
+    private StockStatus stockStatus;
     private String imageUrl;
     private String imageUrls;
     private String detailImageUrls;
@@ -48,6 +50,12 @@ public class ProductWithOptionsDto {
 
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }
+
+    public Integer getLowStockThreshold() { return lowStockThreshold; }
+    public void setLowStockThreshold(Integer lowStockThreshold) { this.lowStockThreshold = lowStockThreshold; }
+
+    public StockStatus getStockStatus() { return stockStatus; }
+    public void setStockStatus(StockStatus stockStatus) { this.stockStatus = stockStatus; }
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }

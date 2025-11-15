@@ -19,6 +19,8 @@ public class ProductDetailResponse {
     private BigDecimal discountRate;
     private BigDecimal discountedPrice;
     private Integer stock;
+    private Integer lowStockThreshold;
+    private StockStatus stockStatus;
     private String imageUrl;
     private String imageUrls;
     private String detailImageUrls;
@@ -37,6 +39,17 @@ public class ProductDetailResponse {
         dto.setDiscountRate(product.getDiscountRate());
         dto.setDiscountedPrice(product.getDiscountedPrice());
         dto.setStock(product.getStock());
+        dto.setLowStockThreshold(product.getLowStockThreshold());
+
+        // 재고 상태 계산
+        if (product.getStock() == 0) {
+            dto.setStockStatus(StockStatus.SOLD_OUT);
+        } else if (product.getStock() <= product.getLowStockThreshold()) {
+            dto.setStockStatus(StockStatus.LOW_STOCK);
+        } else {
+            dto.setStockStatus(StockStatus.IN_STOCK);
+        }
+
         dto.setImageUrl(product.getImageUrl());
         dto.setImageUrls(product.getImageUrls());
         dto.setDetailImageUrls(product.getDetailImageUrls());

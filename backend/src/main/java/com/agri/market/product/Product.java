@@ -51,6 +51,10 @@ public class Product {
     @Column(nullable = false)
     private Integer stock;
 
+    // 재고 부족 임계값 (이 수량 이하면 "품절 임박" 표시)
+    @Column(nullable = false)
+    private Integer lowStockThreshold = 10;
+
     // 공급가 (도매가)
     @Column(precision = 10, scale = 2)
     private BigDecimal supplyPrice;

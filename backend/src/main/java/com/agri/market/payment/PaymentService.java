@@ -186,10 +186,29 @@ public class PaymentService {
     }
 
     /**
-     * 결제 환불 처리 (ADMIN 전용)
+     * 결제 환불 처리 (ADMIN 전용) - 전액 환불
      */
     @Transactional
     public Payment processRefund(Long orderId, String refundReason, Authentication authentication) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+
+        Payment payment = paymentRepository.findByOrder(order)
+                .orElseThrow(() -> new RuntimeException("Payment not found for order: " + orderId));
+
+        return processRefund(orderId, payment.getAmount(), refundReason, authentication);
+    }
+
+    /**
+     * 결제 환불 처리 (ADMIN 전용) - 부분/전액 환불 지원
+     * @param orderId 주문 ID
+     * @param refundAmount 환불 금액
+     * @param refundReason 환불 사유
+     * @param authentication 인증 정보
+     * @return 업데이트된 Payment 엔티티
+     */
+    @Transactional
+    public Payment processRefund(Long orderId, BigDecimal refundAmount, String refundReason, Authentication authentication) {
         // ADMIN 권한 검증
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
@@ -208,22 +227,105 @@ public class PaymentService {
             throw new RuntimeException("Cannot refund: Payment is not in PAID status");
         }
 
-        if (payment.getRefundAmount() != null && payment.getRefundAmount().compareTo(BigDecimal.ZERO) > 0) {
-            throw new RuntimeException("Payment already refunded");
-        }
+        // 부분 환불 검증
+        validateRefundAmount(payment, refundAmount);
 
-        payment.setRefundAmount(payment.getAmount());
-        payment.setRefundedAt(java.time.LocalDateTime.now());
-        payment.setRefundTransactionId("REFUND_TXN_" + System.currentTimeMillis());
+        // Toss Payments API를 통한 실제 환불 처리
+        String paymentKey = payment.getTransactionId();
+        Map<String, Object> cancelResult = callTossCancelApi(paymentKey, refundAmount, refundReason);
+
+        // 환불 정보 업데이트
+        BigDecimal currentRefundAmount = payment.getRefundAmount() != null
+            ? payment.getRefundAmount()
+            : BigDecimal.ZERO;
+        BigDecimal newRefundAmount = currentRefundAmount.add(refundAmount);
+
+        payment.setRefundAmount(newRefundAmount);
+        payment.setRefundedAt(LocalDateTime.now());
+        payment.setRefundTransactionId((String) cancelResult.get("transactionKey"));
         payment.setRefundReason(refundReason);
-        payment.setStatus(PaymentStatus.FAILED);
 
-        order.setOrderStatus(OrderStatus.CANCELLED);
+        // 전액 환불 시에만 주문 취소 처리
+        if (newRefundAmount.compareTo(payment.getAmount()) >= 0) {
+            payment.setStatus(PaymentStatus.FAILED);
+            order.setOrderStatus(OrderStatus.CANCELLED);
+        }
 
         paymentRepository.save(payment);
         orderRepository.save(order);
 
+        logger.info("Refund processed successfully - OrderId: {}, Amount: {}, Total Refunded: {}",
+                    orderId, refundAmount, newRefundAmount);
+
         return payment;
+    }
+
+    /**
+     * 부분 환불 금액 검증
+     */
+    private void validateRefundAmount(Payment payment, BigDecimal refundAmount) {
+        if (refundAmount == null || refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Refund amount must be greater than 0");
+        }
+
+        BigDecimal currentRefundAmount = payment.getRefundAmount() != null
+            ? payment.getRefundAmount()
+            : BigDecimal.ZERO;
+
+        BigDecimal totalRefundAmount = currentRefundAmount.add(refundAmount);
+
+        if (totalRefundAmount.compareTo(payment.getAmount()) > 0) {
+            throw new RuntimeException(
+                String.format("Total refund amount (%s) cannot exceed payment amount (%s)",
+                    totalRefundAmount, payment.getAmount())
+            );
+        }
+    }
+
+    /**
+     * Toss Payments 환불 API 호출
+     * @param paymentKey 결제 키
+     * @param cancelAmount 취소 금액
+     * @param cancelReason 취소 사유
+     * @return API 응답 결과
+     */
+    private Map<String, Object> callTossCancelApi(String paymentKey, BigDecimal cancelAmount, String cancelReason) {
+        try {
+            logger.info("Calling Toss cancel API - PaymentKey: ***, Amount: {}", cancelAmount);
+
+            // Basic Auth 헤더 생성
+            String auth = tossPaymentsConfig.getSecretKey() + ":";
+            String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Basic " + encodedAuth);
+
+            // 요청 바디
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("cancelReason", cancelReason);
+            requestBody.put("cancelAmount", cancelAmount.intValue());
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+            // Toss Payments 환불 API 호출
+            String url = tossPaymentsConfig.getApiUrl() + "/v1/payments/" + paymentKey + "/cancel";
+            logger.debug("Toss cancel API URL: {}", url);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                Map<String, Object> result = response.getBody();
+                logger.info("Toss cancel API succeeded - TransactionKey: {}", result.get("transactionKey"));
+                return result;
+            } else {
+                throw new RuntimeException("Toss cancel API failed with status: " + response.getStatusCode());
+            }
+
+        } catch (Exception e) {
+            logger.error("Toss cancel API call failed - PaymentKey: ***, Amount: {}", cancelAmount, e);
+            throw new RuntimeException("Failed to cancel payment via Toss API: " + e.getMessage(), e);
+        }
     }
 
     /**

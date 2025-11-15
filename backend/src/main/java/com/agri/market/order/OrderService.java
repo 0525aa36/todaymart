@@ -107,9 +107,13 @@ public class OrderService {
             // 합포장 배송비 계산
             BigDecimal itemShippingFee = BigDecimal.ZERO;
             if (product.getShippingFee() != null && product.getShippingFee().compareTo(BigDecimal.ZERO) > 0) {
-                if (product.getCanCombineShipping() && product.getCombineShippingUnit() != null && product.getCombineShippingUnit() > 0) {
+                // 합포장 가능 여부 확인 (null-safe)
+                Boolean canCombine = product.getCanCombineShipping();
+                Integer combineUnit = product.getCombineShippingUnit();
+
+                if (Boolean.TRUE.equals(canCombine) && combineUnit != null && combineUnit > 0) {
                     // 합포장 가능한 경우: 박스 수 계산
-                    int boxes = (int) Math.ceil((double) itemRequest.getQuantity() / product.getCombineShippingUnit());
+                    int boxes = (int) Math.ceil((double) itemRequest.getQuantity() / combineUnit);
                     itemShippingFee = product.getShippingFee().multiply(BigDecimal.valueOf(boxes));
                 } else {
                     // 합포장 불가능한 경우: 각 개별로 배송비

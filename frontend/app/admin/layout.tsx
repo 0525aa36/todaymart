@@ -22,7 +22,8 @@ import {
   MessageSquare,
   Bell,
   MessageCircle,
-  FolderTree
+  FolderTree,
+  Warehouse
 } from 'lucide-react'
 import { API_BASE_URL } from '@/lib/api-client'
 
@@ -102,6 +103,7 @@ export default function AdminLayout({
       label: '상품',
       items: [
         { icon: Package, label: '상품 관리', href: '/admin/products' },
+        { icon: Warehouse, label: '재고 관리', href: '/admin/inventory' },
         { icon: FolderTree, label: '카테고리 관리', href: '/admin/categories' },
         { icon: Store, label: '판매자 관리', href: '/admin/sellers' },
       ]

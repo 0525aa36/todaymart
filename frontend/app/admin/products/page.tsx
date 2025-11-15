@@ -10,18 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import {
   Select,
@@ -33,9 +22,22 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Edit, Trash2, ArrowLeft, Settings, RefreshCw } from "lucide-react"
+import {
+  Plus,
+  Edit,
+  Trash2,
+  RefreshCw,
+  Search,
+  Package,
+  CheckCircle,
+  XCircle,
+  TrendingDown,
+  DollarSign,
+  Loader2,
+} from "lucide-react"
 import Link from "next/link"
-import { apiFetch, API_BASE_URL, getErrorMessage } from "@/lib/api-client"
+import { apiFetch, getErrorMessage } from "@/lib/api-client"
+import { toast as sonnerToast } from "sonner"
 
 interface Seller {
   id: number
@@ -61,66 +63,43 @@ interface Product {
   updatedAt: string
 }
 
-interface ProductOption {
-  id: number
-  optionName: string
-  optionValue: string
-  additionalPrice: number
-  stock: number
-  isAvailable: boolean
+interface ProductStatistics {
+  totalProducts: number
+  inStockProducts: number
+  soldOutProducts: number
+  discountedProducts: number
+  totalStockValue: number
+}
+
+interface ProductPage {
+  content: Product[]
+  totalElements: number
+  totalPages: number
+  number: number
 }
 
 export default function AdminProductsPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
+  const [statistics, setStatistics] = useState<ProductStatistics | null>(null)
   const [loading, setLoading] = useState(true)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [activeSellers, setActiveSellers] = useState<Seller[]>([])
 
-  // Form state
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "",
-    origin: "",
-    description: "",
-    price: "",
-    discountRate: "",
-    stock: "",
-    imageUrl: "",
-    sellerId: "",
-    // 새로 추가된 필드
-    supplyPrice: "",
-    shippingFee: "3000",
-    canCombineShipping: false,
-    combineShippingUnit: "",
-    courierCompany: "",
-    minOrderQuantity: "1",
-    maxOrderQuantity: "",
-  })
-  const [uploadedImages, setUploadedImages] = useState<string[]>([])
-  const [uploading, setUploading] = useState(false)
-  const [descriptionImages, setDescriptionImages] = useState<string[]>([])
+  // Pagination
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalElements, setTotalElements] = useState(0)
 
-  // Options state
-  const [optionsDialogOpen, setOptionsDialogOpen] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [productOptions, setProductOptions] = useState<ProductOption[]>([])
-  const [editingOption, setEditingOption] = useState<ProductOption | null>(null)
-  const [optionFormOpen, setOptionFormOpen] = useState(false)
-  const [optionFormData, setOptionFormData] = useState({
-    optionName: "",
-    optionValue: "",
-    additionalPrice: "",
-    stock: "",
-    isAvailable: true,
-  })
+  // Filters
+  const [categoryFilter, setCategoryFilter] = useState<string>("ALL")
+  const [sellerFilter, setSellerFilter] = useState<string>("ALL")
+  const [stockFilter, setStockFilter] = useState<string>("ALL")
+  const [keyword, setKeyword] = useState("")
+  const [searchInput, setSearchInput] = useState("")
 
   // Google Sheets sync state
   const [syncing, setSyncing] = useState(false)
-  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
-  const [googleSheetsEnabled, setGoogleSheetsEnabled] = useState(false)
   const [selectedSellerId, setSelectedSellerId] = useState<string>("ALL")
 
   useEffect(() => {
@@ -137,20 +116,76 @@ export default function AdminProductsPage() {
 
     fetchProducts()
     fetchActiveSellers()
-    checkGoogleSheetsEnabled()
-  }, [])
+    fetchStatistics()
+  }, [page, categoryFilter, sellerFilter, stockFilter, keyword])
+
+  const fetchStatistics = async () => {
+    try {
+      const data = await apiFetch<{ content: Product[] }>("/api/products?size=1000")
+      const allProducts = data.content || []
+
+      const stats: ProductStatistics = {
+        totalProducts: allProducts.length,
+        inStockProducts: allProducts.filter(p => p.stock > 0).length,
+        soldOutProducts: allProducts.filter(p => p.stock === 0).length,
+        discountedProducts: allProducts.filter(p => p.discountRate && p.discountRate > 0).length,
+        totalStockValue: allProducts.reduce((sum, p) => sum + (p.price * p.stock), 0),
+      }
+
+      setStatistics(stats)
+    } catch (error) {
+      console.error("Error fetching statistics:", error)
+    }
+  }
 
   const fetchProducts = async () => {
     try {
-      const data = await apiFetch<{ content?: Product[] }>("/api/products?size=100&sort=createdAt,desc")
-      setProducts(data.content || [])
+      setLoading(true)
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: "20",
+        sort: "createdAt,desc",
+      })
+
+      // Apply filters (client-side for now)
+      const data = await apiFetch<ProductPage>(`/api/products?${params.toString()}`)
+
+      let filteredProducts = data.content || []
+
+      // Filter by category
+      if (categoryFilter !== "ALL") {
+        filteredProducts = filteredProducts.filter(p => p.category === categoryFilter)
+      }
+
+      // Filter by seller
+      if (sellerFilter !== "ALL") {
+        if (sellerFilter === "DIRECT") {
+          filteredProducts = filteredProducts.filter(p => !p.seller)
+        } else {
+          filteredProducts = filteredProducts.filter(p => p.seller?.id === parseInt(sellerFilter))
+        }
+      }
+
+      // Filter by stock status
+      if (stockFilter === "IN_STOCK") {
+        filteredProducts = filteredProducts.filter(p => p.stock > 0)
+      } else if (stockFilter === "SOLD_OUT") {
+        filteredProducts = filteredProducts.filter(p => p.stock === 0)
+      }
+
+      // Filter by keyword
+      if (keyword) {
+        filteredProducts = filteredProducts.filter(p =>
+          p.name.toLowerCase().includes(keyword.toLowerCase())
+        )
+      }
+
+      setProducts(filteredProducts)
+      setTotalElements(filteredProducts.length)
+      setTotalPages(Math.ceil(filteredProducts.length / 20))
     } catch (error) {
       console.error("Error fetching products:", error)
-      toast({
-        title: "오류",
-        description: getErrorMessage(error, "상품 목록을 불러오는 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
+      sonnerToast.error("상품 목록을 불러오는 중 오류가 발생했습니다")
     } finally {
       setLoading(false)
     }
@@ -164,35 +199,12 @@ export default function AdminProductsPage() {
       setActiveSellers(data)
     } catch (error) {
       console.error("Error fetching active sellers:", error)
-      toast({
-        title: "오류",
-        description: getErrorMessage(error, "판매자 목록을 불러오는 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
-    }
-  }
-
-  const checkGoogleSheetsEnabled = async () => {
-    try {
-      const response = await apiFetch<{ success: boolean; data: { lastSyncTime: string | null } }>("/api/admin/sheets/last-sync", { auth: true })
-      setGoogleSheetsEnabled(true)
-      if (response.data && response.data.lastSyncTime) {
-        setLastSyncTime(response.data.lastSyncTime)
-      }
-    } catch (error) {
-      // Google Sheets가 비활성화되어 있음
-      setGoogleSheetsEnabled(false)
-      console.log("Google Sheets sync not available")
     }
   }
 
   const handleSyncProductsToGoogleSheets = async () => {
     if (selectedSellerId === "ALL") {
-      toast({
-        title: "판매자 선택 필요",
-        description: "상품을 동기화할 판매자를 선택해주세요.",
-        variant: "destructive",
-      })
+      sonnerToast.error("상품을 동기화할 판매자를 선택해주세요")
       return
     }
 
@@ -204,174 +216,32 @@ export default function AdminProductsPage() {
         parseResponse: "json",
       })
 
-      toast({
-        title: "동기화 완료",
-        description: "구글 스프레드시트에 상품 목록이 동기화되었습니다.",
-      })
-
-      checkGoogleSheetsEnabled()
+      sonnerToast.success("구글 스프레드시트에 상품 목록이 동기화되었습니다")
     } catch (error) {
       console.error("Error syncing to Google Sheets:", error)
-      toast({
-        title: "동기화 실패",
-        description: getErrorMessage(error, "구글 스프레드시트 동기화 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
+      sonnerToast.error("구글 스프레드시트 동기화 중 오류가 발생했습니다")
     } finally {
       setSyncing(false)
     }
   }
 
-  const handleImageUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return
-
-    const token = localStorage.getItem("token")
-    if (!token) return
-
-    setUploading(true)
-    try {
-      const formData = new FormData()
-      Array.from(files).forEach((file) => {
-        formData.append("files", file)
-      })
-
-      const data = await apiFetch<{ fileUrls: string[] }>("/api/files/upload-multiple", {
-        method: "POST",
-        body: formData,
-        auth: true,
-      })
-
-      // URL이 이미 절대 URL인 경우 그대로 사용, 아니면 API_BASE_URL 추가
-      const fileUrls = data.fileUrls.map((url: string) =>
-        url.startsWith('http://') || url.startsWith('https://') ? url : `${API_BASE_URL}${url}`
-      )
-      setUploadedImages((prev) => [...prev, ...fileUrls])
-      toast({
-        title: "업로드 완료",
-        description: `${files.length}개의 이미지가 업로드되었습니다.`,
-      })
-    } catch (error) {
-      console.error("Error uploading images:", error)
-      toast({
-        title: "오류",
-        description: getErrorMessage(error, "이미지 업로드 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
-    } finally {
-      setUploading(false)
-    }
+  const handleSearch = () => {
+    setKeyword(searchInput)
+    setPage(0)
   }
 
-  const handleDescriptionImageUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return
-
-    const token = localStorage.getItem("token")
-    if (!token) return
-
-    setUploading(true)
-    try {
-      const formData = new FormData()
-      Array.from(files).forEach((file) => {
-        formData.append("files", file)
-      })
-
-      const data = await apiFetch<{ fileUrls: string[] }>("/api/files/upload-multiple", {
-        method: "POST",
-        body: formData,
-        auth: true,
-      })
-
-      // URL이 이미 절대 URL인 경우 그대로 사용, 아니면 API_BASE_URL 추가
-      const fileUrls = data.fileUrls.map((url: string) =>
-        url.startsWith('http://') || url.startsWith('https://') ? url : `${API_BASE_URL}${url}`
-      )
-      setDescriptionImages((prev) => [...prev, ...fileUrls])
-
-      const imageMarkdown = fileUrls.map((url: string) => `![이미지](${url})`).join("\n")
-      setFormData((prev) => ({
-        ...prev,
-        description: prev.description + (prev.description ? "\n\n" : "") + imageMarkdown,
-      }))
-
-      toast({
-        title: "업로드 완료",
-        description: `${files.length}개의 이미지가 설명에 추가되었습니다.`,
-      })
-    } catch (error) {
-      console.error("Error uploading images:", error)
-      toast({
-        title: "오류",
-        description: getErrorMessage(error, "이미지 업로드 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
-    } finally {
-      setUploading(false)
-    }
+  const handleRefresh = () => {
+    fetchProducts()
+    fetchStatistics()
+    sonnerToast.success("새로고침 완료")
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const token = localStorage.getItem("token")
-    if (!token) return
-
-    const productData = {
-      name: formData.name,
-      category: formData.category,
-      origin: formData.origin,
-      description: formData.description,
-      price: parseFloat(formData.price),
-      discountRate: formData.discountRate ? parseFloat(formData.discountRate) : null,
-      stock: parseInt(formData.stock),
-      imageUrl: uploadedImages.length > 0 ? uploadedImages[0] : (formData.imageUrl || null),
-      imageUrls: uploadedImages.length > 0 ? uploadedImages.join(',') : null,
-      sellerId: formData.sellerId ? parseInt(formData.sellerId) : null,
-      // 새로 추가된 필드
-      supplyPrice: formData.supplyPrice ? parseFloat(formData.supplyPrice) : null,
-      shippingFee: parseFloat(formData.shippingFee),
-      canCombineShipping: formData.canCombineShipping,
-      combineShippingUnit: formData.combineShippingUnit ? parseInt(formData.combineShippingUnit) : null,
-      courierCompany: formData.courierCompany || null,
-      minOrderQuantity: parseInt(formData.minOrderQuantity),
-      maxOrderQuantity: formData.maxOrderQuantity ? parseInt(formData.maxOrderQuantity) : null,
-    }
-
-    try {
-      const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : "/api/admin/products"
-
-      await apiFetch(url, {
-        method: editingProduct ? "PUT" : "POST",
-        auth: true,
-        body: JSON.stringify(productData),
-        parseResponse: "none",
-      })
-
-      toast({
-        title: editingProduct ? "수정 완료" : "등록 완료",
-        description: `상품이 성공적으로 ${editingProduct ? "수정" : "등록"}되었습니다.`,
-      })
-      setDialogOpen(false)
-      resetForm()
-      fetchProducts()
-    } catch (error) {
-      console.error("Error saving product:", error)
-      toast({
-        title: "오류",
-        description: getErrorMessage(error, "상품 저장 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleEdit = (product: any) => {
-    // 수정 페이지로 이동
+  const handleEdit = (product: Product) => {
     router.push(`/admin/products/${product.id}/edit`)
   }
 
   const handleDelete = async (id: number) => {
     if (!confirm("정말 삭제하시겠습니까?")) return
-
-    const token = localStorage.getItem("token")
-    if (!token) return
 
     try {
       await apiFetch(`/api/admin/products/${id}`, {
@@ -380,66 +250,23 @@ export default function AdminProductsPage() {
         parseResponse: "none",
       })
 
-      toast({
-        title: "삭제 완료",
-        description: "상품이 삭제되었습니다.",
-      })
+      sonnerToast.success("상품이 삭제되었습니다")
       fetchProducts()
+      fetchStatistics()
     } catch (error: any) {
       console.error("Error deleting product:", error)
 
-      // 주문 이력이 있는 상품인 경우 특별한 안내
       if (error?.payload?.errorCode === "PRODUCT_HAS_ORDER_HISTORY") {
         const shouldSetStockZero = confirm(
           "주문 이력이 있는 상품은 삭제할 수 없습니다.\n\n대신 재고를 0으로 설정하여 판매를 중단하시겠습니까?"
         )
 
         if (shouldSetStockZero) {
-          // 재고를 0으로 설정하는 로직은 별도로 구현 필요
-          toast({
-            title: "안내",
-            description: "상품 수정 페이지에서 재고를 0으로 설정해주세요.",
-          })
+          sonnerToast("상품 수정 페이지에서 재고를 0으로 설정해주세요")
         }
       } else {
-        toast({
-          title: "삭제 실패",
-          description: getErrorMessage(error, "상품 삭제 중 오류가 발생했습니다."),
-          variant: "destructive",
-        })
+        sonnerToast.error(getErrorMessage(error, "상품 삭제 중 오류가 발생했습니다"))
       }
-    }
-  }
-
-  const resetForm = () => {
-    setEditingProduct(null)
-    setFormData({
-      name: "",
-      category: "",
-      origin: "",
-      description: "",
-      price: "",
-      discountRate: "",
-      stock: "",
-      imageUrl: "",
-      sellerId: "",
-      // 새로 추가된 필드
-      supplyPrice: "",
-      shippingFee: "3000",
-      canCombineShipping: false,
-      combineShippingUnit: "",
-      courierCompany: "",
-      minOrderQuantity: "1",
-      maxOrderQuantity: "",
-    })
-    setUploadedImages([])
-    setDescriptionImages([])
-  }
-
-  const handleDialogClose = (open: boolean) => {
-    setDialogOpen(open)
-    if (!open) {
-      resetForm()
     }
   }
 
@@ -452,146 +279,104 @@ export default function AdminProductsPage() {
     })
   }
 
-  // ========== Option Management Functions ==========
-
-  const handleManageOptions = async (product: Product) => {
-    setSelectedProduct(product)
-    setOptionsDialogOpen(true)
-    await fetchProductOptions(product.id)
-  }
-
-  const fetchProductOptions = async (productId: number) => {
-    const token = localStorage.getItem("token")
-    if (!token) return
-
-    try {
-      const data = await apiFetch<ProductOption[]>(`/api/admin/products/${productId}/options`, {
-        auth: true,
-      })
-      setProductOptions(data)
-    } catch (error) {
-      console.error("Error fetching options:", error)
-      toast({
-        title: "오류",
-        description: getErrorMessage(error, "옵션 목록을 불러오는 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleAddOption = () => {
-    setEditingOption(null)
-    setOptionFormData({
-      optionName: "",
-      optionValue: "",
-      additionalPrice: "",
-      stock: "",
-      isAvailable: true,
-    })
-    setOptionFormOpen(true)
-  }
-
-  const handleEditOption = (option: ProductOption) => {
-    setEditingOption(option)
-    setOptionFormData({
-      optionName: option.optionName,
-      optionValue: option.optionValue,
-      additionalPrice: option.additionalPrice.toString(),
-      stock: option.stock.toString(),
-      isAvailable: option.isAvailable,
-    })
-    setOptionFormOpen(true)
-  }
-
-  const handleSubmitOption = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedProduct) return
-
-    const token = localStorage.getItem("token")
-    if (!token) return
-
-    const optionData = {
-      optionName: optionFormData.optionName,
-      optionValue: optionFormData.optionValue,
-      additionalPrice: parseFloat(optionFormData.additionalPrice) || 0,
-      stock: parseInt(optionFormData.stock) || 0,
-      isAvailable: optionFormData.isAvailable,
-    }
-
-    try {
-      const url = editingOption
-        ? `/api/admin/products/options/${editingOption.id}`
-        : `/api/admin/products/${selectedProduct.id}/options`
-
-      await apiFetch(url, {
-        method: editingOption ? "PUT" : "POST",
-        auth: true,
-        body: JSON.stringify(optionData),
-        parseResponse: "none",
-      })
-
-      toast({
-        title: editingOption ? "수정 완료" : "추가 완료",
-        description: `옵션이 성공적으로 ${editingOption ? "수정" : "추가"}되었습니다.`,
-      })
-      setOptionFormOpen(false)
-      fetchProductOptions(selectedProduct.id)
-    } catch (error) {
-      console.error("Error saving option:", error)
-      toast({
-        title: "오류",
-        description: getErrorMessage(error, "옵션 저장 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleDeleteOption = async (optionId: number) => {
-    if (!confirm("정말 삭제하시겠습니까?")) return
-    if (!selectedProduct) return
-
-    const token = localStorage.getItem("token")
-    if (!token) return
-
-    try {
-      await apiFetch(`/api/admin/products/options/${optionId}`, {
-        method: "DELETE",
-        auth: true,
-        parseResponse: "none",
-      })
-
-      toast({
-        title: "삭제 완료",
-        description: "옵션이 삭제되었습니다.",
-      })
-      fetchProductOptions(selectedProduct.id)
-    } catch (error) {
-      console.error("Error deleting option:", error)
-      toast({
-        title: "오류",
-        description: getErrorMessage(error, "옵션 삭제 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
-    }
-  }
+  // Get unique categories from products
+  const categories = Array.from(new Set(products.map(p => p.category)))
 
   return (
-    <>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">상품 관리</h1>
-            <p className="text-sm text-gray-500 mt-1">등록된 상품을 관리하고 새 상품을 추가하세요</p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">상품 관리</h1>
+        <Button onClick={handleRefresh} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          새로고침
+        </Button>
+      </div>
 
-          <div className="flex items-center gap-3">
-            <Select value={selectedSellerId} onValueChange={setSelectedSellerId}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="판매자 선택" />
+      {/* Statistics Cards */}
+      {statistics && (
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">전체 상품</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{statistics.totalProducts}</div>
+              <p className="text-xs text-muted-foreground">
+                총 재고 가치: {statistics.totalStockValue.toLocaleString()}원
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">판매 중</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-500">{statistics.inStockProducts}</div>
+              <p className="text-xs text-muted-foreground">
+                재고가 있는 상품
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">품절</CardTitle>
+              <XCircle className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-500">{statistics.soldOutProducts}</div>
+              <p className="text-xs text-muted-foreground">
+                재고 0개 상품
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">할인 중</CardTitle>
+              <TrendingDown className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-500">{statistics.discountedProducts}</div>
+              <p className="text-xs text-muted-foreground">
+                할인율이 적용된 상품
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>필터 및 검색</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Select value={categoryFilter} onValueChange={(value) => { setCategoryFilter(value); setPage(0); }}>
+              <SelectTrigger>
+                <SelectValue placeholder="카테고리" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">판매자 선택</SelectItem>
+                <SelectItem value="ALL">전체 카테고리</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={sellerFilter} onValueChange={(value) => { setSellerFilter(value); setPage(0); }}>
+              <SelectTrigger>
+                <SelectValue placeholder="판매자" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">전체 판매자</SelectItem>
+                <SelectItem value="DIRECT">직매</SelectItem>
                 {activeSellers.map((seller) => (
                   <SelectItem key={seller.id} value={seller.id.toString()}>
                     {seller.name}
@@ -599,395 +384,202 @@ export default function AdminProductsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              onClick={handleSyncProductsToGoogleSheets}
-              disabled={syncing || selectedSellerId === "ALL"}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-              {syncing ? "동기화 중..." : "구글 시트 동기화"}
-            </Button>
-            <Link href="/admin/products/new">
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" />
-                상품 등록
+
+            <Select value={stockFilter} onValueChange={(value) => { setStockFilter(value); setPage(0); }}>
+              <SelectTrigger>
+                <SelectValue placeholder="재고 상태" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">전체</SelectItem>
+                <SelectItem value="IN_STOCK">판매중</SelectItem>
+                <SelectItem value="SOLD_OUT">품절</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex gap-2">
+              <Input
+                placeholder="상품명 검색..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+              />
+              <Button onClick={handleSearch}>
+                <Search className="h-4 w-4" />
               </Button>
-            </Link>
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
-              <DialogContent className="sm:max-w-[625px]">
-                <form onSubmit={handleSubmit}>
-                  <DialogHeader>
-                    <DialogTitle>{editingProduct ? "상품 수정" : "새 상품 등록"}</DialogTitle>
-                    <DialogDescription>
-                      {editingProduct ? "상품 정보를 수정하세요" : "판매할 상품 정보를 입력하세요"}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">상품명 *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
-                        placeholder="예: 제주 감귤 3kg"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="category">카테고리 *</Label>
-                        <Input
-                          id="category"
-                          value={formData.category}
-                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                          required
-                          placeholder="예: 과일"
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="origin">원산지 *</Label>
-                        <Input
-                          id="origin"
-                          value={formData.origin}
-                          onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-                          required
-                          placeholder="예: 제주"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="sellerId">판매자 (선택)</Label>
-                      <select
-                        id="sellerId"
-                        value={formData.sellerId}
-                        onChange={(e) => setFormData({ ...formData, sellerId: e.target.value })}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <option value="">직매 (판매자 없음)</option>
-                        {activeSellers.map((seller) => (
-                          <option key={seller.id} value={seller.id}>
-                            {seller.name} ({seller.businessNumber})
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-xs text-muted-foreground">
-                        판매자를 선택하지 않으면 직매 상품으로 등록됩니다
-                      </p>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="description">상품 설명 *</Label>
-                      <Textarea
-                        id="description"
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        required
-                        rows={3}
-                        placeholder="상품에 대한 상세 설명을 입력하세요"
-                      />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="price">가격 (원) *</Label>
-                        <Input
-                          id="price"
-                          type="number"
-                          value={formData.price}
-                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                          required
-                          min="0"
-                          placeholder="19900"
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="discountRate">할인율 (%)</Label>
-                        <Input
-                          id="discountRate"
-                          type="number"
-                          value={formData.discountRate}
-                          onChange={(e) => setFormData({ ...formData, discountRate: e.target.value })}
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          placeholder="10"
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="stock">재고 *</Label>
-                        <Input
-                          id="stock"
-                          type="number"
-                          value={formData.stock}
-                          onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                          required
-                          min="0"
-                          placeholder="100"
-                        />
-                      </div>
-                    </div>
+      {/* Actions */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Select value={selectedSellerId} onValueChange={setSelectedSellerId}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="판매자 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">판매자 선택</SelectItem>
+              {activeSellers.map((seller) => (
+                <SelectItem key={seller.id} value={seller.id.toString()}>
+                  {seller.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={handleSyncProductsToGoogleSheets}
+            disabled={syncing || selectedSellerId === "ALL"}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "동기화 중..." : "구글 시트 동기화"}
+          </Button>
+        </div>
 
-                    {/* 배송 및 수량 정보 */}
-                    <div className="border-t pt-4 mt-2">
-                      <h3 className="font-semibold mb-3 text-sm text-gray-700">배송 정보</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="supplyPrice">공급가 (원)</Label>
-                          <Input
-                            id="supplyPrice"
-                            type="number"
-                            value={formData.supplyPrice}
-                            onChange={(e) => setFormData({ ...formData, supplyPrice: e.target.value })}
-                            min="0"
-                            placeholder="도매가 입력 (선택)"
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="shippingFee">배송비 (원) *</Label>
-                          <Input
-                            id="shippingFee"
-                            type="number"
-                            value={formData.shippingFee}
-                            onChange={(e) => setFormData({ ...formData, shippingFee: e.target.value })}
-                            required
-                            min="0"
-                            placeholder="3000"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 mt-4">
-                        <div className="grid gap-2">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="canCombineShipping"
-                              checked={formData.canCombineShipping}
-                              onChange={(e) => setFormData({ ...formData, canCombineShipping: e.target.checked })}
-                              className="h-4 w-4"
-                            />
-                            <Label htmlFor="canCombineShipping">합포장 가능</Label>
-                          </div>
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="combineShippingUnit">합포장 단위</Label>
-                          <Input
-                            id="combineShippingUnit"
-                            type="number"
-                            value={formData.combineShippingUnit}
-                            onChange={(e) => setFormData({ ...formData, combineShippingUnit: e.target.value })}
-                            min="1"
-                            placeholder="예: 5개씩"
-                            disabled={!formData.canCombineShipping}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid gap-2 mt-4">
-                        <Label htmlFor="courierCompany">택배사</Label>
-                        <Input
-                          id="courierCompany"
-                          value={formData.courierCompany}
-                          onChange={(e) => setFormData({ ...formData, courierCompany: e.target.value })}
-                          placeholder="예: CJ대한통운, 로젠택배"
-                        />
-                      </div>
-                    </div>
-
-                    {/* 주문 수량 제한 */}
-                    <div className="border-t pt-4 mt-2">
-                      <h3 className="font-semibold mb-3 text-sm text-gray-700">주문 수량 설정</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="minOrderQuantity">최소 주문 수량 *</Label>
-                          <Input
-                            id="minOrderQuantity"
-                            type="number"
-                            value={formData.minOrderQuantity}
-                            onChange={(e) => setFormData({ ...formData, minOrderQuantity: e.target.value })}
-                            required
-                            min="1"
-                            placeholder="1"
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="maxOrderQuantity">최대 주문 수량</Label>
-                          <Input
-                            id="maxOrderQuantity"
-                            type="number"
-                            value={formData.maxOrderQuantity}
-                            onChange={(e) => setFormData({ ...formData, maxOrderQuantity: e.target.value })}
-                            min="1"
-                            placeholder="제한 없음"
-                          />
-                          <p className="text-xs text-muted-foreground">비워두면 제한 없음</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="productImages">상품 이미지 (여러 장 업로드 가능)</Label>
-                      <Input
-                        id="productImages"
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={(e) => handleImageUpload(e.target.files)}
-                        disabled={uploading}
-                      />
-                      {uploadedImages.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {uploadedImages.map((url, index) => (
-                            <div key={index} className="relative w-20 h-20">
-                              <img src={url} alt={`상품 ${index + 1}`} className="w-full h-full object-cover rounded" />
-                              <button
-                                type="button"
-                                onClick={() => setUploadedImages(uploadedImages.filter((_, i) => i !== index))}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <p className="text-xs text-muted-foreground">첫 번째 이미지가 대표 이미지로 사용됩니다.</p>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="descriptionImages">상품 설명 이미지</Label>
-                      <Input
-                        id="descriptionImages"
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={(e) => handleDescriptionImageUpload(e.target.files)}
-                        disabled={uploading}
-                      />
-                      <p className="text-xs text-muted-foreground">이미지가 자동으로 설명에 추가됩니다.</p>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => handleDialogClose(false)}>
-                      취소
-                    </Button>
-                    <Button type="submit">{editingProduct ? "수정" : "등록"}</Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Products Table */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="border-b bg-gray-50/50 px-6 py-4">
-              <CardTitle className="text-lg font-semibold text-gray-900">
-                등록된 상품 ({products.length}개)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
-                </div>
-              ) : products.length === 0 ? (
-                <div className="text-center py-12">
-                  <Plus className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">등록된 상품이 없습니다. 새 상품을 등록해보세요!</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b bg-gray-50/50">
-                        <TableHead className="w-[60px] font-semibold text-gray-700">ID</TableHead>
-                        <TableHead className="font-semibold text-gray-700">상품명</TableHead>
-                        <TableHead className="font-semibold text-gray-700">카테고리</TableHead>
-                        <TableHead className="font-semibold text-gray-700">원산지</TableHead>
-                        <TableHead className="font-semibold text-gray-700">판매자</TableHead>
-                        <TableHead className="font-semibold text-gray-700">가격</TableHead>
-                        <TableHead className="font-semibold text-gray-700">할인</TableHead>
-                        <TableHead className="font-semibold text-gray-700">재고</TableHead>
-                        <TableHead className="font-semibold text-gray-700">등록일</TableHead>
-                        <TableHead className="text-center font-semibold text-gray-700">작업</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {products.map((product) => (
-                        <TableRow key={product.id} className="hover:bg-gray-50/50 transition-colors">
-                          <TableCell className="font-medium text-gray-900">{product.id}</TableCell>
-                          <TableCell className="font-medium text-gray-900">{product.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="bg-blue-50 text-blue-700">{product.category}</Badge>
-                          </TableCell>
-                          <TableCell className="text-gray-600">{product.origin}</TableCell>
-                          <TableCell>
-                            {product.seller ? (
-                              <div className="text-sm">
-                                <div className="font-medium text-gray-900">{product.seller.name}</div>
-                                <div className="text-gray-500 text-xs">{product.seller.businessNumber}</div>
-                              </div>
-                            ) : (
-                              <Badge variant="outline" className="text-gray-600">직매</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {product.discountRate ? (
-                              <div className="flex flex-col">
-                                <span className="line-through text-xs text-gray-400">
-                                  {product.price.toLocaleString()}원
-                                </span>
-                                <span className="font-semibold text-gray-900">
-                                  {Math.round(product.price * (1 - product.discountRate / 100)).toLocaleString()}원
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="font-semibold text-gray-900">{product.price.toLocaleString()}원</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {product.discountRate ? (
-                              <Badge variant="destructive">{product.discountRate}%</Badge>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={product.stock > 0 ? "default" : "destructive"} className={product.stock > 0 ? "bg-green-100 text-green-800" : ""}>
-                              {product.stock > 0 ? `${product.stock}개` : "품절"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-sm text-gray-600">{formatDate(product.createdAt)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2 justify-center">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEdit(product)}
-                                className="h-8 w-8 p-0"
-                                title="수정"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDelete(product.id)}
-                                className="h-8 w-8 p-0"
-                                title="삭제"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              )}
-            </CardContent>
-          </Card>
+        <Link href="/admin/products/new">
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-4 w-4 mr-2" />
+            상품 등록
+          </Button>
+        </Link>
       </div>
 
-    </>
+      {/* Products Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>상품 목록 ({totalElements}개)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              상품이 없습니다
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[60px]">ID</TableHead>
+                    <TableHead>상품명</TableHead>
+                    <TableHead>카테고리</TableHead>
+                    <TableHead>원산지</TableHead>
+                    <TableHead>판매자</TableHead>
+                    <TableHead>가격</TableHead>
+                    <TableHead>할인</TableHead>
+                    <TableHead>재고</TableHead>
+                    <TableHead>등록일</TableHead>
+                    <TableHead className="text-center">작업</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {products.map((product) => (
+                    <TableRow key={product.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">{product.id}</TableCell>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                          {product.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{product.origin}</TableCell>
+                      <TableCell>
+                        {product.seller ? (
+                          <div className="text-sm">
+                            <div className="font-medium">{product.seller.name}</div>
+                            <div className="text-gray-500 text-xs">{product.seller.businessNumber}</div>
+                          </div>
+                        ) : (
+                          <Badge variant="outline">직매</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {product.discountRate ? (
+                          <div className="flex flex-col">
+                            <span className="line-through text-xs text-gray-400">
+                              {product.price.toLocaleString()}원
+                            </span>
+                            <span className="font-semibold">
+                              {Math.round(product.price * (1 - product.discountRate / 100)).toLocaleString()}원
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="font-semibold">{product.price.toLocaleString()}원</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {product.discountRate ? (
+                          <Badge variant="destructive">{product.discountRate}%</Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={product.stock > 0 ? "default" : "destructive"}
+                          className={product.stock > 0 ? "bg-green-100 text-green-800" : ""}
+                        >
+                          {product.stock > 0 ? `${product.stock}개` : "품절"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">{formatDate(product.createdAt)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2 justify-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(product)}
+                            className="h-8 w-8 p-0"
+                            title="수정"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(product.id)}
+                            className="h-8 w-8 p-0"
+                            title="삭제"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setPage(page - 1)}
+                    disabled={page === 0}
+                  >
+                    이전
+                  </Button>
+                  <span className="flex items-center px-4">
+                    {page + 1} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPage(page + 1)}
+                    disabled={page >= totalPages - 1}
+                  >
+                    다음
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 }

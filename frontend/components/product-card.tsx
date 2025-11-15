@@ -21,6 +21,9 @@ interface ProductCardProps {
   rating?: number
   reviewCount?: number
   hasOptions?: boolean
+  stock?: number
+  lowStockThreshold?: number
+  stockStatus?: "SOLD_OUT" | "LOW_STOCK" | "IN_STOCK"
 }
 
 export function ProductCard({
@@ -33,6 +36,9 @@ export function ProductCard({
   rating,
   reviewCount,
   hasOptions = false,
+  stock = 999,
+  lowStockThreshold = 10,
+  stockStatus = "IN_STOCK",
 }: ProductCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [cartQuantity, setCartQuantity] = useState(0)
@@ -108,13 +114,7 @@ export function ProductCard({
     e.preventDefault()
     e.stopPropagation()
 
-    // 옵션이 있는 상품은 모달 열기
-    if (hasOptions) {
-      setIsModalOpen(true)
-      return
-    }
-
-    // 옵션이 없는 상품은 바로 장바구니에 추가
+    // 로그인 체크
     const token = localStorage.getItem("token")
     if (!token) {
       toast.error("로그인이 필요합니다")
@@ -122,49 +122,67 @@ export function ProductCard({
       return
     }
 
-    handleAddToCart(id, 1)
+    // 모든 상품에 대해 모달 열기 (수량 선택)
+    setIsModalOpen(true)
   }
 
   return (
     <>
       <div className="relative bg-card rounded-lg overflow-hidden">
         <div className="relative aspect-square overflow-hidden bg-muted group">
-          <Link href={`/product/${id}`}>
+          <Link href={`/product/${id}`} className={stockStatus === "SOLD_OUT" ? "pointer-events-none" : ""}>
             <Image
               src={image || "/placeholder.svg"}
               alt={name}
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              className={`object-cover group-hover:scale-105 transition-transform duration-300 ${stockStatus === "SOLD_OUT" ? "opacity-50" : ""}`}
             />
           </Link>
-          {badge && <Badge className="absolute top-2 left-2 bg-accent text-accent-foreground">{badge}</Badge>}
 
-          {/* 장바구니 담기 버튼 - 이미지 우측 하단 */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute bottom-2 right-2 bg-white/90 hover:bg-white shadow-md"
-            onClick={handleCartButtonClick}
-          >
-            <ShoppingCart className="h-5 w-5 text-primary" />
-            {cartQuantity > 0 && (
-              <span className="absolute -top-1 -right-1 min-h-5 min-w-5 rounded-full bg-primary text-white text-xs flex items-center justify-center px-1 font-bold">
-                {cartQuantity}
-              </span>
-            )}
-          </Button>
+          {/* 품절 오버레이 */}
+          {stockStatus === "SOLD_OUT" && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <Badge variant="destructive" className="text-lg px-4 py-2">품절</Badge>
+            </div>
+          )}
+
+          {/* 재고 상태 배지 */}
+          {stockStatus === "LOW_STOCK" && stock <= 5 && (
+            <Badge className="absolute top-2 left-2 bg-red-500 text-white animate-pulse">
+              ⏰ 단 {stock}개 남음!
+            </Badge>
+          )}
+          {stockStatus === "LOW_STOCK" && stock > 5 && (
+            <Badge className="absolute top-2 left-2 bg-orange-500 text-white">
+              ⚡ 품절임박! 서두르세요
+            </Badge>
+          )}
+          {badge && stockStatus !== "LOW_STOCK" && (
+            <Badge className="absolute top-2 left-2 bg-accent text-accent-foreground">{badge}</Badge>
+          )}
         </div>
 
         <div className="pt-3">
-          <Link href={`/product/${id}`}>
+          {stockStatus === "SOLD_OUT" ? (
+            <Button
+              variant="outline"
+              className="w-full"
+              size="sm"
+              disabled
+            >
+              품절
+            </Button>
+          ) : (
             <Button
               variant="outline"
               className="w-full transition-colors border-primary text-primary hover:bg-primary hover:text-white hover:border-primary"
               size="sm"
+              onClick={handleCartButtonClick}
             >
-              바로 구매
+              <ShoppingCart className="h-4 w-4 mr-1.5" />
+              담기
             </Button>
-          </Link>
+          )}
         </div>
 
         <div className="py-3">

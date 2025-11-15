@@ -11,8 +11,9 @@ import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { ChevronLeft, Package, MapPin, CreditCard } from "lucide-react"
+import { ChevronLeft, Package, MapPin, CreditCard, RotateCcw } from "lucide-react"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
+import { ReturnRequestDialog } from "@/components/returns/return-request-dialog"
 
 interface OrderItem {
   id: number
@@ -49,6 +50,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [cancelling, setCancelling] = useState(false)
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -66,6 +68,8 @@ export default function OrderDetailPage() {
 
     try {
       const data = await apiFetch<Order>(`/api/orders/${params.id}`, { auth: true })
+      console.log("Fetched order data:", data)
+      console.log("Order status:", data.orderStatus)
       setOrder(data)
     } catch (error) {
       console.error("Error fetching order:", error)
@@ -156,6 +160,10 @@ export default function OrderDetailPage() {
       SHIPPED: "배송중",
       DELIVERED: "배송 완료",
       CANCELLED: "주문 취소",
+      RETURN_REQUESTED: "반품 요청",
+      RETURN_APPROVED: "반품 승인",
+      RETURN_COMPLETED: "반품 완료",
+      PARTIALLY_RETURNED: "부분 반품",
     }
     return statusMap[status] || status
   }
@@ -169,6 +177,10 @@ export default function OrderDetailPage() {
       SHIPPED: "bg-purple-500",
       DELIVERED: "bg-green-500",
       CANCELLED: "bg-gray-500",
+      RETURN_REQUESTED: "bg-orange-500",
+      RETURN_APPROVED: "bg-orange-600",
+      RETURN_COMPLETED: "bg-gray-600",
+      PARTIALLY_RETURNED: "bg-gray-600",
     }
     return colorMap[status] || "bg-muted"
   }
@@ -368,8 +380,12 @@ export default function OrderDetailPage() {
             )}
             {order.orderStatus === "DELIVERED" && (
               <>
-                <Button variant="outline" className="flex-1 bg-transparent" onClick={handleConfirmDelivery}>
+                <Button variant="outline" className="flex-1" onClick={handleConfirmDelivery}>
                   구매 확정
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => setReturnDialogOpen(true)}>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  반품 신청
                 </Button>
                 <Button className="flex-1">리뷰 작성</Button>
               </>
@@ -379,6 +395,17 @@ export default function OrderDetailPage() {
       </main>
 
       <Footer />
+
+      {/* Return Request Dialog */}
+      {order && (
+        <ReturnRequestDialog
+          open={returnDialogOpen}
+          onOpenChange={setReturnDialogOpen}
+          orderId={order.id}
+          orderItems={order.orderItems}
+          onSuccess={fetchOrder}
+        />
+      )}
     </div>
   )
 }

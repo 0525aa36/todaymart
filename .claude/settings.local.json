@@ -77,7 +77,12 @@
       "Bash(ps:*)",
       "Bash(env)",
       "Bash(git fetch:*)",
-      "WebFetch(domain:www.law.go.kr)"
+      "WebFetch(domain:www.law.go.kr)",
+      "Bash(/tmp/new-task-def.json)",
+      "Bash(set -a)",
+      "Bash(source:*)",
+      "Bash(set +a)",
+      "Bash(./gradlew:*)"
     ],
     "deny": [],
     "ask": []

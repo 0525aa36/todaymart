@@ -406,4 +406,188 @@ public class ProductService {
         }
         return productRepository.findByStockLessThan(threshold);
     }
+
+    // ==================== 재고 관리 시스템 메서드 ====================
+
+    /**
+     * 재고 통계 조회
+     */
+    @Transactional(readOnly = true)
+    public com.agri.market.dto.admin.InventoryStatisticsResponse getInventoryStatistics() {
+        List<Product> allProducts = productRepository.findAll();
+        List<ProductOption> allOptions = productOptionRepository.findAll();
+
+        // Product 통계
+        long totalProducts = allProducts.size();
+        long soldOutProducts = allProducts.stream().filter(p -> p.getStock() == 0).count();
+        long lowStockProducts = allProducts.stream()
+                .filter(p -> p.getStock() > 0 && p.getStock() <= p.getLowStockThreshold()).count();
+        long inStockProducts = allProducts.stream()
+                .filter(p -> p.getStock() > p.getLowStockThreshold()).count();
+        java.math.BigDecimal totalProductStockValue = allProducts.stream()
+                .map(p -> p.getPrice().multiply(java.math.BigDecimal.valueOf(p.getStock())))
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        // ProductOption 통계
+        long totalOptions = allOptions.size();
+        long soldOutOptions = allOptions.stream().filter(o -> o.getStock() == 0).count();
+        long lowStockOptions = allOptions.stream()
+                .filter(o -> o.getStock() > 0 && o.getStock() <= o.getProduct().getLowStockThreshold()).count();
+        long inStockOptions = allOptions.stream()
+                .filter(o -> o.getStock() > o.getProduct().getLowStockThreshold()).count();
+        java.math.BigDecimal totalOptionStockValue = allOptions.stream()
+                .map(o -> o.getProduct().getPrice().add(o.getAdditionalPrice())
+                        .multiply(java.math.BigDecimal.valueOf(o.getStock())))
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        // Combined statistics
+        com.agri.market.dto.admin.InventoryStatisticsResponse response =
+                new com.agri.market.dto.admin.InventoryStatisticsResponse();
+        response.setTotalProducts(totalProducts);
+        response.setSoldOutProducts(soldOutProducts);
+        response.setLowStockProducts(lowStockProducts);
+        response.setInStockProducts(inStockProducts);
+        response.setTotalProductStockValue(totalProductStockValue);
+
+        response.setTotalOptions(totalOptions);
+        response.setSoldOutOptions(soldOutOptions);
+        response.setLowStockOptions(lowStockOptions);
+        response.setInStockOptions(inStockOptions);
+        response.setTotalOptionStockValue(totalOptionStockValue);
+
+        response.setTotalItems(totalProducts + totalOptions);
+        response.setTotalSoldOut(soldOutProducts + soldOutOptions);
+        response.setTotalLowStock(lowStockProducts + lowStockOptions);
+        response.setTotalInStock(inStockProducts + inStockOptions);
+        response.setTotalStockValue(totalProductStockValue.add(totalOptionStockValue));
+
+        return response;
+    }
+
+    /**
+     * 재고 목록 조회 (필터링, 페이징)
+     */
+    @Transactional(readOnly = true)
+    public Page<com.agri.market.dto.admin.InventoryItemResponse> getInventoryItems(
+            com.agri.market.dto.StockStatus stockStatus, String keyword, Pageable pageable) {
+
+        List<Product> allProducts = productRepository.findAll();
+        List<ProductOption> allOptions = productOptionRepository.findAll();
+
+        // Convert to InventoryItemResponse
+        List<com.agri.market.dto.admin.InventoryItemResponse> allItems = new java.util.ArrayList<>();
+
+        for (Product product : allProducts) {
+            com.agri.market.dto.admin.InventoryItemResponse item =
+                    com.agri.market.dto.admin.InventoryItemResponse.fromProduct(product);
+
+            // Apply filters
+            if (stockStatus != null && item.getStockStatus() != stockStatus) {
+                continue;
+            }
+            if (keyword != null && !keyword.trim().isEmpty() &&
+                    !item.getName().toLowerCase().contains(keyword.toLowerCase())) {
+                continue;
+            }
+
+            allItems.add(item);
+        }
+
+        for (ProductOption option : allOptions) {
+            com.agri.market.dto.admin.InventoryItemResponse item =
+                    com.agri.market.dto.admin.InventoryItemResponse.fromProductOption(option);
+
+            // Apply filters
+            if (stockStatus != null && item.getStockStatus() != stockStatus) {
+                continue;
+            }
+            if (keyword != null && !keyword.trim().isEmpty() &&
+                    !item.getName().toLowerCase().contains(keyword.toLowerCase())) {
+                continue;
+            }
+
+            allItems.add(item);
+        }
+
+        // Apply pagination
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), allItems.size());
+        List<com.agri.market.dto.admin.InventoryItemResponse> pageContent =
+                start < allItems.size() ? allItems.subList(start, end) : new java.util.ArrayList<>();
+
+        return new PageImpl<>(pageContent, pageable, allItems.size());
+    }
+
+    /**
+     * Product 재고 수정
+     */
+    @Transactional
+    public void updateProductStock(Long productId, Integer newStock) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+
+        if (newStock < 0) {
+            throw new BusinessException("재고는 0 이상이어야 합니다.", "INVALID_STOCK");
+        }
+
+        product.setStock(newStock);
+        productRepository.save(product);
+
+        logger.info("Product stock updated - ID: {}, Old: {}, New: {}",
+                productId, product.getStock(), newStock);
+    }
+
+    /**
+     * ProductOption 재고 수정
+     */
+    @Transactional
+    public void updateProductOptionStock(Long optionId, Integer newStock) {
+        ProductOption option = productOptionRepository.findById(optionId)
+                .orElseThrow(() -> new RuntimeException("ProductOption not found with id: " + optionId));
+
+        if (newStock < 0) {
+            throw new BusinessException("재고는 0 이상이어야 합니다.", "INVALID_STOCK");
+        }
+
+        option.setStock(newStock);
+        productOptionRepository.save(option);
+
+        logger.info("ProductOption stock updated - ID: {}, Old: {}, New: {}",
+                optionId, option.getStock(), newStock);
+    }
+
+    /**
+     * 재고 임계값 수정
+     */
+    @Transactional
+    public void updateLowStockThreshold(Long productId, Integer newThreshold) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+
+        if (newThreshold < 0) {
+            throw new BusinessException("임계값은 0 이상이어야 합니다.", "INVALID_THRESHOLD");
+        }
+
+        product.setLowStockThreshold(newThreshold);
+        productRepository.save(product);
+
+        logger.info("Product low stock threshold updated - ID: {}, Old: {}, New: {}",
+                productId, product.getLowStockThreshold(), newThreshold);
+    }
+
+    /**
+     * 재고 일괄 수정
+     */
+    @Transactional
+    public void bulkUpdateStock(com.agri.market.dto.admin.BulkStockUpdateRequest request) {
+        for (com.agri.market.dto.admin.StockUpdateItem item : request.getItems()) {
+            if ("PRODUCT".equals(item.getType())) {
+                updateProductStock(item.getId(), item.getNewStock());
+            } else if ("OPTION".equals(item.getType())) {
+                updateProductOptionStock(item.getId(), item.getNewStock());
+            }
+        }
+
+        logger.info("Bulk stock update completed - {} items updated", request.getItems().size());
+    }
 }

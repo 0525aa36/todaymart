@@ -45,6 +45,8 @@ interface Product {
   discountedPrice: number
   discountRate: number | null
   stock: number
+  lowStockThreshold: number
+  stockStatus: "SOLD_OUT" | "LOW_STOCK" | "IN_STOCK"
   imageUrl: string
   imageUrls?: string
   detailImageUrls?: string
@@ -230,6 +232,28 @@ export function ProductDetailPage() {
         variant: "destructive",
       })
     }
+  }
+
+  const handleQuantityChange = (delta: number) => {
+    const maxStock = selectedOption?.stock || product?.stock || 999
+    const newQuantity = quantity + delta
+
+    // 재고 한도 도달 시 알림
+    if (newQuantity > maxStock) {
+      toast({
+        title: "재고 한도 도달",
+        description: `최대 ${maxStock}개까지만 구매 가능합니다`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 최소 수량 1개
+    if (newQuantity < 1) {
+      return
+    }
+
+    setQuantity(newQuantity)
   }
 
   const buyNow = async () => {
@@ -557,6 +581,37 @@ export function ProductDetailPage() {
                 </div>
               )}
 
+              {/* Stock Status */}
+              <div className="mb-4">
+                {product.stockStatus === "SOLD_OUT" ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-600 font-semibold text-center">현재 품절되었습니다</p>
+                    <p className="text-red-500 text-sm text-center mt-1">재입고 알림 신청 기능 준비중입니다</p>
+                  </div>
+                ) : product.stockStatus === "LOW_STOCK" ? (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <p className="text-orange-600 font-semibold flex items-center justify-center gap-2">
+                      <span>⚠️ 재고가 얼마 남지 않았습니다</span>
+                    </p>
+                    {product.stock <= 5 ? (
+                      <p className="text-orange-500 text-sm text-center mt-1 font-semibold animate-pulse">
+                        ⏰ 단 {product.stock}개 남음! 서둘러 주문하세요
+                      </p>
+                    ) : (
+                      <p className="text-orange-500 text-sm text-center mt-1">
+                        재고: {product.stock}개
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-green-600 text-sm text-center">
+                      최대 {product.stock}개 구매 가능
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Quantity */}
               <div className="space-y-4 mb-6">
                 <div>
@@ -565,21 +620,32 @@ export function ProductDetailPage() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      disabled={quantity <= 1}
+                      onClick={() => handleQuantityChange(-1)}
+                      disabled={quantity <= 1 || product.stockStatus === "SOLD_OUT"}
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
-                    <Input type="number" value={quantity} readOnly className="w-20 text-center" />
+                    <Input
+                      type="number"
+                      value={quantity}
+                      readOnly
+                      className="w-20 text-center"
+                      disabled={product.stockStatus === "SOLD_OUT"}
+                    />
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setQuantity(Math.min((selectedOption?.stock || product.stock), quantity + 1))}
-                      disabled={quantity >= (selectedOption?.stock || product.stock)}
+                      onClick={() => handleQuantityChange(1)}
+                      disabled={quantity >= (selectedOption?.stock || product.stock) || product.stockStatus === "SOLD_OUT"}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
+                  {product.stockStatus !== "SOLD_OUT" && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      최대 {selectedOption?.stock || product.stock}개까지 구매 가능
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -608,18 +674,28 @@ export function ProductDetailPage() {
                   className={isInWishlist ? "bg-primary text-primary-foreground" : "bg-transparent"}
                   onClick={toggleWishlist}
                   title={isInWishlist ? "찜 취소" : "찜하기"}
+                  disabled={product.stockStatus === "SOLD_OUT"}
                 >
                   <Heart className={`h-5 w-5 ${isInWishlist ? "fill-current" : ""}`} />
                 </Button>
                 <Button variant="outline" size="icon" className="bg-transparent">
                   <Share2 className="h-5 w-5" />
                 </Button>
-                <Button variant="outline" className="flex-1 bg-transparent" onClick={addToCart}>
-                  장바구니
+                <Button
+                  variant="outline"
+                  className="flex-1 bg-transparent"
+                  onClick={addToCart}
+                  disabled={product.stockStatus === "SOLD_OUT"}
+                >
+                  {product.stockStatus === "SOLD_OUT" ? "품절" : "장바구니"}
                 </Button>
-                <Button className="flex-1" onClick={buyNow}>
+                <Button
+                  className="flex-1"
+                  onClick={buyNow}
+                  disabled={product.stockStatus === "SOLD_OUT"}
+                >
                   <ShoppingCart className="h-5 w-5 mr-2" />
-                  바로구매
+                  {product.stockStatus === "SOLD_OUT" ? "품절" : "바로구매"}
                 </Button>
               </div>
 

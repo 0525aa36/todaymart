@@ -20,6 +20,8 @@ public class ProductListDto {
     private BigDecimal discountRate;
     private BigDecimal discountedPrice;
     private Integer stock;
+    private Integer lowStockThreshold;
+    private StockStatus stockStatus;
     private String imageUrl;
     private LocalDateTime createdAt;
 
@@ -42,6 +44,17 @@ public class ProductListDto {
         this.discountRate = product.getDiscountRate();
         this.discountedPrice = product.getDiscountedPrice();
         this.stock = product.getStock();
+        this.lowStockThreshold = product.getLowStockThreshold();
+
+        // 재고 상태 계산
+        if (product.getStock() == 0) {
+            this.stockStatus = StockStatus.SOLD_OUT;
+        } else if (product.getStock() <= product.getLowStockThreshold()) {
+            this.stockStatus = StockStatus.LOW_STOCK;
+        } else {
+            this.stockStatus = StockStatus.IN_STOCK;
+        }
+
         this.imageUrl = product.getImageUrl();
         this.createdAt = product.getCreatedAt();
 

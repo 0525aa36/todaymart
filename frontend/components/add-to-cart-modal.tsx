@@ -9,6 +9,7 @@ import { Minus, Plus } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import Image from "next/image"
+import { toast } from "sonner"
 
 interface ProductOption {
   id: number
@@ -22,6 +23,8 @@ interface Product {
   price: number
   imageUrl: string
   options: ProductOption[]
+  stock: number
+  stockStatus: "SOLD_OUT" | "LOW_STOCK" | "IN_STOCK"
 }
 
 interface AddToCartModalProps {
@@ -59,7 +62,25 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
   }
 
   const handleQuantityChange = (delta: number) => {
-    setQuantity(prev => Math.max(1, prev + delta))
+    const maxStock = product?.stock || 999
+    const newQuantity = prev => {
+      const next = prev + delta
+
+      // 재고 한도 도달 시 알림
+      if (next > maxStock) {
+        toast.warning(`최대 ${maxStock}개까지만 구매 가능합니다`)
+        return prev
+      }
+
+      // 최소 수량 1개
+      if (next < 1) {
+        return 1
+      }
+
+      return next
+    }
+
+    setQuantity(newQuantity)
   }
 
   const handleAddToCart = async () => {
@@ -129,6 +150,29 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
               </div>
             )}
 
+            {/* 재고 상태 */}
+            {product.stockStatus === "SOLD_OUT" ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-600 font-semibold text-center text-sm">현재 품절되었습니다</p>
+              </div>
+            ) : product.stockStatus === "LOW_STOCK" ? (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                {product.stock <= 5 ? (
+                  <p className="text-orange-600 font-semibold text-center text-sm animate-pulse">
+                    ⏰ 단 {product.stock}개 남음! 서둘러 주문하세요
+                  </p>
+                ) : (
+                  <p className="text-orange-600 font-semibold text-center text-sm">
+                    ⚡ 품절임박! 재고: {product.stock}개
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-green-600 text-sm text-center">최대 {product.stock}개 구매 가능</p>
+              </div>
+            )}
+
             {/* 수량 선택 */}
             <div className="space-y-2">
               <Label>수량</Label>
@@ -137,7 +181,7 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
                   variant="outline"
                   size="icon"
                   onClick={() => handleQuantityChange(-1)}
-                  disabled={quantity <= 1}
+                  disabled={quantity <= 1 || product.stockStatus === "SOLD_OUT"}
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
@@ -146,6 +190,7 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
                   variant="outline"
                   size="icon"
                   onClick={() => handleQuantityChange(1)}
+                  disabled={quantity >= product.stock || product.stockStatus === "SOLD_OUT"}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -171,6 +216,7 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
                 className="flex-1 border-primary text-primary hover:bg-primary hover:text-white"
                 disabled={
                   addingToCart ||
+                  product.stockStatus === "SOLD_OUT" ||
                   (product.options && product.options.length > 0 && !selectedOptionId)
                 }
               >
@@ -179,6 +225,8 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
                     <LoadingSpinner size="sm" className="mr-2" />
                     담는 중...
                   </>
+                ) : product.stockStatus === "SOLD_OUT" ? (
+                  "품절"
                 ) : (
                   "장바구니 담기"
                 )}
