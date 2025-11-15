@@ -158,7 +158,7 @@ export default function AdminOrdersPage() {
 
     setUpdating(true)
     try {
-      await apiFetch(`/api/admin/orders/${selectedOrder.id}/status`, {
+      await apiFetch(`/api/admin/orders/${selectedOrder.orderId}/status`, {
         method: "PUT",
         auth: true,
         body: JSON.stringify({ status: newStatus }),
@@ -191,7 +191,7 @@ export default function AdminOrdersPage() {
 
     setUpdating(true)
     try {
-      await apiFetch(`/api/admin/orders/${selectedOrder.id}/tracking`, {
+      await apiFetch(`/api/admin/orders/${selectedOrder.orderId}/tracking`, {
         method: "PUT",
         auth: true,
         body: JSON.stringify({ trackingNumber: trackingNumber.trim() }),
@@ -316,7 +316,7 @@ export default function AdminOrdersPage() {
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      return (        order.id.toString().includes(query) ||
+      return (        order.orderId.toString().includes(query) ||
         order.customer.name.toLowerCase().includes(query) ||
         order.recipientName.toLowerCase().includes(query) ||
         order.orderItems.some((item) => item.productName.toLowerCase().includes(query))
@@ -526,7 +526,7 @@ export default function AdminOrdersPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>주문 상태 변경</DialogTitle>
-            <DialogDescription>주문번호: #{selectedOrder?.id}</DialogDescription>
+            <DialogDescription>주문번호: #{selectedOrder?.orderId}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -563,7 +563,7 @@ export default function AdminOrdersPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>송장번호 등록</DialogTitle>
-            <DialogDescription>주문번호: #{selectedOrder?.id}</DialogDescription>
+            <DialogDescription>주문번호: #{selectedOrder?.orderId}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>

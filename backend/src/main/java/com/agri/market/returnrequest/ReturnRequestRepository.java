@@ -65,11 +65,16 @@ public interface ReturnRequestRepository extends JpaRepository<ReturnRequest, Lo
     /**
      * 복합 필터링 조회
      */
-    @Query("SELECT rr FROM ReturnRequest rr " +
+    @Query("SELECT DISTINCT rr FROM ReturnRequest rr " +
+           "LEFT JOIN FETCH rr.order o " +
+           "LEFT JOIN FETCH o.user u " +
+           "LEFT JOIN FETCH rr.returnItems ri " +
+           "LEFT JOIN FETCH ri.orderItem oi " +
+           "LEFT JOIN FETCH oi.product " +
            "WHERE (:status IS NULL OR rr.status = :status) " +
            "AND (:reasonCategory IS NULL OR rr.reasonCategory = :reasonCategory) " +
-           "AND (:keyword IS NULL OR rr.order.orderNumber LIKE %:keyword% " +
-           "                     OR rr.order.user.name LIKE %:keyword%) " +
+           "AND (:keyword IS NULL OR o.orderNumber LIKE %:keyword% " +
+           "                     OR u.name LIKE %:keyword%) " +
            "ORDER BY rr.requestedAt DESC")
     Page<ReturnRequest> findByFilters(
         @Param("status") ReturnStatus status,

@@ -283,7 +283,18 @@ public class PaymentService {
     }
 
     /**
-     * Toss Payments 환불 API 호출
+     * Toss Payments 환불 API 호출 (Public - OrderService에서 사용)
+     * @param paymentKey 결제 키
+     * @param cancelAmount 취소 금액
+     * @param cancelReason 취소 사유
+     * @return API 응답 결과
+     */
+    public Map<String, Object> callTossCancelApiPublic(String paymentKey, BigDecimal cancelAmount, String cancelReason) {
+        return callTossCancelApi(paymentKey, cancelAmount, cancelReason);
+    }
+
+    /**
+     * Toss Payments 환불 API 호출 (내부 메서드)
      * @param paymentKey 결제 키
      * @param cancelAmount 취소 금액
      * @param cancelReason 취소 사유

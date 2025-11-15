@@ -43,6 +43,7 @@ public class OrderService {
 
     private final NotificationService notificationService;
     private final UserCouponService userCouponService;
+    private com.agri.market.payment.PaymentService paymentService;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
                         UserRepository userRepository, ProductRepository productRepository,
@@ -56,6 +57,14 @@ public class OrderService {
         this.paymentRepository = paymentRepository;
         this.notificationService = notificationService;
         this.userCouponService = userCouponService;
+    }
+
+    /**
+     * PaymentService 의존성 주입 (순환 참조 방지를 위한 Setter Injection + @Lazy)
+     */
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPaymentService(@org.springframework.context.annotation.Lazy com.agri.market.payment.PaymentService paymentService) {
+        this.paymentService = paymentService;
     }
 
     @RateLimiter(name = "order")
@@ -344,7 +353,7 @@ public class OrderService {
             }
         }
 
-        // 결제 완료된 경우 환불 처리
+        // 결제 완료된 경우 환불 처리 (실제 Toss Payments API 호출)
         if (order.getOrderStatus() == OrderStatus.PAID ||
             order.getOrderStatus() == OrderStatus.PREPARING ||
             order.getOrderStatus() == OrderStatus.SHIPPED) {
@@ -352,13 +361,24 @@ public class OrderService {
                     .orElse(null);
 
             if (payment != null && payment.getRefundAmount() == null) {
-                // 환불 처리
-                payment.setRefundAmount(payment.getAmount());
-                payment.setRefundedAt(LocalDateTime.now());
-                payment.setRefundTransactionId("REFUND_" + System.currentTimeMillis());
-                payment.setRefundReason(cancellationReason);
-                // Payment 엔티티의 status는 별도 관리 (주문 상태와 독립)
-                paymentRepository.save(payment);
+                try {
+                    // Toss Payments 취소 API 호출
+                    String paymentKey = payment.getTransactionId();
+                    java.util.Map<String, Object> cancelResult =
+                        paymentService.callTossCancelApiPublic(paymentKey, payment.getAmount(), cancellationReason);
+
+                    // 환불 처리
+                    payment.setRefundAmount(payment.getAmount());
+                    payment.setRefundedAt(LocalDateTime.now());
+                    payment.setRefundTransactionId((String) cancelResult.get("transactionKey"));
+                    payment.setRefundReason(cancellationReason);
+                    payment.setStatus(PaymentStatus.FAILED);
+                    paymentRepository.save(payment);
+                } catch (Exception e) {
+                    // Toss API 호출 실패 시에도 주문 상태는 취소 처리 (수동 환불 필요)
+                    throw new RuntimeException("주문 취소는 완료되었으나 자동 환불 처리 실패: " + e.getMessage() +
+                                             ". 관리자에게 문의하여 수동 환불을 요청하세요.", e);
+                }
             }
         }
 

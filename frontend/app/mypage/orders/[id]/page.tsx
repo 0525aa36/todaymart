@@ -11,9 +11,19 @@ import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { ChevronLeft, Package, MapPin, CreditCard, RotateCcw } from "lucide-react"
+import { ChevronLeft, Package, MapPin, CreditCard, RotateCcw, AlertTriangle } from "lucide-react"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { ReturnRequestDialog } from "@/components/returns/return-request-dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface OrderItem {
   id: number
@@ -51,6 +61,7 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true)
   const [cancelling, setCancelling] = useState(false)
   const [returnDialogOpen, setReturnDialogOpen] = useState(false)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -86,9 +97,6 @@ export default function OrderDetailPage() {
   const handleCancelOrder = async () => {
     if (!order) return
 
-    const confirmCancel = confirm("정말로 주문을 취소하시겠습니까?")
-    if (!confirmCancel) return
-
     const token = localStorage.getItem("token")
     if (!token) return
 
@@ -107,6 +115,7 @@ export default function OrderDetailPage() {
         title: "주문 취소 완료",
         description: "주문이 성공적으로 취소되었습니다.",
       })
+      setCancelDialogOpen(false)
       fetchOrder()
     } catch (error) {
       console.error("Error cancelling order:", error)
@@ -374,8 +383,13 @@ export default function OrderDetailPage() {
           {/* Action Buttons */}
           <div className="flex gap-3">
             {order.orderStatus === "PAID" && (
-              <Button variant="destructive" className="flex-1" onClick={handleCancelOrder} disabled={cancelling}>
-                {cancelling ? "취소 처리 중..." : "주문 취소"}
+              <Button
+                variant="destructive"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold"
+                onClick={() => setCancelDialogOpen(true)}
+                disabled={cancelling}
+              >
+                주문 취소
               </Button>
             )}
             {order.orderStatus === "DELIVERED" && (
@@ -395,6 +409,36 @@ export default function OrderDetailPage() {
       </main>
 
       <Footer />
+
+      {/* Cancel Order Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              주문 취소 확인
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              정말로 이 주문을 취소하시겠습니까?
+              <br />
+              <br />
+              <span className="font-semibold text-foreground">주문번호: #{order?.id}</span>
+              <br />
+              <span className="text-sm">취소 시 결제 금액이 환불 처리됩니다.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelOrder}
+              disabled={cancelling}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {cancelling ? "처리 중..." : "주문 취소하기"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Return Request Dialog */}
       {order && (

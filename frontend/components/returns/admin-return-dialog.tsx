@@ -260,9 +260,9 @@ export function AdminReturnDialog({
               {returnRequest.returnItems.map((item) => (
                 <div key={item.id} className="flex justify-between items-center">
                   <div>
-                    <p className="font-medium">{item.orderItem.product.name}</p>
+                    <p className="font-medium">{item.orderItem?.product?.name || 'N/A'}</p>
                     <p className="text-sm text-muted-foreground">
-                      반품 수량: {item.quantity}개 (주문 수량: {item.orderItem.quantity}개)
+                      반품 수량: {item.quantity}개 (주문 수량: {item.orderItem?.quantity || 0}개)
                     </p>
                   </div>
                   <p className="font-semibold">{item.refundAmount.toLocaleString()}원</p>

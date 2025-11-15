@@ -23,7 +23,8 @@ import {
   Bell,
   MessageCircle,
   FolderTree,
-  Warehouse
+  Warehouse,
+  RotateCcw
 } from 'lucide-react'
 import { API_BASE_URL } from '@/lib/api-client'
 
@@ -96,6 +97,7 @@ export default function AdminLayout({
       label: '주문/배송',
       items: [
         { icon: ShoppingCart, label: '주문 관리', href: '/admin/orders' },
+        { icon: RotateCcw, label: '반품 관리', href: '/admin/returns' },
         { icon: Receipt, label: '정산 관리', href: '/admin/settlements' },
       ]
     },

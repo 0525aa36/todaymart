@@ -2,6 +2,8 @@ package com.agri.market.returnrequest;
 
 import com.agri.market.order.OrderItem;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -39,6 +41,7 @@ public class ReturnItem {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_item_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "order"})
     private OrderItem orderItem;
 
     /**

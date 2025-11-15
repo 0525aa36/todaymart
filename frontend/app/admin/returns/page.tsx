@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -168,23 +166,15 @@ export default function AdminReturnsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 py-8 bg-muted/30">
-          <div className="container mx-auto px-4">
-            <p className="text-center">로딩 중...</p>
-          </div>
-        </main>
-        <Footer />
+      <div className="flex items-center justify-center py-12">
+        <p className="text-center">로딩 중...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-
-      <main className="flex-1 py-8 bg-muted/30">
+    <div className="max-w-7xl mx-auto">
+      <main className="py-8">
         <div className="container mx-auto px-4 max-w-7xl">
           {/* Header */}
           <div className="mb-6">
@@ -360,8 +350,6 @@ export default function AdminReturnsPage() {
           )}
         </div>
       </main>
-
-      <Footer />
 
       {/* Admin Return Dialog */}
       {selectedReturn && (

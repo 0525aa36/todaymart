@@ -2,6 +2,7 @@ package com.agri.market.order;
 
 import com.agri.market.coupon.Coupon;
 import com.agri.market.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
@@ -34,6 +35,7 @@ public class Order {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
+    @JsonIgnore
     private Set<OrderItem> orderItems = new HashSet<>();
 
     @Column(nullable = false, precision = 10, scale = 2)
