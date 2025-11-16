@@ -111,7 +111,7 @@ function HelpCenterContent() {
   const fetchFaqs = async () => {
     try {
       setLoadingFaqs(true)
-      const data = await apiFetch<FAQ[]>("/api/faq")
+      const data = await apiFetch<FAQ[]>("/api/faqs")
       setFaqs(data)
     } catch (error) {
       console.error("Error fetching FAQs:", error)
