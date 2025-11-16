@@ -40,6 +40,25 @@ interface Inquiry {
   updatedAt: string
 }
 
+interface Notice {
+  id: number
+  title: string
+  content: string
+  isPinned: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+interface FAQ {
+  id: number
+  category: string
+  question: string
+  answer: string
+  viewCount: number
+  createdAt: string
+  updatedAt: string
+}
+
 function HelpCenterContent() {
   const searchParams = useSearchParams()
   const [activeMenu, setActiveMenu] = useState<MenuItem>('notices')
@@ -54,6 +73,10 @@ function HelpCenterContent() {
   const [loadingInquiries, setLoadingInquiries] = useState(false)
   const [showInquiryForm, setShowInquiryForm] = useState(false)
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null)
+  const [notices, setNotices] = useState<Notice[]>([])
+  const [loadingNotices, setLoadingNotices] = useState(false)
+  const [faqs, setFaqs] = useState<FAQ[]>([])
+  const [loadingFaqs, setLoadingFaqs] = useState(false)
 
   useEffect(() => {
     const tab = searchParams.get('tab') as MenuItem | null
@@ -61,9 +84,42 @@ function HelpCenterContent() {
       setActiveMenu(tab)
       if (tab === 'inquiries') {
         fetchInquiries()
+      } else if (tab === 'notices') {
+        fetchNotices()
+      } else if (tab === 'faq') {
+        fetchFaqs()
       }
+    } else {
+      // 기본적으로 공지사항 로드
+      fetchNotices()
     }
   }, [searchParams])
+
+  const fetchNotices = async () => {
+    try {
+      setLoadingNotices(true)
+      const data = await apiFetch<Notice[]>("/api/notices")
+      setNotices(data)
+    } catch (error) {
+      console.error("Error fetching notices:", error)
+      toast.error("공지사항을 불러오지 못했습니다")
+    } finally {
+      setLoadingNotices(false)
+    }
+  }
+
+  const fetchFaqs = async () => {
+    try {
+      setLoadingFaqs(true)
+      const data = await apiFetch<FAQ[]>("/api/faq")
+      setFaqs(data)
+    } catch (error) {
+      console.error("Error fetching FAQs:", error)
+      toast.error("FAQ를 불러오지 못했습니다")
+    } finally {
+      setLoadingFaqs(false)
+    }
+  }
 
   const fetchInquiries = async () => {
     const token = localStorage.getItem("token")
@@ -231,9 +287,35 @@ function HelpCenterContent() {
                       <div className="flex-1 text-center font-semibold">제목</div>
                       <div className="w-32 text-center font-semibold">작성일</div>
                     </div>
-                    <div className="p-12 text-center text-muted-foreground">
-                      게시글이 없습니다.
-                    </div>
+                    {loadingNotices ? (
+                      <div className="p-12 text-center">
+                        <LoadingSpinner size="lg" />
+                      </div>
+                    ) : notices.length === 0 ? (
+                      <div className="p-12 text-center text-muted-foreground">
+                        게시글이 없습니다.
+                      </div>
+                    ) : (
+                      <div className="divide-y">
+                        {notices.map((notice) => (
+                          <Link
+                            key={notice.id}
+                            href={`/help/notices/${notice.id}`}
+                            className="flex items-center px-6 py-4 hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex-1 flex items-center gap-2">
+                              {notice.isPinned && (
+                                <span className="px-2 py-0.5 text-xs bg-red-500 text-white rounded">공지</span>
+                              )}
+                              <span className="font-medium">{notice.title}</span>
+                            </div>
+                            <div className="w-32 text-center text-sm text-muted-foreground">
+                              {formatDate(notice.createdAt)}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -242,13 +324,36 @@ function HelpCenterContent() {
                 <div>
                   <h2 className="text-2xl font-bold mb-6 text-primary">자주하는 질문</h2>
                   <div className="border border-primary/20 rounded-lg">
-                    <div className="bg-primary/5 px-6 py-4 border-b border-primary/20 flex items-center">
-                      <div className="flex-1 text-center font-semibold">제목</div>
-                      <div className="w-32 text-center font-semibold">카테고리</div>
-                    </div>
-                    <div className="p-12 text-center text-muted-foreground">
-                      게시글이 없습니다.
-                    </div>
+                    {loadingFaqs ? (
+                      <div className="p-12 text-center">
+                        <LoadingSpinner size="lg" />
+                      </div>
+                    ) : faqs.length === 0 ? (
+                      <div className="p-12 text-center text-muted-foreground">
+                        게시글이 없습니다.
+                      </div>
+                    ) : (
+                      <div className="divide-y">
+                        {faqs.map((faq) => (
+                          <Link
+                            key={faq.id}
+                            href={`/help/faq/${faq.id}`}
+                            className="block px-6 py-4 hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="px-2 py-0.5 text-xs bg-primary/10 text-primary rounded">
+                                    {faq.category}
+                                  </span>
+                                </div>
+                                <h3 className="font-medium">Q. {faq.question}</h3>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
