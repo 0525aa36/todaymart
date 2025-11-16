@@ -2,12 +2,9 @@
 
 import { ProductCard } from "@/components/product-card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Search } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 
 interface Product {
@@ -78,25 +75,6 @@ export function SearchContent() {
     }
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    const params = new URLSearchParams()
-    if (searchKeyword) params.append("keyword", searchKeyword)
-    if (category) params.append("category", category)
-    if (origin) params.append("origin", origin)
-    router.push(`/search?${params.toString()}`)
-  }
-
-  const handleCategoryChange = (value: string) => {
-    const newCategory = value === "all" ? "" : value
-    setCategory(newCategory)
-    const params = new URLSearchParams()
-    if (searchKeyword) params.append("keyword", searchKeyword)
-    if (newCategory) params.append("category", newCategory)
-    if (origin) params.append("origin", origin)
-    router.push(`/search?${params.toString()}`)
-  }
-
   const getCategoryName = (code: string) => {
     const categoryMap: Record<string, string> = {
       vegetables: "채소",
@@ -118,47 +96,10 @@ export function SearchContent() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-4">상품 검색</h1>
 
-            {/* Search Form */}
-            <form onSubmit={handleSearch} className="mb-6">
-              <div className="flex gap-4 flex-wrap">
-                <div className="flex-1 min-w-[200px]">
-                  <Input
-                    type="search"
-                    placeholder="상품명으로 검색"
-                    value={searchKeyword}
-                    onChange={(e) => setSearchKeyword(e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-                <Select value={category || "all"} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="카테고리" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">전체</SelectItem>
-                    <SelectItem value="vegetables">채소</SelectItem>
-                    <SelectItem value="fruits">과일</SelectItem>
-                    <SelectItem value="seafood">수산물</SelectItem>
-                    <SelectItem value="meat">축산물</SelectItem>
-                    <SelectItem value="grains">쌀/잡곡</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button type="submit">
-                  <Search className="h-4 w-4 mr-2" />
-                  검색
-                </Button>
-              </div>
-            </form>
-
             {/* Search Result Info */}
             {!loading && (
               <div className="flex items-center justify-between">
                 <p className="text-muted-foreground">
-                  {searchKeyword && (
-                    <>
-                      <strong>"{searchKeyword}"</strong> 검색 결과{" "}
-                    </>
-                  )}
                   총 <strong>{totalElements}</strong>개의 상품
                 </p>
                 {(searchKeyword || category || origin) && (
