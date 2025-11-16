@@ -18,51 +18,35 @@ import Link from "next/link"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { useNotifications } from "@/hooks/use-notifications"
 
-interface Product {
-  id: number
-  name: string
-  category: string
-  price: number
-  stock: number
+interface TopProduct {
+  productId: number
+  productName: string
+  totalSold: number
+  revenue: number
+  imageUrl: string
 }
 
-interface OrderItem {
-  id: number
-  product: Product
-  quantity: number
-  price: number
-}
-
-interface Order {
-  orderId: number
-  orderNumber: string
-  createdAt: string
-  totalAmount: number
-  orderStatus: string
-  paymentStatus: string
-  orderItems: OrderItem[]
-  customer: {
-    userId: number
-    name: string
-    email: string
-    phone: string
-  }
-  recipientName: string
-  recipientPhone: string
-  shippingPostcode: string
-  shippingAddressLine1: string
-  shippingAddressLine2?: string
-  senderName?: string
-  senderPhone?: string
-  deliveryMessage?: string
-  trackingNumber?: string
+interface DashboardStats {
+  totalSales: number
+  todaySales: number
+  monthSales: number
+  salesGrowthRate: number
+  totalOrders: number
+  todayOrders: number
+  monthOrders: number
+  pendingOrders: number
+  ordersGrowthRate: number
+  totalUsers: number
+  todayNewUsers: number
+  usersGrowthRate: number
+  lowStockCount: number
+  topProducts: TopProduct[]
 }
 
 export default function AdminDashboard() {
   const router = useRouter()
   const { toast } = useToast()
-  const [orders, setOrders] = useState<Order[]>([])
-  const [products, setProducts] = useState<Product[]>([])
+  const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   // 관리자 실시간 알림 활성화
@@ -97,12 +81,8 @@ export default function AdminDashboard() {
     if (!token) return
 
     try {
-      // Fetch orders (Admin - all orders)
-      const ordersData = await apiFetch<{ content?: Order[] }>("/api/admin/orders", { auth: true })
-      setOrders(ordersData.content || [])
-
-      const productsData = await apiFetch<{ content?: Product[] }>("/api/products?size=1000")
-      setProducts(productsData.content || [])
+      const data = await apiFetch<DashboardStats>("/api/admin/dashboard/stats", { auth: true })
+      setStats(data)
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({
@@ -115,17 +95,22 @@ export default function AdminDashboard() {
     }
   }
 
-  // Calculate statistics
-  const totalSales = orders.reduce((sum, order) => sum + order.totalAmount, 0)
-  const totalOrders = orders.length
-  const totalProducts = products.length
-  const lowStockProducts = products.filter(p => p.stock < 10).length
+  const GrowthRate = ({ rate }: { rate?: number }) => {
+    if (rate === undefined || rate === null) return null
+    const isPositive = rate >= 0
+    return (
+      <div className={`flex items-center text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+        <TrendingUp className={`h-4 w-4 mr-1 ${isPositive ? '' : 'rotate-180'}`} />
+        <span className="font-medium">{isPositive ? '+' : ''}{rate.toFixed(1)}%</span>
+      </div>
+    )
+  }
 
-  if (loading) {
+  if (loading || !stats) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
         </div>
       </div>
@@ -142,73 +127,68 @@ export default function AdminDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* 총 매출 */}
+        {/* 이번 달 매출 */}
         <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-blue-600" />
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-primary-50)' }}>
+                <DollarSign className="h-6 w-6" style={{ color: 'var(--color-primary)' }} />
               </div>
-              <div className="flex items-center text-green-600 text-sm">
-                <TrendingUp className="h-4 w-4 mr-1" />
-                <span className="font-medium">+12%</span>
-              </div>
+              <GrowthRate rate={stats.salesGrowthRate} />
             </div>
             <div className="text-2xl font-bold text-gray-900 mb-1">
-              {totalSales.toLocaleString()}원
+              {stats.monthSales.toLocaleString()}원
             </div>
-            <p className="text-sm text-gray-500">총 매출</p>
+            <p className="text-sm text-gray-500">이번 달 매출</p>
           </CardContent>
         </Card>
 
-        {/* 총 주문 */}
+        {/* 이번 달 주문 */}
         <Link href="/admin/orders">
           <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
-                  <ShoppingCart className="h-6 w-6 text-purple-600" />
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#EEF2FF' }}>
+                  <ShoppingCart className="h-6 w-6" style={{ color: '#7C3AED' }} />
                 </div>
-                <ArrowUpRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                <GrowthRate rate={stats.ordersGrowthRate} />
               </div>
               <div className="text-2xl font-bold text-gray-900 mb-1">
-                {totalOrders}건
+                {stats.monthOrders}건
               </div>
-              <p className="text-sm text-gray-500">총 주문</p>
+              <p className="text-sm text-gray-500">이번 달 주문</p>
             </CardContent>
           </Card>
         </Link>
 
-        {/* 총 상품 */}
-        <Link href="/admin/products">
-          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-                  <Package className="h-6 w-6 text-green-600" />
-                </div>
-                <ArrowUpRight className="h-5 w-5 text-gray-400 group-hover:text-green-600 transition-colors" />
+        {/* 이번 달 신규 회원 */}
+        <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E8F5E9' }}>
+                <Users className="h-6 w-6" style={{ color: 'var(--color-success)' }} />
               </div>
-              <div className="text-2xl font-bold text-gray-900 mb-1">
-                {totalProducts}개
-              </div>
-              <p className="text-sm text-gray-500">등록된 상품</p>
-            </CardContent>
-          </Card>
-        </Link>
+              <GrowthRate rate={stats.usersGrowthRate} />
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">
+              {stats.todayNewUsers}명
+            </div>
+            <p className="text-sm text-gray-500">오늘 신규 회원</p>
+          </CardContent>
+        </Card>
 
         {/* 재고 부족 */}
-        <Link href="/admin/products">
+        <Link href="/admin/inventory">
           <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
-                  <Package className="h-6 w-6 text-orange-600" />
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FFF3E0' }}>
+                  <Package className="h-6 w-6" style={{ color: 'var(--color-warning)' }} />
                 </div>
                 <ArrowUpRight className="h-5 w-5 text-gray-400 group-hover:text-orange-600 transition-colors" />
               </div>
               <div className="text-2xl font-bold text-gray-900 mb-1">
-                {lowStockProducts}개
+                {stats.lowStockCount}개
               </div>
               <p className="text-sm text-gray-500">재고 부족 (10개 미만)</p>
             </CardContent>
@@ -257,42 +237,52 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* 최근 활동 */}
+        {/* 인기 상품 Top 5 */}
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold">최근 활동</CardTitle>
-            <CardDescription className="text-sm">최근 주문 현황</CardDescription>
+            <CardTitle className="text-lg font-semibold">인기 상품 Top 5</CardTitle>
+            <CardDescription className="text-sm">이번 달 판매량 기준</CardDescription>
           </CardHeader>
           <CardContent>
-            {orders.slice(0, 5).length === 0 ? (
+            {stats.topProducts.length === 0 ? (
               <div className="text-center py-8 text-gray-500 text-sm">
-                최근 주문 내역이 없습니다
+                판매 내역이 없습니다
               </div>
             ) : (
               <div className="space-y-3">
-                {orders.slice(0, 5).map((order, index) => (
+                {stats.topProducts.map((product, index) => (
                   <Link
-                    key={order.orderId ?? order.orderNumber ?? `order-${index}`}
-                    href={`/admin/orders`}
-                    className="flex items-center justify-between py-2 px-3 rounded hover:bg-gray-50 transition-colors"
+                    key={product.productId}
+                    href={`/product/${product.productId}`}
+                    className="flex items-center gap-3 py-2 px-3 rounded hover:bg-gray-50 transition-colors"
                   >
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold"
+                         style={{
+                           backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : 'var(--color-primary-50)',
+                           color: index < 3 ? 'white' : 'var(--color-primary)'
+                         }}>
+                      {index + 1}
+                    </div>
+                    {product.imageUrl && (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.productName}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {order.customer.name}
+                        {product.productName}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {new Date(order.createdAt).toLocaleDateString('ko-KR')}
+                        판매량: {product.totalSold}개
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-900">
-                        {order.totalAmount.toLocaleString()}원
+                        {product.revenue.toLocaleString()}원
                       </p>
-                      <p className="text-xs text-gray-500">
-                        {order.orderStatus === 'PAID' ? '결제완료' :
-                         order.orderStatus === 'SHIPPED' ? '배송중' :
-                         order.orderStatus === 'DELIVERED' ? '배송완료' : '처리중'}
-                      </p>
+                      <p className="text-xs text-gray-500">매출</p>
                     </div>
                   </Link>
                 ))}
