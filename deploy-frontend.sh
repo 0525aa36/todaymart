@@ -6,8 +6,8 @@ cd /home/jaemin/korean-agri-shop/frontend
 # 의존성 설치
 npm install
 
-# 빌드
-NEXT_PUBLIC_API_URL=http://korean-agri-shop-alb-1602964285.ap-northeast-2.elb.amazonaws.com npm run build
+# 빌드 (HTTPS API URL 사용 - CloudFront를 통한 접근)
+NEXT_PUBLIC_API_BASE_URL=https://api.todaymart.co.kr npm run build
 
 # 빌드 파일을 S3에 업로드하기 위한 준비
 cd .next

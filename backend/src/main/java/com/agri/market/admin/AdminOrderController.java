@@ -110,6 +110,7 @@ public class AdminOrderController {
      * 주문 상태 변경 (감사 로그 기록됨)
      */
     @PutMapping("/{orderId}/status")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> updateOrderStatus(
             @PathVariable Long orderId,
             @RequestBody Map<String, String> request) {
@@ -150,6 +151,7 @@ public class AdminOrderController {
      * 송장번호 업데이트 (감사 로그 기록됨)
      */
     @PutMapping("/{orderId}/tracking")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> updateTrackingNumber(
             @PathVariable Long orderId,
             @RequestBody Map<String, String> request) {

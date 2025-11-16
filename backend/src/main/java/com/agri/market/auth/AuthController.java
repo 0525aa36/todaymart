@@ -31,6 +31,12 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @org.springframework.beans.factory.annotation.Value("${cookie.secure:false}")
+    private boolean cookieSecure;
+
+    @org.springframework.beans.factory.annotation.Value("${cookie.same-site:Lax}")
+    private String cookieSameSite;
+
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
@@ -69,11 +75,10 @@ public class AuthController {
         // 리프레시 토큰을 httpOnly 쿠키로 설정
         jakarta.servlet.http.Cookie refreshTokenCookie = new jakarta.servlet.http.Cookie("refreshToken", tokens.refreshToken);
         refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(false); // 로컬 개발 환경에서는 false, 프로덕션에서는 true
+        refreshTokenCookie.setSecure(cookieSecure); // 환경변수로 제어 (프로덕션: true, 로컬: false)
         refreshTokenCookie.setPath("/");
         refreshTokenCookie.setMaxAge(30 * 24 * 60 * 60); // 30일
-        // Lax: CSRF 방어 + 크로스 사이트 호환성
-        refreshTokenCookie.setAttribute("SameSite", "Lax");
+        refreshTokenCookie.setAttribute("SameSite", cookieSameSite); // 환경변수로 제어 (프로덕션: None, 로컬: Lax)
         response.addCookie(refreshTokenCookie);
 
         // 액세스 토큰만 응답 본문에 포함 (리프레시 토큰은 제외)
@@ -244,10 +249,10 @@ public class AuthController {
         // 리프레시 토큰 쿠키 삭제
         jakarta.servlet.http.Cookie refreshTokenCookie = new jakarta.servlet.http.Cookie("refreshToken", "");
         refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(false);
+        refreshTokenCookie.setSecure(cookieSecure); // 환경변수로 제어
         refreshTokenCookie.setPath("/");
         refreshTokenCookie.setMaxAge(0); // 쿠키 삭제
-        refreshTokenCookie.setAttribute("SameSite", "Lax");
+        refreshTokenCookie.setAttribute("SameSite", cookieSameSite); // 환경변수로 제어
         response.addCookie(refreshTokenCookie);
 
         return ResponseEntity.ok(Map.of("message", "로그아웃되었습니다."));
