@@ -88,12 +88,24 @@ export function SearchContent() {
   }
 
   const handleCategoryChange = (value: string) => {
-    setCategory(value)
+    const newCategory = value === "all" ? "" : value
+    setCategory(newCategory)
     const params = new URLSearchParams()
     if (searchKeyword) params.append("keyword", searchKeyword)
-    if (value) params.append("category", value)
+    if (newCategory) params.append("category", newCategory)
     if (origin) params.append("origin", origin)
     router.push(`/search?${params.toString()}`)
+  }
+
+  const getCategoryName = (code: string) => {
+    const categoryMap: Record<string, string> = {
+      vegetables: "채소",
+      fruits: "과일",
+      seafood: "수산물",
+      meat: "축산물",
+      grains: "쌀/잡곡",
+    }
+    return categoryMap[code] || code
   }
 
   const handlePageChange = (page: number) => {
@@ -118,17 +130,17 @@ export function SearchContent() {
                     className="w-full"
                   />
                 </div>
-                <Select value={category} onValueChange={handleCategoryChange}>
+                <Select value={category || "all"} onValueChange={handleCategoryChange}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="카테고리" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">전체</SelectItem>
-                    <SelectItem value="채소">채소</SelectItem>
-                    <SelectItem value="과일">과일</SelectItem>
-                    <SelectItem value="수산물">수산물</SelectItem>
-                    <SelectItem value="축산물">축산물</SelectItem>
-                    <SelectItem value="쌀/잡곡">쌀/잡곡</SelectItem>
+                    <SelectItem value="all">전체</SelectItem>
+                    <SelectItem value="vegetables">채소</SelectItem>
+                    <SelectItem value="fruits">과일</SelectItem>
+                    <SelectItem value="seafood">수산물</SelectItem>
+                    <SelectItem value="meat">축산물</SelectItem>
+                    <SelectItem value="grains">쌀/잡곡</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button type="submit">
@@ -170,7 +182,7 @@ export function SearchContent() {
                         if (origin) params.append("origin", origin)
                         router.push(`/search${params.toString() ? '?' + params.toString() : ''}`)
                       }}>
-                        {category} ✕
+                        {getCategoryName(category)} ✕
                       </Badge>
                     )}
                   </div>
