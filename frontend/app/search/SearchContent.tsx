@@ -2,7 +2,6 @@
 
 import { ProductCard } from "@/components/product-card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { apiFetch } from "@/lib/api-client"
@@ -35,7 +34,6 @@ export function SearchContent() {
   const router = useRouter()
   const [searchKeyword, setSearchKeyword] = useState(searchParams.get("keyword") || "")
   const [category, setCategory] = useState(searchParams.get("category") || "")
-  const [origin, setOrigin] = useState(searchParams.get("origin") || "")
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [totalElements, setTotalElements] = useState(0)
@@ -45,20 +43,17 @@ export function SearchContent() {
   useEffect(() => {
     const keyword = searchParams.get("keyword") || ""
     const cat = searchParams.get("category") || ""
-    const org = searchParams.get("origin") || ""
     setSearchKeyword(keyword)
     setCategory(cat)
-    setOrigin(org)
-    searchProducts(keyword, cat, org, 0)
+    searchProducts(keyword, cat, 0)
   }, [searchParams])
 
-  const searchProducts = async (keyword: string, cat: string, org: string, page: number) => {
+  const searchProducts = async (keyword: string, cat: string, page: number) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (keyword) params.append("keyword", keyword)
       if (cat) params.append("category", cat)
-      if (org) params.append("origin", org)
       params.append("page", page.toString())
       params.append("size", "12")
 
@@ -75,19 +70,8 @@ export function SearchContent() {
     }
   }
 
-  const getCategoryName = (code: string) => {
-    const categoryMap: Record<string, string> = {
-      vegetables: "채소",
-      fruits: "과일",
-      seafood: "수산물",
-      meat: "축산물",
-      grains: "쌀/잡곡",
-    }
-    return categoryMap[code] || code
-  }
-
   const handlePageChange = (page: number) => {
-    searchProducts(searchKeyword, category, origin, page)
+    searchProducts(searchKeyword, category, page)
   }
 
   return (
@@ -98,37 +82,9 @@ export function SearchContent() {
 
             {/* Search Result Info */}
             {!loading && (
-              <div className="flex items-center justify-between">
-                <p className="text-muted-foreground">
-                  총 <strong>{totalElements}</strong>개의 상품
-                </p>
-                {(searchKeyword || category || origin) && (
-                  <div className="flex gap-2 items-center">
-                    {searchKeyword && (
-                      <Badge variant="secondary" className="cursor-pointer" onClick={() => {
-                        setSearchKeyword("")
-                        const params = new URLSearchParams()
-                        if (category) params.append("category", category)
-                        if (origin) params.append("origin", origin)
-                        router.push(`/search${params.toString() ? '?' + params.toString() : ''}`)
-                      }}>
-                        {searchKeyword} ✕
-                      </Badge>
-                    )}
-                    {category && (
-                      <Badge variant="secondary" className="cursor-pointer" onClick={() => {
-                        setCategory("")
-                        const params = new URLSearchParams()
-                        if (searchKeyword) params.append("keyword", searchKeyword)
-                        if (origin) params.append("origin", origin)
-                        router.push(`/search${params.toString() ? '?' + params.toString() : ''}`)
-                      }}>
-                        {getCategoryName(category)} ✕
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </div>
+              <p className="text-muted-foreground">
+                총 <strong>{totalElements}</strong>개의 상품
+              </p>
             )}
           </div>
 
