@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -61,6 +61,7 @@ interface FAQ {
 
 function HelpCenterContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [activeMenu, setActiveMenu] = useState<MenuItem>('notices')
   const [uploadingFile, setUploadingFile] = useState(false)
   const [formData, setFormData] = useState({
@@ -77,6 +78,7 @@ function HelpCenterContent() {
   const [loadingNotices, setLoadingNotices] = useState(false)
   const [faqs, setFaqs] = useState<FAQ[]>([])
   const [loadingFaqs, setLoadingFaqs] = useState(false)
+  const [expandedFaqId, setExpandedFaqId] = useState<number | null>(null)
 
   useEffect(() => {
     const tab = searchParams.get('tab') as MenuItem | null
@@ -263,7 +265,7 @@ function HelpCenterContent() {
                           : 'hover:bg-muted border-l-4 border-transparent text-foreground'
                         }
                       `}
-                      onClick={() => setActiveMenu(item.id)}
+                      onClick={() => router.push(`/help?tab=${item.id}`)}
                     >
                       <div>
                         <div className={isActive ? 'text-primary' : 'text-foreground'}>
@@ -323,36 +325,51 @@ function HelpCenterContent() {
               {activeMenu === 'faq' && (
                 <div>
                   <h2 className="text-2xl font-bold mb-6 text-primary">자주하는 질문</h2>
-                  <div className="border border-primary/20 rounded-lg">
+                  <div className="space-y-3">
                     {loadingFaqs ? (
                       <div className="p-12 text-center">
                         <LoadingSpinner size="lg" />
                       </div>
                     ) : faqs.length === 0 ? (
-                      <div className="p-12 text-center text-muted-foreground">
+                      <div className="p-12 text-center text-muted-foreground border border-primary/20 rounded-lg">
                         게시글이 없습니다.
                       </div>
                     ) : (
-                      <div className="divide-y">
-                        {faqs.map((faq) => (
-                          <Link
-                            key={faq.id}
-                            href={`/help/faq/${faq.id}`}
-                            className="block px-6 py-4 hover:bg-muted/50 transition-colors"
+                      faqs.map((faq) => (
+                        <div
+                          key={faq.id}
+                          className="border border-primary/20 rounded-lg overflow-hidden"
+                        >
+                          <div
+                            className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => setExpandedFaqId(expandedFaqId === faq.id ? null : faq.id)}
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="px-2 py-0.5 text-xs bg-primary/10 text-primary rounded">
-                                    {faq.category}
-                                  </span>
-                                </div>
-                                <h3 className="font-medium">Q. {faq.question}</h3>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="px-2 py-0.5 text-xs bg-primary/10 text-primary rounded">
+                                  {faq.category}
+                                </span>
                               </div>
+                              <h3 className="font-medium">Q. {faq.question}</h3>
                             </div>
-                          </Link>
-                        ))}
-                      </div>
+                            <div className="ml-4">
+                              {expandedFaqId === faq.id ? (
+                                <ChevronUp className="h-5 w-5 text-primary" />
+                              ) : (
+                                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                              )}
+                            </div>
+                          </div>
+                          {expandedFaqId === faq.id && (
+                            <div className="px-6 py-4 bg-primary/5 border-t border-primary/20">
+                              <p className="font-semibold mb-2 text-primary">A.</p>
+                              <p className="whitespace-pre-wrap text-muted-foreground leading-relaxed">
+                                {faq.answer}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
