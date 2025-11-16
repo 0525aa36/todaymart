@@ -30,7 +30,7 @@ import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { useState, useEffect, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ShoppingCart, Heart, Share2, Minus, Plus, Star, Truck, Shield, RefreshCw } from "lucide-react"
+import { ShoppingCart, Heart, Share2, Minus, Plus, Star, Truck, Shield, RefreshCw, ChevronRight, Home } from "lucide-react"
 import { ApiError, apiFetch, getErrorMessage } from "@/lib/api-client"
 import { marked } from "marked"
 import { ProductNoticeDisplay, ProductNoticeData } from "@/components/product/ProductNoticeDisplay"
@@ -444,6 +444,20 @@ export function ProductDetailPage() {
     })
   }
 
+  const getCategoryName = (category: string) => {
+    const categoryMap: Record<string, string> = {
+      vegetables: "채소",
+      fruits: "과일",
+      grains: "곡물",
+      meat: "육류",
+      seafood: "수산물",
+      dairy: "유제품",
+      processed: "가공식품",
+      others: "기타",
+    }
+    return categoryMap[category.toLowerCase()] || category
+  }
+
   // Convert markdown to HTML
   const descriptionHtml = useMemo(() => {
     if (!product) return ""
@@ -474,6 +488,26 @@ export function ProductDetailPage() {
 
       <main className="flex-1 py-8">
         <div className="container mx-auto px-4 max-w-6xl">
+          {/* Breadcrumb Navigation */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+            <button
+              onClick={() => router.push("/")}
+              className="hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              <Home className="h-4 w-4" />
+              <span>홈</span>
+            </button>
+            <ChevronRight className="h-4 w-4" />
+            <button
+              onClick={() => router.push(`/search?category=${product.category}`)}
+              className="hover:text-foreground transition-colors font-medium"
+            >
+              {getCategoryName(product.category)}
+            </button>
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-foreground">{product.name}</span>
+          </div>
+
           {/* Product Info Section */}
           <div className="grid md:grid-cols-5 gap-8 mb-12">
             {/* Images */}
@@ -492,12 +526,9 @@ export function ProductDetailPage() {
             {/* Product Details */}
             <div className="md:col-span-3">
               <div className="mb-4">
-                <Badge className="mb-2 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100 border-emerald-300" variant="outline">
-                  {product.origin}
-                </Badge>
                 <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
                 <p className="text-muted-foreground mb-4">
-                  {product.description.replace(/<[^>]*>/g, '').substring(0, 100)}...
+                  {product.description.replace(/<[^>]*>/g, '').substring(0, 100)}
                 </p>
 
                 <div className="flex items-center gap-2 mb-4">
@@ -582,35 +613,19 @@ export function ProductDetailPage() {
               )}
 
               {/* Stock Status */}
-              <div className="mb-4">
-                {product.stockStatus === "SOLD_OUT" ? (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <p className="text-red-600 font-semibold text-center">현재 품절되었습니다</p>
-                    <p className="text-red-500 text-sm text-center mt-1">재입고 알림 신청 기능 준비중입니다</p>
-                  </div>
-                ) : product.stockStatus === "LOW_STOCK" ? (
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                    <p className="text-orange-600 font-semibold flex items-center justify-center gap-2">
-                      <span>⚠️ 재고가 얼마 남지 않았습니다</span>
-                    </p>
-                    {product.stock <= 5 ? (
-                      <p className="text-orange-500 text-sm text-center mt-1 font-semibold animate-pulse">
-                        ⏰ 단 {product.stock}개 남음! 서둘러 주문하세요
-                      </p>
-                    ) : (
-                      <p className="text-orange-500 text-sm text-center mt-1">
-                        재고: {product.stock}개
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-green-600 text-sm text-center">
-                      최대 {product.stock}개 구매 가능
-                    </p>
-                  </div>
-                )}
-              </div>
+              {product.stockStatus === "SOLD_OUT" ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <p className="text-red-600 font-semibold text-center">현재 품절되었습니다</p>
+                  <p className="text-red-500 text-sm text-center mt-1">빠른 시일 내에 재입고 예정입니다</p>
+                </div>
+              ) : (selectedOption?.stock || product.stock) <= 10 && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                  <p className="text-orange-600 font-semibold text-center">품절임박</p>
+                  <p className="text-orange-500 text-sm text-center mt-1 font-medium">
+                    서둘러 주문하세요! (재고 {selectedOption?.stock || product.stock}개)
+                  </p>
+                </div>
+              )}
 
               {/* Quantity */}
               <div className="space-y-4 mb-6">
@@ -641,11 +656,6 @@ export function ProductDetailPage() {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  {product.stockStatus !== "SOLD_OUT" && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      최대 {selectedOption?.stock || product.stock}개까지 구매 가능
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -758,7 +768,7 @@ export function ProductDetailPage() {
                   <div className="grid md:grid-cols-2 gap-4 text-sm">
                     <div className="flex">
                       <span className="font-semibold w-24">카테고리</span>
-                      <span>{product.category}</span>
+                      <span>{getCategoryName(product.category)}</span>
                     </div>
                     <div className="flex">
                       <span className="font-semibold w-24">원산지</span>
@@ -769,14 +779,6 @@ export function ProductDetailPage() {
                       <span>냉장보관</span>
                     </div>
                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-xl font-bold">상품 설명</h3>
-                  <div
-                    className="leading-relaxed [&_img]:mx-auto [&_img]:block [&_img]:my-4"
-                    dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-                  />
                 </div>
 
                 {/* 상세페이지 이미지 */}

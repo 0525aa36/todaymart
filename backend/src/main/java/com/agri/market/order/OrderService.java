@@ -275,15 +275,17 @@ public class OrderService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
 
-        List<Order> orders = orderRepository.findByUser(user);
+        List<Order> orders = orderRepository.findByUserWithItems(user);
 
-        // Lazy loading 초기화
+        // Lazy loading 초기화 (이미 eager loading되었지만 안전을 위해 유지)
         orders.forEach(order -> {
             order.getUser().getName(); // User 초기화
-            order.getOrderItems().size(); // OrderItems 초기화
-            order.getOrderItems().forEach(item -> {
-                item.getProduct().getName(); // Product 초기화
-            });
+            if (order.getOrderItems() != null) {
+                order.getOrderItems().size(); // OrderItems 초기화
+                order.getOrderItems().forEach(item -> {
+                    item.getProduct().getName(); // Product 초기화
+                });
+            }
             // Initialize appliedCoupon if present
             if (order.getAppliedCoupon() != null) {
                 order.getAppliedCoupon().getName();

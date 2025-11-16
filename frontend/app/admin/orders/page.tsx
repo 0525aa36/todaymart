@@ -63,6 +63,7 @@ interface Order {
   shippingAddressLine2: string
   shippingPostcode: string
   trackingNumber?: string
+  cancellationReason?: string
 }
 
 interface Seller {
@@ -162,7 +163,7 @@ export default function AdminOrdersPage() {
         method: "PUT",
         auth: true,
         body: JSON.stringify({ status: newStatus }),
-        parseResponse: "none",
+        parseResponse: "json",
       })
 
       toast({
@@ -195,7 +196,7 @@ export default function AdminOrdersPage() {
         method: "PUT",
         auth: true,
         body: JSON.stringify({ trackingNumber: trackingNumber.trim() }),
-        parseResponse: "none",
+        parseResponse: "json",
       })
 
       toast({
@@ -280,7 +281,7 @@ export default function AdminOrdersPage() {
       case "PENDING_PAYMENT":
         return <Badge className="bg-yellow-500">결제 대기</Badge>
       case "PAYMENT_FAILED":
-        return <Badge variant="destructive">결제 실패</Badge>
+        return <Badge className="bg-red-600 text-white">결제 실패</Badge>
       case "PAID":
         return <Badge className="bg-green-500">결제 완료</Badge>
       case "PREPARING":
@@ -290,7 +291,15 @@ export default function AdminOrdersPage() {
       case "DELIVERED":
         return <Badge className="bg-green-600">배송 완료</Badge>
       case "CANCELLED":
-        return <Badge variant="destructive">주문 취소</Badge>
+        return <Badge className="bg-red-600 text-white">주문 취소</Badge>
+      case "RETURN_REQUESTED":
+        return <Badge className="bg-orange-500">반품 요청</Badge>
+      case "RETURN_APPROVED":
+        return <Badge className="bg-orange-600">반품 승인</Badge>
+      case "RETURN_COMPLETED":
+        return <Badge className="bg-gray-500">반품 완료</Badge>
+      case "PARTIALLY_RETURNED":
+        return <Badge className="bg-gray-600">부분 반품 완료</Badge>
       default:
         return <Badge>{status}</Badge>
     }
@@ -448,7 +457,7 @@ export default function AdminOrdersPage() {
                         <TableHead className="font-semibold text-gray-700">판매자</TableHead>
                         <TableHead className="font-semibold text-gray-700">금액</TableHead>
                         <TableHead className="font-semibold text-gray-700">상태</TableHead>
-                        <TableHead className="font-semibold text-gray-700">송장번호</TableHead>
+                        <TableHead className="font-semibold text-gray-700">송장번호/취소사유</TableHead>
                         <TableHead className="font-semibold text-gray-700 text-center">관리</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -481,7 +490,14 @@ export default function AdminOrdersPage() {
                           <TableCell className="font-semibold text-gray-900">{order.totalAmount.toLocaleString()}원</TableCell>
                           <TableCell>{getStatusBadge(order.orderStatus)}</TableCell>
                           <TableCell>
-                            {order.trackingNumber ? (
+                            {order.orderStatus === "CANCELLED" && order.cancellationReason ? (
+                              <div className="max-w-xs">
+                                <p className="text-xs text-red-600 font-medium">취소 사유:</p>
+                                <p className="text-sm text-gray-700 truncate" title={order.cancellationReason}>
+                                  {order.cancellationReason}
+                                </p>
+                              </div>
+                            ) : order.trackingNumber ? (
                               <span className="text-sm text-gray-900 font-mono">{order.trackingNumber}</span>
                             ) : (
                               <span className="text-xs text-gray-400">-</span>
@@ -543,6 +559,10 @@ export default function AdminOrdersPage() {
                   <SelectItem value="SHIPPED">배송중</SelectItem>
                   <SelectItem value="DELIVERED">배송 완료</SelectItem>
                   <SelectItem value="CANCELLED">주문 취소</SelectItem>
+                  <SelectItem value="RETURN_REQUESTED">반품 요청</SelectItem>
+                  <SelectItem value="RETURN_APPROVED">반품 승인</SelectItem>
+                  <SelectItem value="RETURN_COMPLETED">반품 완료</SelectItem>
+                  <SelectItem value="PARTIALLY_RETURNED">부분 반품 완료</SelectItem>
                 </SelectContent>
               </Select>
             </div>

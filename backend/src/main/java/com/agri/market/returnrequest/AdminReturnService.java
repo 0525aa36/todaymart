@@ -68,7 +68,7 @@ public class AdminReturnService {
      * 반품 요청 상세 조회 (관리자용)
      */
     public ReturnRequest getReturnRequest(Long returnRequestId) {
-        return returnRequestRepository.findById(returnRequestId)
+        return returnRequestRepository.findByIdWithAll(returnRequestId)
             .orElseThrow(() -> new NotFoundException("반품 요청을 찾을 수 없습니다."));
     }
 
@@ -77,7 +77,7 @@ public class AdminReturnService {
      */
     @Transactional
     public ReturnRequest approveReturn(Long returnRequestId, String adminNote, Authentication authentication) {
-        ReturnRequest returnRequest = returnRequestRepository.findById(returnRequestId)
+        ReturnRequest returnRequest = returnRequestRepository.findByIdWithAll(returnRequestId)
             .orElseThrow(() -> new NotFoundException("반품 요청을 찾을 수 없습니다."));
 
         // REQUESTED 상태에서만 승인 가능
@@ -110,7 +110,7 @@ public class AdminReturnService {
      */
     @Transactional
     public ReturnRequest rejectReturn(Long returnRequestId, String rejectionReason, Authentication authentication) {
-        ReturnRequest returnRequest = returnRequestRepository.findById(returnRequestId)
+        ReturnRequest returnRequest = returnRequestRepository.findByIdWithAll(returnRequestId)
             .orElseThrow(() -> new NotFoundException("반품 요청을 찾을 수 없습니다."));
 
         // REQUESTED 상태에서만 거부 가능
@@ -146,7 +146,7 @@ public class AdminReturnService {
      */
     @Transactional
     public ReturnRequest completeReturn(Long returnRequestId, Authentication authentication) {
-        ReturnRequest returnRequest = returnRequestRepository.findById(returnRequestId)
+        ReturnRequest returnRequest = returnRequestRepository.findByIdWithAll(returnRequestId)
             .orElseThrow(() -> new NotFoundException("반품 요청을 찾을 수 없습니다."));
 
         // APPROVED 상태에서만 완료 처리 가능

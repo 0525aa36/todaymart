@@ -82,7 +82,21 @@
       "Bash(set -a)",
       "Bash(source:*)",
       "Bash(set +a)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(export WEBHOOK_SECRET=\"test-webhook-secret\")",
+      "Bash(export SENDGRID_API_KEY=\"test\")",
+      "Bash(export TOSS_PAYMENTS_CLIENT_KEY:*)",
+      "Bash(export TOSS_PAYMENTS_SECRET_KEY:*)",
+      "Bash(export:*)",
+      "Bash(export NAVER_CLIENT_SECRET=\"bdkPlBthqK\")",
+      "Bash(export KAKAO_CLIENT_ID=\"56380206602abece46af0dabc59a7c66\")",
+      "Bash(export KAKAO_CLIENT_SECRET=\"b06HyFFbPBgEndovP5UGf3uLPkYPaTFv\")",
+      "Bash(export GOOGLE_SHEETS_ENABLED=true)",
+      "Bash(export GOOGLE_SHEETS_CREDENTIALS_PATH=./google-credentials.json:*)",
+      "Bash(JWT_SECRET=\"l+M2HT323RdnuAjRZB/KsXeREnG47s70ff/m1nty6fZK3dLSrXOgKek14a1Lzl+6twRjlfs4lShBy6MveP9yuA==\" NAVER_CLIENT_ID=\"mclMxOndgnb3NwKPSLcx\" NAVER_CLIENT_SECRET=\"bdkPlBthqK\" KAKAO_CLIENT_ID=\"56380206602abece46af0dabc59a7c66\" KAKAO_CLIENT_SECRET=\"b06HyFFbPBgEndovP5UGf3uLPkYPaTFv\" GOOGLE_SHEETS_ENABLED=true GOOGLE_SHEETS_CREDENTIALS_PATH=./google-credentials.json WEBHOOK_SECRET=\"test-webhook-secret\" TOSS_PAYMENTS_CLIENT_KEY=\"test_gck_ex6BJGQOVDKR16DAee4Q3W4w2zNb\" TOSS_PAYMENTS_SECRET_KEY=\"test_gsk_5OWRapdA8dWg4pRQMmvPro1zEqZK\" SENDGRID_API_KEY=\"test\" ./gradlew:*)",
+      "Bash(chmod:*)",
+      "Bash(/home/jaemin/korean-agri-shop/update-ecs-env.sh)",
+      "Bash(new-task-def.json)"
     ],
     "deny": [],
     "ask": []

@@ -75,7 +75,7 @@ export function CategoryNav() {
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 top-full mt-0 w-64 bg-white shadow-2xl border rounded-b-lg z-50"
+          className="absolute left-0 top-full mt-0 w-52 bg-white shadow-2xl border rounded-b-lg z-50"
           onMouseLeave={() => {
             setIsOpen(false);
             setHoveredCategory(null);
@@ -90,14 +90,14 @@ export function CategoryNav() {
             >
               <Link
                 href={`/category/${category.code}`}
-                className={`flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b last:border-b-0 ${
+                className={`flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-gray-50 transition-colors border-b last:border-b-0 ${
                   hoveredCategory === category.id ? 'bg-gray-50' : ''
                 } ${category.isEvent ? 'bg-purple-50 hover:bg-purple-100' : ''}`}
                 onClick={() => setIsOpen(false)}
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{category.iconName}</span>
-                  <span className={`font-medium ${category.isEvent ? 'text-purple-700' : 'text-gray-800'}`}>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">{category.iconName}</span>
+                  <span className={`font-medium text-sm ${category.isEvent ? 'text-purple-700' : 'text-gray-800'}`}>
                     {category.name}
                   </span>
                 </div>
@@ -115,18 +115,18 @@ export function CategoryNav() {
 
               {/* 하위 카테고리 (오른쪽에 표시) */}
               {category.children && category.children.length > 0 && hoveredCategory === category.id && (
-                <div className="absolute left-full top-0 w-56 bg-white shadow-2xl border rounded-r-lg ml-0 z-[60]">
+                <div className="absolute left-full top-0 w-44 bg-white shadow-2xl border rounded-r-lg ml-0 z-[60]">
                   {category.children.map((child) => (
                     <Link
                       key={child.id}
                       href={`/category/${child.code}`}
-                      className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors text-sm border-b last:border-b-0"
+                      className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 transition-colors text-sm border-b last:border-b-0"
                       onClick={() => {
                         setIsOpen(false);
                         setHoveredCategory(null);
                       }}
                     >
-                      <span className="text-xl">{child.iconName}</span>
+                      <span className="text-lg">{child.iconName}</span>
                       <span className="text-gray-700">{child.name}</span>
                     </Link>
                   ))}

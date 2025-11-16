@@ -57,17 +57,21 @@ public interface ReturnRequestRepository extends JpaRepository<ReturnRequest, Lo
     long countByStatus(ReturnStatus status);
 
     /**
-     * 모든 반품 요청 조회 (페이징)
+     * 모든 반품 요청 조회 (페이징, 연관 엔티티 즉시 로딩)
      */
-    @Query("SELECT rr FROM ReturnRequest rr LEFT JOIN FETCH rr.order ORDER BY rr.requestedAt DESC")
+    @Query("SELECT DISTINCT rr FROM ReturnRequest rr " +
+           "LEFT JOIN FETCH rr.order o " +
+           "LEFT JOIN FETCH o.orderItems " +
+           "ORDER BY rr.requestedAt DESC")
     Page<ReturnRequest> findAllWithOrder(Pageable pageable);
 
     /**
-     * 복합 필터링 조회
+     * 복합 필터링 조회 (모든 연관 엔티티 즉시 로딩)
      */
     @Query("SELECT DISTINCT rr FROM ReturnRequest rr " +
            "LEFT JOIN FETCH rr.order o " +
            "LEFT JOIN FETCH o.user u " +
+           "LEFT JOIN FETCH o.orderItems orderItems " +
            "LEFT JOIN FETCH rr.returnItems ri " +
            "LEFT JOIN FETCH ri.orderItem oi " +
            "LEFT JOIN FETCH oi.product " +
@@ -82,4 +86,17 @@ public interface ReturnRequestRepository extends JpaRepository<ReturnRequest, Lo
         @Param("keyword") String keyword,
         Pageable pageable
     );
+
+    /**
+     * ID로 반품 요청 조회 (모든 연관 엔티티 즉시 로딩)
+     */
+    @Query("SELECT DISTINCT rr FROM ReturnRequest rr " +
+           "LEFT JOIN FETCH rr.order o " +
+           "LEFT JOIN FETCH o.user u " +
+           "LEFT JOIN FETCH o.orderItems " +
+           "LEFT JOIN FETCH rr.returnItems ri " +
+           "LEFT JOIN FETCH ri.orderItem oi " +
+           "LEFT JOIN FETCH oi.product " +
+           "WHERE rr.id = :id")
+    Optional<ReturnRequest> findByIdWithAll(@Param("id") Long id);
 }

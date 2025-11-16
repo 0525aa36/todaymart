@@ -13,6 +13,16 @@ import { Loader2 } from "lucide-react"
 
 const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || ""
 
+interface OrderItem {
+  id: number
+  product: {
+    id: number
+    name: string
+  }
+  quantity: number
+  price: number
+}
+
 interface Order {
   id: number
   orderNumber: string
@@ -21,6 +31,7 @@ interface Order {
   shippingFee?: number
   finalAmount?: number
   recipientName: string
+  orderItems?: OrderItem[]
   user: {
     id: number
     email: string
@@ -181,9 +192,21 @@ export default function PaymentPage() {
 
     try {
       const orderNumber = order.orderNumber || `ORDER_${order.id}_${Date.now()}`
+
+      // 주문 상품명 생성: 첫 번째 상품명 + 외 N개
+      let orderName = `주문 ${order.id}` // 기본값
+      if (order.orderItems && order.orderItems.length > 0) {
+        const firstProduct = order.orderItems[0].product?.name || `상품 ${order.orderItems[0].id}`
+        if (order.orderItems.length === 1) {
+          orderName = firstProduct
+        } else {
+          orderName = `${firstProduct} 외 ${order.orderItems.length - 1}개`
+        }
+      }
+
       await paymentWidgetRef.current.requestPayment({
         orderId: orderNumber,
-        orderName: `주문 ${order.id}`,
+        orderName: orderName,
         customerName: order.recipientName,
         successUrl: `${window.location.origin}/payment/success?orderDbId=${order.id}`,
         failUrl: `${window.location.origin}/payment/fail`,

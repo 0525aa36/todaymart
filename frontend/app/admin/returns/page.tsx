@@ -295,6 +295,7 @@ export default function AdminReturnsPage() {
                             <Button
                               size="sm"
                               variant="destructive"
+                              className="bg-red-600 hover:bg-red-700 text-white"
                               onClick={() => openDialog(returnRequest, "reject")}
                             >
                               <XCircle className="h-4 w-4 mr-1" />

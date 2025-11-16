@@ -104,8 +104,8 @@ public class ReturnService {
     public ReturnRequest createReturnRequest(CreateReturnRequestDto dto, Authentication authentication) {
         String userEmail = authentication.getName();
 
-        // 주문 조회 및 권한 확인
-        Order order = orderRepository.findById(dto.getOrderId())
+        // 주문 조회 및 권한 확인 (orderItems와 product 즉시 로딩)
+        Order order = orderRepository.findByIdWithItems(dto.getOrderId())
             .orElseThrow(() -> new NotFoundException("주문을 찾을 수 없습니다."));
 
         if (!order.getUser().getEmail().equals(userEmail)) {

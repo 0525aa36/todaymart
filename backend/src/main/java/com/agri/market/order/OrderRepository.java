@@ -84,4 +84,23 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     // 사용자별 주문 내역 조회
     List<Order> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    /**
+     * 사용자별 주문 내역 조회 (연관 엔티티 즉시 로딩)
+     */
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.orderItems oi " +
+           "LEFT JOIN FETCH oi.product p " +
+           "WHERE o.user = :user " +
+           "ORDER BY o.createdAt DESC")
+    List<Order> findByUserWithItems(@Param("user") User user);
+
+    /**
+     * ID로 주문 조회 (연관 엔티티 즉시 로딩)
+     */
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.orderItems oi " +
+           "LEFT JOIN FETCH oi.product p " +
+           "WHERE o.id = :id")
+    java.util.Optional<Order> findByIdWithItems(@Param("id") Long id);
 }

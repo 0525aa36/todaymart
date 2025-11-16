@@ -35,7 +35,6 @@ public class Order {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
-    @JsonIgnore
     private Set<OrderItem> orderItems = new HashSet<>();
 
     @Column(nullable = false, precision = 10, scale = 2)
