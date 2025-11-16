@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { OrderStatusBadge } from "@/components/order-status-badge"
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
@@ -47,6 +48,7 @@ interface OrderItem {
 
 interface Order {
   id: number
+  orderNumber: string
   createdAt: string
   totalAmount: number
   orderStatus: string
@@ -122,28 +124,6 @@ export function MyPage() {
     }
   }
 
-  const getOrderStatusLabel = (status: string) => {
-    const statusMap: Record<string, string> = {
-      PENDING: "결제대기",
-      PAID: "결제완료",
-      SHIPPED: "배송중",
-      DELIVERED: "배송완료",
-      CANCELLED: "취소됨",
-    }
-    return statusMap[status] || status
-  }
-
-  const getOrderStatusColor = (status: string) => {
-    const colorMap: Record<string, string> = {
-      PENDING: "bg-muted",
-      PAID: "bg-primary",
-      SHIPPED: "bg-blue-500",
-      DELIVERED: "bg-secondary",
-      CANCELLED: "bg-destructive",
-    }
-    return colorMap[status] || "bg-muted"
-  }
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString("ko-KR", {
@@ -178,7 +158,9 @@ export function MyPage() {
   ]
 
   // Get recent orders (최근 2개)
-  const recentOrders = orders.slice(0, 2)
+  const recentOrders = [...orders]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 2)
 
   if (loading) {
     return (
@@ -359,11 +341,9 @@ export function MyPage() {
                         <div className="flex items-center justify-between mb-4">
                           <div>
                             <div className="text-sm text-muted-foreground mb-1">{formatDate(order.createdAt)}</div>
-                            <div className="font-semibold">주문번호: #{order.id}</div>
+                            <div className="font-semibold">주문번호: {order.orderNumber}</div>
                           </div>
-                          <Badge className={getOrderStatusColor(order.orderStatus)}>
-                            {getOrderStatusLabel(order.orderStatus)}
-                          </Badge>
+                          <OrderStatusBadge status={order.orderStatus} />
                         </div>
 
                         {order.orderItems.slice(0, 2).map((item, index) => (

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
+import { OrderStatusBadge } from "@/components/order-status-badge"
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
@@ -28,6 +29,7 @@ interface OrderItem {
 
 interface Order {
   id: number
+  orderNumber: string
   createdAt: string
   totalAmount: number
   orderStatus: string
@@ -43,6 +45,8 @@ export function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentPage, setCurrentPage] = useState(0)
+  const [itemsPerPage] = useState(5)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -56,6 +60,7 @@ export function OrdersPage() {
 
   useEffect(() => {
     filterOrders()
+    setCurrentPage(0) // Reset to first page when filters change
   }, [orders, selectedStatus, searchQuery])
 
   const fetchOrders = async () => {
@@ -89,34 +94,12 @@ export function OrdersPage() {
     if (searchQuery) {
       filtered = filtered.filter(
         (order) =>
-          order.id.toString().includes(searchQuery) ||
+          order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
           order.orderItems.some((item) => item.product.name.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     }
 
     setFilteredOrders(filtered)
-  }
-
-  const getOrderStatusLabel = (status: string) => {
-    const statusMap: Record<string, string> = {
-      PENDING: "결제대기",
-      PAID: "결제완료",
-      SHIPPED: "배송중",
-      DELIVERED: "배송완료",
-      CANCELLED: "취소됨",
-    }
-    return statusMap[status] || status
-  }
-
-  const getOrderStatusColor = (status: string) => {
-    const colorMap: Record<string, string> = {
-      PENDING: "bg-muted",
-      PAID: "bg-primary",
-      SHIPPED: "bg-blue-500",
-      DELIVERED: "bg-secondary",
-      CANCELLED: "bg-destructive",
-    }
-    return colorMap[status] || "bg-muted"
   }
 
   const formatDate = (dateString: string) => {
@@ -130,11 +113,25 @@ export function OrdersPage() {
 
   const statusFilters = [
     { value: "ALL", label: "전체", count: orders.length },
+    { value: "PENDING_PAYMENT", label: "결제 대기", count: orders.filter((o) => o.orderStatus === "PENDING_PAYMENT").length },
     { value: "PAID", label: "결제완료", count: orders.filter((o) => o.orderStatus === "PAID").length },
+    { value: "PREPARING", label: "상품 준비중", count: orders.filter((o) => o.orderStatus === "PREPARING").length },
     { value: "SHIPPED", label: "배송중", count: orders.filter((o) => o.orderStatus === "SHIPPED").length },
     { value: "DELIVERED", label: "배송완료", count: orders.filter((o) => o.orderStatus === "DELIVERED").length },
-    { value: "CANCELLED", label: "취소됨", count: orders.filter((o) => o.orderStatus === "CANCELLED").length },
+    { value: "CANCELLED", label: "주문 취소", count: orders.filter((o) => o.orderStatus === "CANCELLED").length },
   ]
+
+  // Pagination
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
+  const paginatedOrders = filteredOrders.slice(
+    currentPage * itemsPerPage,
+    (currentPage + 1) * itemsPerPage
+  )
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   if (loading) {
     return (
@@ -212,21 +209,20 @@ export function OrdersPage() {
                     ? "검색 결과가 없습니다."
                     : selectedStatus === "ALL"
                     ? "주문 내역이 없습니다."
-                    : `${getOrderStatusLabel(selectedStatus)} 주문이 없습니다.`}
+                    : "해당 상태의 주문이 없습니다."}
                 </CardContent>
               </Card>
             ) : (
-              filteredOrders.map((order) => (
+              <>
+              {paginatedOrders.map((order) => (
                 <Card key={order.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-sm text-muted-foreground mb-1">{formatDate(order.createdAt)}</div>
-                        <CardTitle className="text-lg">주문번호: #{order.id}</CardTitle>
+                        <CardTitle className="text-lg">주문번호: {order.orderNumber}</CardTitle>
                       </div>
-                      <Badge className={getOrderStatusColor(order.orderStatus)}>
-                        {getOrderStatusLabel(order.orderStatus)}
-                      </Badge>
+                      <OrderStatusBadge status={order.orderStatus} />
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -281,7 +277,37 @@ export function OrdersPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+              ))}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center gap-2 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 0}
+                  >
+                    이전
+                  </Button>
+                  {Array.from({ length: totalPages }, (_, i) => i).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      onClick={() => handlePageChange(page)}
+                    >
+                      {page + 1}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="outline"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages - 1}
+                  >
+                    다음
+                  </Button>
+                </div>
+              )}
+              </>
             )}
           </div>
 

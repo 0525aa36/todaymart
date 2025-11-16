@@ -223,7 +223,7 @@ export default function MyReturnsPage() {
                             href={`/mypage/orders/${returnRequest.order.id}`}
                             className="text-primary hover:underline"
                           >
-                            #{returnRequest.order.id}
+                            {returnRequest.order.orderNumber}
                           </Link>
                         </p>
                       </div>

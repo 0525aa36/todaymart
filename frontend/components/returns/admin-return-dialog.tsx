@@ -29,6 +29,7 @@ interface ReturnRequest {
   id: number
   order: {
     id: number
+    orderNumber: string
     user: {
       name: string
       email: string
@@ -243,7 +244,7 @@ export function AdminReturnDialog({
             </div>
             <div>
               <span className="text-muted-foreground">주문 번호</span>
-              <p className="font-medium mt-1">#{returnRequest.order.id}</p>
+              <p className="font-medium mt-1">{returnRequest.order.orderNumber}</p>
             </div>
             <div>
               <span className="text-muted-foreground">요청 날짜</span>

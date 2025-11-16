@@ -53,6 +53,8 @@ export default function AdminUsersPage() {
   const [roleDialogOpen, setRoleDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [newRole, setNewRole] = useState<string>("")
+  const [currentPage, setCurrentPage] = useState(0)
+  const [itemsPerPage] = useState(10)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -161,6 +163,18 @@ export default function AdminUsersPage() {
     user.email.toLowerCase().includes(searchKeyword.toLowerCase())
   )
 
+  // Pagination
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage)
+  const paginatedUsers = filteredUsers.slice(
+    currentPage * itemsPerPage,
+    (currentPage + 1) * itemsPerPage
+  )
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <>
       <div className="space-y-6">
@@ -226,7 +240,7 @@ export default function AdminUsersPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers.map((user) => (
+                    {paginatedUsers.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.id}</TableCell>
                         <TableCell className="font-medium">{user.name}</TableCell>
@@ -263,6 +277,39 @@ export default function AdminUsersPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 0}
+                >
+                  이전
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i).map((page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    onClick={() => handlePageChange(page)}
+                  >
+                    {page + 1}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages - 1}
+                >
+                  다음
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Role Change Confirmation Dialog */}

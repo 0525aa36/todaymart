@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
+import { OrderStatusBadge } from "@/components/order-status-badge"
 import {
   Table,
   TableBody,
@@ -63,6 +64,7 @@ interface OrderItem {
 
 interface Order {
   id: number
+  orderNumber: string
   createdAt: string
   totalAmount: number
   orderStatus: string
@@ -202,23 +204,6 @@ export function AdminDashboard() {
   const topProducts = Object.values(productSales)
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "SHIPPED":
-        return <Badge className="bg-blue-500">배송중</Badge>
-      case "PAID":
-        return <Badge className="bg-green-500">결제완료</Badge>
-      case "DELIVERED":
-        return <Badge variant="secondary">배송완료</Badge>
-      case "CANCELLED":
-        return <Badge variant="destructive">주문취소</Badge>
-      case "PENDING":
-        return <Badge className="bg-muted">결제대기</Badge>
-      default:
-        return <Badge>{status}</Badge>
-    }
-  }
 
   const handleExportExcel = async () => {
     const token = localStorage.getItem("token")
@@ -433,7 +418,7 @@ export function AdminDashboard() {
                           {recentOrders.flatMap((order) =>
                             order.orderItems.map((item, index) => (
                               <TableRow key={`${order.id}-${item.id}`}>
-                                <TableCell className="font-medium">#{order.id}</TableCell>
+                                <TableCell className="font-medium">{order.orderNumber}</TableCell>
                                 <TableCell>{order.senderName || order.user.name}</TableCell>
                                 <TableCell>{order.senderPhone || order.user.phone}</TableCell>
                                 <TableCell>{order.recipientName}</TableCell>

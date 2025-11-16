@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { RotateCcw, Search, Filter, CheckCircle, XCircle, Package } from "lucide-react"
@@ -29,6 +30,7 @@ interface ReturnRequest {
   id: number
   order: {
     id: number
+    orderNumber: string
     user: {
       name: string
       email: string
@@ -66,6 +68,8 @@ export default function AdminReturnsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [reasonFilter, setReasonFilter] = useState<string>("all")
   const [searchKeyword, setSearchKeyword] = useState("")
+  const [currentPage, setCurrentPage] = useState(0)
+  const [itemsPerPage] = useState(10)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -76,6 +80,7 @@ export default function AdminReturnsPage() {
 
     fetchReturns()
     fetchStats()
+    setCurrentPage(0) // Reset to first page when filters change
   }, [statusFilter, reasonFilter, searchKeyword])
 
   const fetchReturns = async () => {
@@ -162,6 +167,18 @@ export default function AdminReturnsPage() {
       hour: "2-digit",
       minute: "2-digit",
     })
+  }
+
+  // Pagination
+  const totalPages = Math.ceil(returns.length / itemsPerPage)
+  const paginatedReturns = returns.slice(
+    currentPage * itemsPerPage,
+    (currentPage + 1) * itemsPerPage
+  )
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   if (loading) {
@@ -258,96 +275,137 @@ export default function AdminReturnsPage() {
             </CardContent>
           </Card>
 
-          {/* Returns List */}
-          {returns.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <RotateCcw className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-lg font-medium">반품 요청이 없습니다</p>
+          {/* Returns Table */}
+          <Card>
+            <CardContent className="p-0">
+              {returns.length === 0 ? (
+                <div className="text-center py-12">
+                  <RotateCcw className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-lg font-medium">반품 요청이 없습니다</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[80px]">번호</TableHead>
+                        <TableHead className="w-[100px]">상태</TableHead>
+                        <TableHead className="w-[120px]">주문번호</TableHead>
+                        <TableHead className="w-[100px]">고객명</TableHead>
+                        <TableHead className="w-[150px]">반품사유</TableHead>
+                        <TableHead className="w-[250px]">상세사유</TableHead>
+                        <TableHead className="w-[120px]">환불금액</TableHead>
+                        <TableHead className="w-[150px]">요청날짜</TableHead>
+                        <TableHead className="w-[200px] text-center">액션</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedReturns.map((returnRequest) => (
+                        <TableRow
+                          key={returnRequest.id}
+                          className="hover:bg-muted/50 cursor-pointer"
+                          onClick={() => openDialog(returnRequest, "detail")}
+                        >
+                          <TableCell className="font-medium">#{returnRequest.id}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(returnRequest.status)}>
+                              {getStatusLabel(returnRequest.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{returnRequest.order.orderNumber}</TableCell>
+                          <TableCell>{returnRequest.order.user.name}</TableCell>
+                          <TableCell>{getReasonCategoryLabel(returnRequest.reasonCategory)}</TableCell>
+                          <TableCell>
+                            <div className="max-w-[250px] truncate" title={returnRequest.detailedReason}>
+                              {returnRequest.detailedReason}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-semibold text-primary">
+                            {returnRequest.totalRefundAmount.toLocaleString()}원
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {formatDate(returnRequest.requestedAt)}
+                          </TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <div className="flex gap-1 justify-center">
+                              {returnRequest.status === "REQUESTED" && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                    onClick={() => openDialog(returnRequest, "approve")}
+                                  >
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    승인
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                    onClick={() => openDialog(returnRequest, "reject")}
+                                  >
+                                    <XCircle className="h-3 w-3 mr-1" />
+                                    거부
+                                  </Button>
+                                </>
+                              )}
+                              {returnRequest.status === "APPROVED" && (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  className="bg-green-600 hover:bg-green-700"
+                                  onClick={() => openDialog(returnRequest, "complete")}
+                                >
+                                  <Package className="h-3 w-3 mr-1" />
+                                  완료
+                                </Button>
+                              )}
+                              {returnRequest.status === "COMPLETED" || returnRequest.status === "REJECTED" ? (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Card className="mt-6">
+              <CardContent className="p-4">
+                <div className="flex justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 0}
+                  >
+                    이전
+                  </Button>
+                  {Array.from({ length: totalPages }, (_, i) => i).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      onClick={() => handlePageChange(page)}
+                    >
+                      {page + 1}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="outline"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages - 1}
+                  >
+                    다음
+                  </Button>
+                </div>
               </CardContent>
             </Card>
-          ) : (
-            <div className="space-y-4">
-              {returns.map((returnRequest) => (
-                <Card key={returnRequest.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <CardTitle className="text-lg">반품 요청 #{returnRequest.id}</CardTitle>
-                        <Badge className={getStatusColor(returnRequest.status)}>
-                          {getStatusLabel(returnRequest.status)}
-                        </Badge>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openDialog(returnRequest, "detail")}>
-                          상세보기
-                        </Button>
-                        {returnRequest.status === "REQUESTED" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() => openDialog(returnRequest, "approve")}
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              승인
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="bg-red-600 hover:bg-red-700 text-white"
-                              onClick={() => openDialog(returnRequest, "reject")}
-                            >
-                              <XCircle className="h-4 w-4 mr-1" />
-                              거부
-                            </Button>
-                          </>
-                        )}
-                        {returnRequest.status === "APPROVED" && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            onClick={() => openDialog(returnRequest, "complete")}
-                          >
-                            <Package className="h-4 w-4 mr-1" />
-                            완료 처리
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">요청 날짜</span>
-                        <p className="font-medium mt-1">{formatDate(returnRequest.requestedAt)}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">주문 번호</span>
-                        <p className="font-medium mt-1">#{returnRequest.order.id}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">고객명</span>
-                        <p className="font-medium mt-1">{returnRequest.order.user.name}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">환불 금액</span>
-                        <p className="font-medium mt-1 text-primary">
-                          {returnRequest.totalRefundAmount.toLocaleString()}원
-                        </p>
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-sm text-muted-foreground">반품 사유</span>
-                      <p className="font-medium mt-1">{getReasonCategoryLabel(returnRequest.reasonCategory)}</p>
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                        {returnRequest.detailedReason}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           )}
         </div>
       </main>

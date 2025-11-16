@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { OrderStatusBadge } from "@/components/order-status-badge"
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
@@ -39,6 +40,7 @@ interface OrderItem {
 
 interface Order {
   id: number
+  orderNumber: string
   createdAt: string
   totalAmount: number
   couponDiscountAmount?: number
@@ -160,40 +162,6 @@ export default function OrderDetailPage() {
     }
   }
 
-  const getOrderStatusLabel = (status: string) => {
-    const statusMap: Record<string, string> = {
-      PENDING_PAYMENT: "결제 대기",
-      PAYMENT_FAILED: "결제 실패",
-      PAID: "결제 완료",
-      PREPARING: "상품 준비중",
-      SHIPPED: "배송중",
-      DELIVERED: "배송 완료",
-      CANCELLED: "주문 취소",
-      RETURN_REQUESTED: "반품 요청",
-      RETURN_APPROVED: "반품 승인",
-      RETURN_COMPLETED: "반품 완료",
-      PARTIALLY_RETURNED: "부분 반품",
-    }
-    return statusMap[status] || status
-  }
-
-  const getOrderStatusColor = (status: string) => {
-    const colorMap: Record<string, string> = {
-      PENDING_PAYMENT: "bg-yellow-500",
-      PAYMENT_FAILED: "bg-destructive",
-      PAID: "bg-primary",
-      PREPARING: "bg-blue-500",
-      SHIPPED: "bg-purple-500",
-      DELIVERED: "bg-green-500",
-      CANCELLED: "bg-gray-500",
-      RETURN_REQUESTED: "bg-orange-500",
-      RETURN_APPROVED: "bg-orange-600",
-      RETURN_COMPLETED: "bg-gray-600",
-      PARTIALLY_RETURNED: "bg-gray-600",
-    }
-    return colorMap[status] || "bg-muted"
-  }
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString("ko-KR", {
@@ -255,11 +223,9 @@ export default function OrderDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold mb-2">주문 상세</h1>
-                <p className="text-muted-foreground">주문번호: #{order.id}</p>
+                <p className="text-muted-foreground">주문번호: {order.orderNumber}</p>
               </div>
-              <Badge className={getOrderStatusColor(order.orderStatus)}>
-                {getOrderStatusLabel(order.orderStatus)}
-              </Badge>
+              <OrderStatusBadge status={order.orderStatus} />
             </div>
           </div>
 
@@ -279,7 +245,9 @@ export default function OrderDetailPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">주문 상태</span>
-                  <p className="font-medium mt-1">{getOrderStatusLabel(order.orderStatus)}</p>
+                  <div className="mt-1">
+                    <OrderStatusBadge status={order.orderStatus} />
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -422,7 +390,7 @@ export default function OrderDetailPage() {
               정말로 이 주문을 취소하시겠습니까?
               <br />
               <br />
-              <span className="font-semibold text-foreground">주문번호: #{order?.id}</span>
+              <span className="font-semibold text-foreground">주문번호: {order?.orderNumber}</span>
               <br />
               <span className="text-sm">취소 시 결제 금액이 환불 처리됩니다.</span>
             </AlertDialogDescription>

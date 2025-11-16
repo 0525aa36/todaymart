@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { OrderStatusBadge } from "@/components/order-status-badge"
 import {
   Select,
   SelectContent,
@@ -93,6 +94,8 @@ export default function AdminOrdersPage() {
   const [syncing, setSyncing] = useState(false)
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
   const [googleSheetsEnabled, setGoogleSheetsEnabled] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [itemsPerPage] = useState(10)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -276,35 +279,6 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "PENDING_PAYMENT":
-        return <Badge className="bg-yellow-500">결제 대기</Badge>
-      case "PAYMENT_FAILED":
-        return <Badge className="bg-red-600 text-white">결제 실패</Badge>
-      case "PAID":
-        return <Badge className="bg-green-500">결제 완료</Badge>
-      case "PREPARING":
-        return <Badge className="bg-blue-500">상품 준비중</Badge>
-      case "SHIPPED":
-        return <Badge className="bg-purple-500">배송중</Badge>
-      case "DELIVERED":
-        return <Badge className="bg-green-600">배송 완료</Badge>
-      case "CANCELLED":
-        return <Badge className="bg-red-600 text-white">주문 취소</Badge>
-      case "RETURN_REQUESTED":
-        return <Badge className="bg-orange-500">반품 요청</Badge>
-      case "RETURN_APPROVED":
-        return <Badge className="bg-orange-600">반품 승인</Badge>
-      case "RETURN_COMPLETED":
-        return <Badge className="bg-gray-500">반품 완료</Badge>
-      case "PARTIALLY_RETURNED":
-        return <Badge className="bg-gray-600">부분 반품 완료</Badge>
-      default:
-        return <Badge>{status}</Badge>
-    }
-  }
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString("ko-KR", {
@@ -325,7 +299,8 @@ export default function AdminOrdersPage() {
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      return (        order.orderId.toString().includes(query) ||
+      return (
+        order.orderNumber.toLowerCase().includes(query) ||
         order.customer.name.toLowerCase().includes(query) ||
         order.recipientName.toLowerCase().includes(query) ||
         order.orderItems.some((item) => item.productName.toLowerCase().includes(query))
@@ -334,6 +309,18 @@ export default function AdminOrdersPage() {
 
     return true
   })
+
+  // Pagination
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
+  const paginatedOrders = filteredOrders.slice(
+    currentPage * itemsPerPage,
+    (currentPage + 1) * itemsPerPage
+  )
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   if (loading) {
     return (
@@ -462,9 +449,9 @@ export default function AdminOrdersPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredOrders.map((order, index) => (
+                      {paginatedOrders.map((order, index) => (
                         <TableRow key={order.orderId ?? order.orderNumber ?? `order-${index}`} className="hover:bg-gray-50/50 transition-colors">
-                          <TableCell className="font-medium text-gray-900">#{order.orderId}</TableCell>
+                          <TableCell className="font-medium text-gray-900">{order.orderNumber}</TableCell>
                           <TableCell className="text-sm text-gray-600">{formatDate(order.createdAt)}</TableCell>
                           <TableCell>
                             <div>
@@ -488,7 +475,7 @@ export default function AdminOrdersPage() {
                             </span>
                           </TableCell>
                           <TableCell className="font-semibold text-gray-900">{order.totalAmount.toLocaleString()}원</TableCell>
-                          <TableCell>{getStatusBadge(order.orderStatus)}</TableCell>
+                          <TableCell><OrderStatusBadge status={order.orderStatus} /></TableCell>
                           <TableCell>
                             {order.orderStatus === "CANCELLED" && order.cancellationReason ? (
                               <div className="max-w-xs">
@@ -535,6 +522,39 @@ export default function AdminOrdersPage() {
               )}
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 0}
+                >
+                  이전
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i).map((page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    onClick={() => handlePageChange(page)}
+                  >
+                    {page + 1}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages - 1}
+                >
+                  다음
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Status Update Dialog */}
@@ -542,7 +562,7 @@ export default function AdminOrdersPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>주문 상태 변경</DialogTitle>
-            <DialogDescription>주문번호: #{selectedOrder?.orderId}</DialogDescription>
+            <DialogDescription>주문번호: {selectedOrder?.orderNumber}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -583,7 +603,7 @@ export default function AdminOrdersPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>송장번호 등록</DialogTitle>
-            <DialogDescription>주문번호: #{selectedOrder?.orderId}</DialogDescription>
+            <DialogDescription>주문번호: {selectedOrder?.orderNumber}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
