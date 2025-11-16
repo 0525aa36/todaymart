@@ -249,12 +249,12 @@ export default function AdminUsersPage() {
                         <TableCell>{formatDate(user.birthDate)}</TableCell>
                         <TableCell>
                           {user.role === "ADMIN" ? (
-                            <Badge variant="destructive">
+                            <Badge className="bg-purple-600 text-white">
                               <Shield className="h-3 w-3 mr-1" />
                               관리자
                             </Badge>
                           ) : (
-                            <Badge variant="secondary">
+                            <Badge className="bg-blue-500 text-white">
                               <UserIcon className="h-3 w-3 mr-1" />
                               일반 사용자
                             </Badge>
