@@ -513,7 +513,7 @@ export default function AdminProductsPage() {
                       </TableCell>
                       <TableCell>
                         {product.discountRate ? (
-                          <Badge variant="destructive">{product.discountRate}%</Badge>
+                          <Badge className="bg-red-600 text-white">{product.discountRate}%</Badge>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
