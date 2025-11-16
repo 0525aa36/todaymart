@@ -31,11 +31,11 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @org.springframework.beans.factory.annotation.Value("${cookie.secure:false}")
-    private boolean cookieSecure;
+    @org.springframework.beans.factory.annotation.Value("${cookie.secure:true}")
+    private boolean cookieSecure = true; // 프로덕션 기본값: true
 
-    @org.springframework.beans.factory.annotation.Value("${cookie.same-site:Lax}")
-    private String cookieSameSite;
+    @org.springframework.beans.factory.annotation.Value("${cookie.same-site:None}")
+    private String cookieSameSite = "None"; // 프로덕션 기본값: None
 
     public AuthController(AuthService authService) {
         this.authService = authService;
