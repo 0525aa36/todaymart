@@ -89,10 +89,10 @@ export default function CouponSelector({
   return (
     <div className="space-y-2">
       {selectedCoupon ? (
-        <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50">
+        <div className="flex items-center justify-between p-4 border rounded-lg" style={{ backgroundColor: "#E8F5E9" }}>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <Ticket className="h-5 w-5 text-green-600" />
+              <Ticket className="h-5 w-5" style={{ color: "var(--color-success)" }} />
               <span className="font-semibold">{selectedCoupon.coupon.name}</span>
             </div>
             <p className="text-sm text-muted-foreground mt-1">

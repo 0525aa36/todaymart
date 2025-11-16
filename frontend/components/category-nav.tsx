@@ -92,18 +92,24 @@ export function CategoryNav() {
                 href={`/category/${category.code}`}
                 className={`flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-gray-50 transition-colors border-b last:border-b-0 ${
                   hoveredCategory === category.id ? 'bg-gray-50' : ''
-                } ${category.isEvent ? 'bg-purple-50 hover:bg-purple-100' : ''}`}
+                }`}
+                style={category.isEvent ? {
+                  backgroundColor: 'var(--color-primary-50)',
+                } : undefined}
                 onClick={() => setIsOpen(false)}
               >
                 <div className="flex items-center gap-2.5">
                   <span className="text-xl">{category.iconName}</span>
-                  <span className={`font-medium text-sm ${category.isEvent ? 'text-purple-700' : 'text-gray-800'}`}>
+                  <span
+                    className="font-medium text-sm"
+                    style={category.isEvent ? { color: 'var(--color-primary)' } : { color: '#1f2937' }}
+                  >
                     {category.name}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
                   {category.isEvent && (
-                    <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    <span className="text-white text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--color-accent)' }}>
                       N
                     </span>
                   )}

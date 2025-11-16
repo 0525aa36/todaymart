@@ -27,6 +27,9 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Shield, User as UserIcon, Search } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
+import { AdminPagination } from "@/components/admin/AdminPagination"
+import { AdminLoadingSpinner } from "@/components/admin/AdminLoadingSpinner"
+import { SortableTableHead, SortDirection } from "@/components/ui/sortable-table-head"
 
 interface User {
   id: number
@@ -56,6 +59,10 @@ export default function AdminUsersPage() {
   const [currentPage, setCurrentPage] = useState(0)
   const [itemsPerPage] = useState(10)
 
+  // Sorting states
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
+
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -73,7 +80,7 @@ export default function AdminUsersPage() {
 
   const fetchUsers = async () => {
     try {
-      let url = "/api/admin/users?size=100&sort=createdAt,desc"
+      let url = "/api/admin/users?size=100&sort=id,asc"
       if (roleFilter) {
         url += `&role=${roleFilter}`
       }
@@ -158,14 +165,54 @@ export default function AdminUsersPage() {
     })
   }
 
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc")
+      } else if (sortDirection === "desc") {
+        setSortKey(null)
+        setSortDirection(null)
+      }
+    } else {
+      setSortKey(key)
+      setSortDirection("asc")
+    }
+  }
+
   const filteredUsers = users.filter((user) =>
     user.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
     user.email.toLowerCase().includes(searchKeyword.toLowerCase())
   )
 
+  // Sort filtered users
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    if (!sortKey || !sortDirection) return 0
+
+    const direction = sortDirection === "asc" ? 1 : -1
+
+    switch (sortKey) {
+      case "id":
+        return (a.id - b.id) * direction
+      case "name":
+        return a.name.localeCompare(b.name) * direction
+      case "email":
+        return a.email.localeCompare(b.email) * direction
+      case "phone":
+        return a.phone.localeCompare(b.phone) * direction
+      case "birthDate":
+        return (new Date(a.birthDate).getTime() - new Date(b.birthDate).getTime()) * direction
+      case "role":
+        return a.role.localeCompare(b.role) * direction
+      case "createdAt":
+        return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * direction
+      default:
+        return 0
+    }
+  })
+
   // Pagination
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage)
-  const paginatedUsers = filteredUsers.slice(
+  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage)
+  const paginatedUsers = sortedUsers.slice(
     currentPage * itemsPerPage,
     (currentPage + 1) * itemsPerPage
   )
@@ -220,7 +267,7 @@ export default function AdminUsersPage() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="text-center py-12 text-muted-foreground">로딩 중...</div>
+                <AdminLoadingSpinner type="table" />
               ) : filteredUsers.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   사용자가 없습니다.
@@ -229,13 +276,63 @@ export default function AdminUsersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[60px]">ID</TableHead>
-                      <TableHead>이름</TableHead>
-                      <TableHead>이메일</TableHead>
-                      <TableHead>전화번호</TableHead>
-                      <TableHead>생년월일</TableHead>
-                      <TableHead>역할</TableHead>
-                      <TableHead>가입일</TableHead>
+                      <SortableTableHead
+                        sortKey="id"
+                        currentSortKey={sortKey}
+                        currentSortDirection={sortDirection}
+                        onSort={handleSort}
+                        className="w-[60px]"
+                      >
+                        ID
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="name"
+                        currentSortKey={sortKey}
+                        currentSortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
+                        이름
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="email"
+                        currentSortKey={sortKey}
+                        currentSortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
+                        이메일
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="phone"
+                        currentSortKey={sortKey}
+                        currentSortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
+                        전화번호
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="birthDate"
+                        currentSortKey={sortKey}
+                        currentSortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
+                        생년월일
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="role"
+                        currentSortKey={sortKey}
+                        currentSortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
+                        역할
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="createdAt"
+                        currentSortKey={sortKey}
+                        currentSortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
+                        가입일
+                      </SortableTableHead>
                       <TableHead className="text-right">작업</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -249,12 +346,12 @@ export default function AdminUsersPage() {
                         <TableCell>{formatDate(user.birthDate)}</TableCell>
                         <TableCell>
                           {user.role === "ADMIN" ? (
-                            <Badge className="bg-purple-600 text-white">
+                            <Badge style={{ backgroundColor: "var(--color-primary)", color: "white" }}>
                               <Shield className="h-3 w-3 mr-1" />
                               관리자
                             </Badge>
                           ) : (
-                            <Badge className="bg-blue-500 text-white">
+                            <Badge style={{ backgroundColor: "var(--color-secondary-600)", color: "var(--color-secondary-foreground)" }}>
                               <UserIcon className="h-3 w-3 mr-1" />
                               일반 사용자
                             </Badge>
@@ -280,35 +377,16 @@ export default function AdminUsersPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex justify-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 0}
-                >
-                  이전
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => i).map((page) => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    onClick={() => handlePageChange(page)}
-                  >
-                    {page + 1}
-                  </Button>
-                ))}
-                <Button
-                  variant="outline"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages - 1}
-                >
-                  다음
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <AdminPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalElements={sortedUsers.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={(newPage) => {
+              setCurrentPage(newPage)
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
+          />
         )}
       </div>
 

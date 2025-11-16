@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { RotateCcw, Search, Filter, CheckCircle, XCircle, Package } from "lucide-react"
 import { AdminReturnDialog } from "@/components/returns/admin-return-dialog"
+import { AdminPagination } from "@/components/admin/AdminPagination"
+import { AdminLoadingSpinner } from "@/components/admin/AdminLoadingSpinner"
 
 interface ReturnItem {
   id: number
@@ -182,11 +184,7 @@ export default function AdminReturnsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-center">로딩 중...</p>
-      </div>
-    )
+    return <AdminLoadingSpinner size="lg" />
   }
 
   return (
@@ -332,8 +330,6 @@ export default function AdminReturnsPage() {
                                 <>
                                   <Button
                                     size="sm"
-                                    variant="default"
-                                    className="bg-blue-600 hover:bg-blue-700"
                                     onClick={() => openDialog(returnRequest, "approve")}
                                   >
                                     <CheckCircle className="h-3 w-3 mr-1" />
@@ -342,7 +338,6 @@ export default function AdminReturnsPage() {
                                   <Button
                                     size="sm"
                                     variant="destructive"
-                                    className="bg-red-600 hover:bg-red-700 text-white"
                                     onClick={() => openDialog(returnRequest, "reject")}
                                   >
                                     <XCircle className="h-3 w-3 mr-1" />
@@ -353,8 +348,6 @@ export default function AdminReturnsPage() {
                               {returnRequest.status === "APPROVED" && (
                                 <Button
                                   size="sm"
-                                  variant="default"
-                                  className="bg-green-600 hover:bg-green-700"
                                   onClick={() => openDialog(returnRequest, "complete")}
                                 >
                                   <Package className="h-3 w-3 mr-1" />
@@ -377,35 +370,16 @@ export default function AdminReturnsPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <Card className="mt-6">
-              <CardContent className="p-4">
-                <div className="flex justify-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 0}
-                  >
-                    이전
-                  </Button>
-                  {Array.from({ length: totalPages }, (_, i) => i).map((page) => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      onClick={() => handlePageChange(page)}
-                    >
-                      {page + 1}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages - 1}
-                  >
-                    다음
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <AdminPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalElements={returns.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={(newPage) => {
+                setCurrentPage(newPage)
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+            />
           )}
         </div>
       </main>

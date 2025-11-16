@@ -472,41 +472,57 @@ public class ProductService {
             com.agri.market.dto.StockStatus stockStatus, String keyword, Pageable pageable) {
 
         List<Product> allProducts = productRepository.findAll();
-        List<ProductOption> allOptions = productOptionRepository.findAll();
+
+        // Product를 ID 순으로 정렬
+        allProducts.sort(java.util.Comparator.comparing(Product::getId));
 
         // Convert to InventoryItemResponse
         List<com.agri.market.dto.admin.InventoryItemResponse> allItems = new java.util.ArrayList<>();
 
+        // 각 상품과 그 옵션들을 그룹화하여 추가
         for (Product product : allProducts) {
-            com.agri.market.dto.admin.InventoryItemResponse item =
+            com.agri.market.dto.admin.InventoryItemResponse productItem =
                     com.agri.market.dto.admin.InventoryItemResponse.fromProduct(product);
 
-            // Apply filters
-            if (stockStatus != null && item.getStockStatus() != stockStatus) {
-                continue;
+            // Apply filters to product
+            boolean productPassesFilter = true;
+            if (stockStatus != null && productItem.getStockStatus() != stockStatus) {
+                productPassesFilter = false;
             }
             if (keyword != null && !keyword.trim().isEmpty() &&
-                    !item.getName().toLowerCase().contains(keyword.toLowerCase())) {
-                continue;
+                    !productItem.getName().toLowerCase().contains(keyword.toLowerCase())) {
+                productPassesFilter = false;
             }
 
-            allItems.add(item);
-        }
-
-        for (ProductOption option : allOptions) {
-            com.agri.market.dto.admin.InventoryItemResponse item =
-                    com.agri.market.dto.admin.InventoryItemResponse.fromProductOption(option);
-
-            // Apply filters
-            if (stockStatus != null && item.getStockStatus() != stockStatus) {
-                continue;
-            }
-            if (keyword != null && !keyword.trim().isEmpty() &&
-                    !item.getName().toLowerCase().contains(keyword.toLowerCase())) {
-                continue;
+            if (productPassesFilter) {
+                allItems.add(productItem);
             }
 
-            allItems.add(item);
+            // 해당 상품의 옵션들을 바로 추가
+            if (product.getOptions() != null && !product.getOptions().isEmpty()) {
+                // 옵션을 ID 순으로 정렬
+                List<ProductOption> sortedOptions = new java.util.ArrayList<>(product.getOptions());
+                sortedOptions.sort(java.util.Comparator.comparing(ProductOption::getId));
+
+                for (ProductOption option : sortedOptions) {
+                    com.agri.market.dto.admin.InventoryItemResponse optionItem =
+                            com.agri.market.dto.admin.InventoryItemResponse.fromProductOption(option);
+
+                    // Apply filters to option
+                    boolean optionPassesFilter = true;
+                    if (stockStatus != null && optionItem.getStockStatus() != stockStatus) {
+                        optionPassesFilter = false;
+                    }
+                    if (keyword != null && !keyword.trim().isEmpty() &&
+                            !optionItem.getName().toLowerCase().contains(keyword.toLowerCase())) {
+                        optionPassesFilter = false;
+                    }
+
+                    if (optionPassesFilter) {
+                        allItems.add(optionItem);
+                    }
+                }
+            }
         }
 
         // Apply pagination

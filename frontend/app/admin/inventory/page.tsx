@@ -30,6 +30,10 @@ import {
 } from "@/components/ui/dialog"
 import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
+import { AdminPagination } from "@/components/admin/AdminPagination"
+import { AdminLoadingSpinner } from "@/components/admin/AdminLoadingSpinner"
+import { LoadingButton } from "@/components/admin/LoadingButton"
+import { SortableTableHead, SortDirection } from "@/components/ui/sortable-table-head"
 import {
   Package,
   AlertCircle,
@@ -40,7 +44,6 @@ import {
   Edit2,
   Check,
   X,
-  Loader2
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -87,6 +90,10 @@ export default function InventoryPage() {
   const [keyword, setKeyword] = useState("")
   const [searchInput, setSearchInput] = useState("")
 
+  // Sorting states
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
+
   // Inline editing
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingType, setEditingType] = useState<"PRODUCT" | "OPTION" | null>(null)
@@ -102,7 +109,7 @@ export default function InventoryPage() {
   useEffect(() => {
     fetchStatistics()
     fetchItems()
-  }, [page, stockStatus, keyword])
+  }, [page, stockStatus, keyword, sortKey, sortDirection])
 
   const fetchStatistics = async () => {
     try {
@@ -120,6 +127,7 @@ export default function InventoryPage() {
       const params = new URLSearchParams({
         page: page.toString(),
         size: "20",
+        sort: "id,asc",
       })
 
       if (stockStatus !== "ALL") {
@@ -135,7 +143,35 @@ export default function InventoryPage() {
         { auth: true }
       )
 
-      setItems(data.content)
+      let sortedItems = [...data.content]
+
+      // Apply client-side sorting
+      if (sortKey && sortDirection) {
+        sortedItems.sort((a, b) => {
+          const direction = sortDirection === "asc" ? 1 : -1
+
+          switch (sortKey) {
+            case "id":
+              return (a.id - b.id) * direction
+            case "name":
+              return a.name.localeCompare(b.name) * direction
+            case "category":
+              return a.category.localeCompare(b.category) * direction
+            case "stock":
+              return (a.stock - b.stock) * direction
+            case "threshold":
+              return (a.lowStockThreshold - b.lowStockThreshold) * direction
+            case "price":
+              return (a.price - b.price) * direction
+            case "stockValue":
+              return (a.stockValue - b.stockValue) * direction
+            default:
+              return 0
+          }
+        })
+      }
+
+      setItems(sortedItems)
       setTotalPages(data.totalPages)
       setTotalElements(data.totalElements)
     } catch (error) {
@@ -149,6 +185,20 @@ export default function InventoryPage() {
   const handleSearch = () => {
     setKeyword(searchInput)
     setPage(0)
+  }
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc")
+      } else if (sortDirection === "desc") {
+        setSortKey(null)
+        setSortDirection(null)
+      }
+    } else {
+      setSortKey(key)
+      setSortDirection("asc")
+    }
   }
 
   const handleRefresh = () => {
@@ -430,9 +480,7 @@ export default function InventoryPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
+            <AdminLoadingSpinner type="table" />
           ) : items.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               재고 항목이 없습니다
@@ -449,12 +497,47 @@ export default function InventoryPage() {
                       />
                     </TableHead>
                     <TableHead>타입</TableHead>
-                    <TableHead>상품명</TableHead>
-                    <TableHead>카테고리</TableHead>
-                    <TableHead>재고</TableHead>
-                    <TableHead>임계값</TableHead>
+                    <SortableTableHead
+                      sortKey="name"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      상품명
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="category"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      카테고리
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="stock"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      재고
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="threshold"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      임계값
+                    </SortableTableHead>
                     <TableHead>상태</TableHead>
-                    <TableHead>재고 가치</TableHead>
+                    <SortableTableHead
+                      sortKey="stockValue"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      재고 가치
+                    </SortableTableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -562,24 +645,17 @@ export default function InventoryPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex justify-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage(page - 1)}
-                    disabled={page === 0}
-                  >
-                    이전
-                  </Button>
-                  <span className="flex items-center px-4">
-                    {page + 1} / {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage(page + 1)}
-                    disabled={page >= totalPages - 1}
-                  >
-                    다음
-                  </Button>
+                <div className="py-4">
+                  <AdminPagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalElements={totalElements}
+                    itemsPerPage={20}
+                    onPageChange={(newPage) => {
+                      setPage(newPage)
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                  />
                 </div>
               )}
             </div>
@@ -614,10 +690,9 @@ export default function InventoryPage() {
             <Button variant="outline" onClick={() => setBulkDialogOpen(false)}>
               취소
             </Button>
-            <Button onClick={handleBulkUpdate} disabled={bulkUpdating}>
-              {bulkUpdating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <LoadingButton onClick={handleBulkUpdate} isLoading={bulkUpdating} loadingText="수정 중...">
               수정
-            </Button>
+            </LoadingButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

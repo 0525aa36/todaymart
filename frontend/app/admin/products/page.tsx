@@ -33,11 +33,14 @@ import {
   XCircle,
   TrendingDown,
   DollarSign,
-  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { toast as sonnerToast } from "sonner"
+import { AdminPagination } from "@/components/admin/AdminPagination"
+import { AdminLoadingSpinner } from "@/components/admin/AdminLoadingSpinner"
+import { LoadingButton } from "@/components/admin/LoadingButton"
+import { SortableTableHead, SortDirection } from "@/components/ui/sortable-table-head"
 
 interface Seller {
   id: number
@@ -102,6 +105,10 @@ export default function AdminProductsPage() {
   const [syncing, setSyncing] = useState(false)
   const [selectedSellerId, setSelectedSellerId] = useState<string>("ALL")
 
+  // Sorting states
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
+
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -114,10 +121,11 @@ export default function AdminProductsPage() {
       return
     }
 
+    setPage(0) // 필터 변경 시 첫 페이지로 이동
     fetchProducts()
     fetchActiveSellers()
     fetchStatistics()
-  }, [page, categoryFilter, sellerFilter, stockFilter, keyword])
+  }, [categoryFilter, sellerFilter, stockFilter, keyword])
 
   const fetchStatistics = async () => {
     try {
@@ -142,12 +150,11 @@ export default function AdminProductsPage() {
     try {
       setLoading(true)
       const params = new URLSearchParams({
-        page: page.toString(),
-        size: "20",
-        sort: "createdAt,desc",
+        size: "1000", // 모든 상품 가져오기
+        sort: "id,asc", // ID 오름차순 정렬
       })
 
-      // Apply filters (client-side for now)
+      // Fetch all products
       const data = await apiFetch<ProductPage>(`/api/products?${params.toString()}`)
 
       let filteredProducts = data.content || []
@@ -279,8 +286,68 @@ export default function AdminProductsPage() {
     })
   }
 
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc")
+      } else if (sortDirection === "desc") {
+        setSortKey(null)
+        setSortDirection(null)
+      }
+    } else {
+      setSortKey(key)
+      setSortDirection("asc")
+    }
+  }
+
   // Get unique categories from products
   const categories = Array.from(new Set(products.map(p => p.category)))
+
+  // Sort products
+  const sortedProducts = [...products].sort((a, b) => {
+    if (!sortKey || !sortDirection) return 0
+
+    let aValue: any
+    let bValue: any
+
+    switch (sortKey) {
+      case "id":
+        aValue = a.id
+        bValue = b.id
+        break
+      case "name":
+        aValue = a.name
+        bValue = b.name
+        break
+      case "price":
+        const aFinalPrice = a.discountRate
+          ? Math.round(a.price * (1 - a.discountRate / 100))
+          : a.price
+        const bFinalPrice = b.discountRate
+          ? Math.round(b.price * (1 - b.discountRate / 100))
+          : b.price
+        aValue = aFinalPrice
+        bValue = bFinalPrice
+        break
+      case "stock":
+        aValue = a.stock
+        bValue = b.stock
+        break
+      case "createdAt":
+        aValue = new Date(a.createdAt).getTime()
+        bValue = new Date(b.createdAt).getTime()
+        break
+      default:
+        return 0
+    }
+
+    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1
+    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1
+    return 0
+  })
+
+  // Client-side pagination
+  const paginatedProducts = sortedProducts.slice(page * 20, (page + 1) * 20)
 
   return (
     <div className="space-y-6">
@@ -311,10 +378,10 @@ export default function AdminProductsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">판매 중</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
+              <CheckCircle className="h-4 w-4" style={{ color: "var(--color-success)" }} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-500">{statistics.inStockProducts}</div>
+              <div className="text-2xl font-bold" style={{ color: "var(--color-success)" }}>{statistics.inStockProducts}</div>
               <p className="text-xs text-muted-foreground">
                 재고가 있는 상품
               </p>
@@ -324,10 +391,10 @@ export default function AdminProductsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">품절</CardTitle>
-              <XCircle className="h-4 w-4 text-red-500" />
+              <XCircle className="h-4 w-4" style={{ color: "var(--color-danger)" }} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-500">{statistics.soldOutProducts}</div>
+              <div className="text-2xl font-bold" style={{ color: "var(--color-danger)" }}>{statistics.soldOutProducts}</div>
               <p className="text-xs text-muted-foreground">
                 재고 0개 상품
               </p>
@@ -337,10 +404,10 @@ export default function AdminProductsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">할인 중</CardTitle>
-              <TrendingDown className="h-4 w-4 text-orange-500" />
+              <TrendingDown className="h-4 w-4" style={{ color: "var(--color-warning)" }} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-500">{statistics.discountedProducts}</div>
+              <div className="text-2xl font-bold" style={{ color: "var(--color-warning)" }}>{statistics.discountedProducts}</div>
               <p className="text-xs text-muted-foreground">
                 할인율이 적용된 상품
               </p>
@@ -427,18 +494,19 @@ export default function AdminProductsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button
+          <LoadingButton
             onClick={handleSyncProductsToGoogleSheets}
-            disabled={syncing || selectedSellerId === "ALL"}
-            className="bg-green-600 hover:bg-green-700"
+            disabled={selectedSellerId === "ALL"}
+            isLoading={syncing}
+            loadingText="동기화 중..."
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "동기화 중..." : "구글 시트 동기화"}
-          </Button>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            구글 시트 동기화
+          </LoadingButton>
         </div>
 
         <Link href="/admin/products/new">
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button>
             <Plus className="h-4 w-4 mr-2" />
             상품 등록
           </Button>
@@ -452,9 +520,7 @@ export default function AdminProductsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
+            <AdminLoadingSpinner type="table" />
           ) : products.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               상품이 없습니다
@@ -464,25 +530,61 @@ export default function AdminProductsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[60px]">ID</TableHead>
-                    <TableHead>상품명</TableHead>
+                    <SortableTableHead
+                      sortKey="id"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="w-[60px]"
+                    >
+                      ID
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="name"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      상품명
+                    </SortableTableHead>
                     <TableHead>카테고리</TableHead>
                     <TableHead>원산지</TableHead>
                     <TableHead>판매자</TableHead>
-                    <TableHead>가격</TableHead>
+                    <SortableTableHead
+                      sortKey="price"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      가격
+                    </SortableTableHead>
                     <TableHead>할인</TableHead>
-                    <TableHead>재고</TableHead>
-                    <TableHead>등록일</TableHead>
+                    <SortableTableHead
+                      sortKey="stock"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      재고
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="createdAt"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      등록일
+                    </SortableTableHead>
                     <TableHead className="text-center">작업</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.map((product) => (
+                  {paginatedProducts.map((product) => (
                     <TableRow key={product.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">{product.id}</TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                        <Badge variant="secondary" style={{ backgroundColor: "var(--color-primary-50)", color: "var(--color-primary)" }}>
                           {product.category}
                         </Badge>
                       </TableCell>
@@ -521,7 +623,7 @@ export default function AdminProductsPage() {
                       <TableCell>
                         <Badge
                           variant={product.stock > 0 ? "default" : "destructive"}
-                          className={product.stock > 0 ? "bg-green-100 text-green-800" : ""}
+                          style={product.stock > 0 ? { backgroundColor: "#E8F5E9", color: "var(--color-success)" } : undefined}
                         >
                           {product.stock > 0 ? `${product.stock}개` : "품절"}
                         </Badge>
@@ -556,24 +658,17 @@ export default function AdminProductsPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex justify-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage(page - 1)}
-                    disabled={page === 0}
-                  >
-                    이전
-                  </Button>
-                  <span className="flex items-center px-4">
-                    {page + 1} / {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage(page + 1)}
-                    disabled={page >= totalPages - 1}
-                  >
-                    다음
-                  </Button>
+                <div className="py-4">
+                  <AdminPagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalElements={totalElements}
+                    itemsPerPage={20}
+                    onPageChange={(newPage) => {
+                      setPage(newPage)
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                  />
                 </div>
               )}
             </div>

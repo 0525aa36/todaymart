@@ -60,10 +60,10 @@ export default function CouponCard({
       return <Badge variant="destructive">만료</Badge>;
     }
     if (userCoupon?.isAvailable) {
-      return <Badge variant="default" className="bg-green-600">사용가능</Badge>;
+      return <Badge style={{ backgroundColor: "var(--color-success)", color: "white" }}>사용가능</Badge>;
     }
     if (coupon.isValid) {
-      return <Badge variant="default" className="bg-blue-600">유효</Badge>;
+      return <Badge style={{ backgroundColor: "var(--color-primary)", color: "white" }}>유효</Badge>;
     }
     return null;
   };

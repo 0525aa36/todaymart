@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { apiFetch } from "@/lib/api-client"
 import { Loader2 } from "lucide-react"
+import { AdminLoadingSpinner, LOADING_MESSAGES } from "@/components/admin/AdminLoadingSpinner"
 
 const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || ""
 
@@ -221,21 +222,7 @@ export default function PaymentPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 bg-muted/30">
-          <div className="container mx-auto px-4 py-8">
-            <p className="text-center">로딩 중...</p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    )
-  }
-
-  if (!order) {
+  if (loading || !order) {
     return null
   }
 
@@ -291,24 +278,16 @@ export default function PaymentPage() {
               <CardHeader>
                 <CardTitle>결제 수단 선택</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div id="payment-widget" className="min-h-[300px]">
-                  {!widgetReady && (
-                    <div className="flex items-center justify-center h-[300px]">
-                      <div className="text-center space-y-4">
-                        <div className="text-yellow-600 dark:text-yellow-400">
-                          <p className="font-semibold mb-2">⚠️ 결제 기능 준비 중</p>
-                          <p className="text-sm text-muted-foreground">
-                            토스페이먼츠 API 키가 설정되지 않았습니다.
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            개발 모드에서는 아래 버튼으로 테스트하실 수 있습니다.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+              <CardContent className="relative">
+                <div id="payment-widget" className="min-h-[300px]"></div>
+                {!widgetReady && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white">
+                    <AdminLoadingSpinner
+                      message="결제 위젯을 불러오는 중..."
+                      size="lg"
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -335,48 +314,13 @@ export default function PaymentPage() {
           )}
 
           {paymentAmount > 0 ? (
-            widgetReady ? (
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={handlePayment}
-              >
-                {`${paymentAmount.toLocaleString()}원 결제하기`}
-              </Button>
-            ) : (
-              <div className="space-y-3">
-                <Button
-                  className="w-full"
-                  size="lg"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await apiFetch(`/api/orders/${order.id}/complete`, {
-                        method: "POST",
-                        auth: true,
-                        parseResponse: "none",
-                      })
-                      toast({
-                        title: "테스트 결제 완료",
-                        description: "개발 모드에서 주문이 완료 처리되었습니다.",
-                      })
-                      router.push(`/mypage/orders/${order.id}`)
-                    } catch (error) {
-                      toast({
-                        title: "오류",
-                        description: "주문 완료 처리 중 오류가 발생했습니다.",
-                        variant: "destructive",
-                      })
-                    }
-                  }}
-                >
-                  🧪 개발 모드: 결제 없이 주문 완료
-                </Button>
-                <p className="text-xs text-center text-muted-foreground">
-                  * 실제 결제를 위해서는 토스페이먼츠 API 키 설정이 필요합니다
-                </p>
-              </div>
-            )
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handlePayment}
+            >
+              {`${paymentAmount.toLocaleString()}원 결제하기`}
+            </Button>
           ) : (
             <Button
               className="w-full"

@@ -35,6 +35,10 @@ import { useRouter } from "next/navigation"
 import { ChevronLeft, Search, Truck, Package2, Edit, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
+import { AdminPagination } from "@/components/admin/AdminPagination"
+import { AdminLoadingSpinner } from "@/components/admin/AdminLoadingSpinner"
+import { LoadingButton } from "@/components/admin/LoadingButton"
+import { SortableTableHead, SortDirection } from "@/components/ui/sortable-table-head"
 
 interface OrderItem {
   id: number
@@ -95,6 +99,10 @@ export default function AdminOrdersPage() {
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
   const [googleSheetsEnabled, setGoogleSheetsEnabled] = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
+
+  // Sorting states
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
   const [itemsPerPage] = useState(10)
 
   useEffect(() => {
@@ -132,7 +140,7 @@ export default function AdminOrdersPage() {
     if (!token) return
 
     try {
-      let url = "/api/admin/orders?size=100"
+      let url = "/api/admin/orders?size=100&sort=id,asc"
       if (selectedStatus !== "ALL") {
         url += `&orderStatus=${selectedStatus}`
       }
@@ -290,6 +298,21 @@ export default function AdminOrdersPage() {
     })
   }
 
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      // Toggle direction
+      if (sortDirection === "asc") {
+        setSortDirection("desc")
+      } else if (sortDirection === "desc") {
+        setSortKey(null)
+        setSortDirection(null)
+      }
+    } else {
+      setSortKey(key)
+      setSortDirection("asc")
+    }
+  }
+
   const filteredOrders = orders.filter((order) => {
     // Filter by status
     if (selectedStatus !== "ALL" && order.orderStatus !== selectedStatus) {
@@ -310,12 +333,50 @@ export default function AdminOrdersPage() {
     return true
   })
 
+  // Sort orders
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    if (!sortKey || !sortDirection) return 0
+
+    let aValue: any
+    let bValue: any
+
+    switch (sortKey) {
+      case "orderNumber":
+        aValue = a.orderNumber
+        bValue = b.orderNumber
+        break
+      case "createdAt":
+        aValue = new Date(a.createdAt).getTime()
+        bValue = new Date(b.createdAt).getTime()
+        break
+      case "customer":
+        aValue = a.customer.name
+        bValue = b.customer.name
+        break
+      case "totalAmount":
+        aValue = a.totalAmount
+        bValue = b.totalAmount
+        break
+      case "status":
+        aValue = a.orderStatus
+        bValue = b.orderStatus
+        break
+      default:
+        return 0
+    }
+
+    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1
+    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1
+    return 0
+  })
+
   // Pagination
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
-  const paginatedOrders = filteredOrders.slice(
+  const totalPages = Math.ceil(sortedOrders.length / itemsPerPage)
+  const paginatedOrders = sortedOrders.slice(
     currentPage * itemsPerPage,
     (currentPage + 1) * itemsPerPage
   )
+  const totalElements = sortedOrders.length
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -323,14 +384,7 @@ export default function AdminOrdersPage() {
   }
 
   if (loading) {
-    return (
-    <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
-        </div>
-      </div>
-    )
+    return <AdminLoadingSpinner size="lg" />
   }
 
   return (
@@ -348,14 +402,14 @@ export default function AdminOrdersPage() {
             )}
           </div>
           {googleSheetsEnabled && (
-            <Button
+            <LoadingButton
               onClick={handleSyncToGoogleSheets}
-              disabled={syncing}
-              className="bg-blue-600 hover:bg-blue-700"
+              isLoading={syncing}
+              loadingText="동기화 중..."
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-              {syncing ? "동기화 중..." : "구글 시트 동기화"}
-            </Button>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              구글 시트 동기화
+            </LoadingButton>
           )}
         </div>
 
@@ -437,13 +491,53 @@ export default function AdminOrdersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-b bg-gray-50/50">
-                        <TableHead className="font-semibold text-gray-700">주문번호</TableHead>
-                        <TableHead className="font-semibold text-gray-700">주문일시</TableHead>
-                        <TableHead className="font-semibold text-gray-700">고객명</TableHead>
+                        <SortableTableHead
+                          sortKey="orderNumber"
+                          currentSortKey={sortKey}
+                          currentSortDirection={sortDirection}
+                          onSort={handleSort}
+                          className="font-semibold text-gray-700"
+                        >
+                          주문번호
+                        </SortableTableHead>
+                        <SortableTableHead
+                          sortKey="createdAt"
+                          currentSortKey={sortKey}
+                          currentSortDirection={sortDirection}
+                          onSort={handleSort}
+                          className="font-semibold text-gray-700"
+                        >
+                          주문일시
+                        </SortableTableHead>
+                        <SortableTableHead
+                          sortKey="customer"
+                          currentSortKey={sortKey}
+                          currentSortDirection={sortDirection}
+                          onSort={handleSort}
+                          className="font-semibold text-gray-700"
+                        >
+                          고객명
+                        </SortableTableHead>
                         <TableHead className="font-semibold text-gray-700">상품</TableHead>
                         <TableHead className="font-semibold text-gray-700">판매자</TableHead>
-                        <TableHead className="font-semibold text-gray-700">금액</TableHead>
-                        <TableHead className="font-semibold text-gray-700">상태</TableHead>
+                        <SortableTableHead
+                          sortKey="totalAmount"
+                          currentSortKey={sortKey}
+                          currentSortDirection={sortDirection}
+                          onSort={handleSort}
+                          className="font-semibold text-gray-700"
+                        >
+                          금액
+                        </SortableTableHead>
+                        <SortableTableHead
+                          sortKey="status"
+                          currentSortKey={sortKey}
+                          currentSortDirection={sortDirection}
+                          onSort={handleSort}
+                          className="font-semibold text-gray-700"
+                        >
+                          상태
+                        </SortableTableHead>
                         <TableHead className="font-semibold text-gray-700">송장번호/취소사유</TableHead>
                         <TableHead className="font-semibold text-gray-700 text-center">관리</TableHead>
                       </TableRow>
@@ -525,35 +619,13 @@ export default function AdminOrdersPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex justify-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 0}
-                >
-                  이전
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => i).map((page) => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    onClick={() => handlePageChange(page)}
-                  >
-                    {page + 1}
-                  </Button>
-                ))}
-                <Button
-                  variant="outline"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages - 1}
-                >
-                  다음
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <AdminPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+          />
         )}
       </div>
 

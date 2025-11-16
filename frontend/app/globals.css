@@ -7,15 +7,43 @@
   --font-sans: "Geist", "Geist Fallback";
   --font-mono: "Geist Mono", "Geist Mono Fallback";
 
-  /* Color System - Fresh & Natural */
+  /* Color System - Fresh & Natural (오늘마트 브랜드) */
   --color-primary: #23747C;
   --color-primary-foreground: #ffffff;
+  --color-primary-50: #E8F4F5;
+  --color-primary-100: #C2E6EA;
+  --color-primary-200: #9BD8DD;
+  --color-primary-600: #1C5D63;
+  --color-primary-700: #154A4F;
 
   --color-secondary: #C2FFB1;
-  --color-secondary-foreground: #ffffff;
+  --color-secondary-foreground: #1a1a1a;
+  --color-secondary-600: #9BDB8A;
 
   --color-accent: #FF6B36;
   --color-accent-foreground: #ffffff;
+
+  /* Semantic Colors (브랜드 기반) */
+  --color-success: #2D8659;
+  --color-success-foreground: #ffffff;
+
+  --color-warning: #F59E0B;
+  --color-warning-foreground: #ffffff;
+
+  --color-danger: #DC2626;
+  --color-danger-foreground: #ffffff;
+
+  --color-info: #3B82F6;
+  --color-info-foreground: #ffffff;
+
+  /* 주문 상태 색상 (브랜드 정렬) */
+  --status-pending: #F59E0B;      /* 대기 중 - Amber */
+  --status-paid: #2D8659;         /* 결제 완료 - Teal Green */
+  --status-preparing: #23747C;    /* 준비 중 - Primary Teal */
+  --status-shipped: #7C3AED;      /* 배송 중 - Purple */
+  --status-delivered: #16A34A;    /* 배송 완료 - Green */
+  --status-cancelled: #DC2626;    /* 취소 - Red */
+  --status-return: #F97316;       /* 반품 - Orange */
 
   --color-background: #ffffff;
   --color-foreground: #1a1a1a;

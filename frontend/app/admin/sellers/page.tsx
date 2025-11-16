@@ -33,11 +33,13 @@ import {
   CheckCircle,
   XCircle,
   Percent,
-  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { toast as sonnerToast } from "sonner"
+import { AdminPagination } from "@/components/admin/AdminPagination"
+import { AdminLoadingSpinner } from "@/components/admin/AdminLoadingSpinner"
+import { SortableTableHead, SortDirection } from "@/components/ui/sortable-table-head"
 
 interface Seller {
   id: number
@@ -89,6 +91,10 @@ export default function AdminSellersPage() {
   const [keyword, setKeyword] = useState("")
   const [searchInput, setSearchInput] = useState("")
 
+  // Sorting states
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
+
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -103,7 +109,7 @@ export default function AdminSellersPage() {
 
     fetchSellers()
     fetchStatistics()
-  }, [page, statusFilter, keyword])
+  }, [page, statusFilter, keyword, sortKey, sortDirection])
 
   const fetchStatistics = async () => {
     try {
@@ -133,7 +139,7 @@ export default function AdminSellersPage() {
       const params = new URLSearchParams({
         page: page.toString(),
         size: "20",
-        sort: "createdAt,desc",
+        sort: "id,asc",
       })
 
       const data = await apiFetch<SellerPage>(`/api/admin/sellers?${params.toString()}`, {
@@ -158,6 +164,30 @@ export default function AdminSellersPage() {
         )
       }
 
+      // Sort sellers
+      if (sortKey && sortDirection) {
+        filteredSellers.sort((a, b) => {
+          const direction = sortDirection === "asc" ? 1 : -1
+
+          switch (sortKey) {
+            case "id":
+              return (a.id - b.id) * direction
+            case "name":
+              return a.name.localeCompare(b.name) * direction
+            case "representative":
+              return a.representative.localeCompare(b.representative) * direction
+            case "businessNumber":
+              return a.businessNumber.localeCompare(b.businessNumber) * direction
+            case "commissionRate":
+              return (a.commissionRate - b.commissionRate) * direction
+            case "createdAt":
+              return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * direction
+            default:
+              return 0
+          }
+        })
+      }
+
       setSellers(filteredSellers)
       setTotalElements(filteredSellers.length)
       setTotalPages(Math.ceil(filteredSellers.length / 20))
@@ -172,6 +202,20 @@ export default function AdminSellersPage() {
   const handleSearch = () => {
     setKeyword(searchInput)
     setPage(0)
+  }
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc")
+      } else if (sortDirection === "desc") {
+        setSortKey(null)
+        setSortDirection(null)
+      }
+    } else {
+      setSortKey(key)
+      setSortDirection("asc")
+    }
   }
 
   const handleRefresh = () => {
@@ -334,7 +378,7 @@ export default function AdminSellersPage() {
       {/* Actions */}
       <div className="flex justify-end">
         <Link href="/admin/sellers/new">
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button>
             <Plus className="h-4 w-4 mr-2" />
             판매자 등록
           </Button>
@@ -348,9 +392,7 @@ export default function AdminSellersPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
+            <AdminLoadingSpinner type="table" />
           ) : sellers.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               판매자가 없습니다
@@ -360,15 +402,58 @@ export default function AdminSellersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[60px]">ID</TableHead>
-                    <TableHead>사업자명</TableHead>
-                    <TableHead>사업자번호</TableHead>
-                    <TableHead>대표자</TableHead>
+                    <SortableTableHead
+                      sortKey="id"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="w-[60px]"
+                    >
+                      ID
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="name"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      사업자명
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="businessNumber"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      사업자번호
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="representative"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      대표자
+                    </SortableTableHead>
                     <TableHead>전화번호</TableHead>
                     <TableHead>이메일</TableHead>
-                    <TableHead>수수료율</TableHead>
+                    <SortableTableHead
+                      sortKey="commissionRate"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      수수료율
+                    </SortableTableHead>
                     <TableHead>상태</TableHead>
-                    <TableHead>등록일</TableHead>
+                    <SortableTableHead
+                      sortKey="createdAt"
+                      currentSortKey={sortKey}
+                      currentSortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      등록일
+                    </SortableTableHead>
                     <TableHead className="text-center">작업</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -382,14 +467,14 @@ export default function AdminSellersPage() {
                       <TableCell>{seller.phone || "-"}</TableCell>
                       <TableCell className="text-sm text-gray-600">{seller.email || "-"}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                        <Badge variant="secondary" style={{ backgroundColor: "var(--color-primary-50)", color: "var(--color-primary)" }}>
                           {seller.commissionRate}%
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant={seller.isActive ? "default" : "destructive"}
-                          className={seller.isActive ? "bg-green-100 text-green-800" : ""}
+                          style={seller.isActive ? { backgroundColor: "#E8F5E9", color: "var(--color-success)" } : undefined}
                         >
                           {seller.isActive ? "활성" : "비활성"}
                         </Badge>
@@ -433,24 +518,17 @@ export default function AdminSellersPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex justify-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage(page - 1)}
-                    disabled={page === 0}
-                  >
-                    이전
-                  </Button>
-                  <span className="flex items-center px-4">
-                    {page + 1} / {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage(page + 1)}
-                    disabled={page >= totalPages - 1}
-                  >
-                    다음
-                  </Button>
+                <div className="py-4">
+                  <AdminPagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalElements={totalElements}
+                    itemsPerPage={20}
+                    onPageChange={(newPage) => {
+                      setPage(newPage)
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                  />
                 </div>
               )}
             </div>

@@ -24,26 +24,26 @@ export function OrderStatusBadge({ status, className }: OrderStatusBadgeProps) {
     return statusMap[status] || status
   }
 
-  const getStatusColor = (status: string) => {
-    const colorMap: Record<string, string> = {
-      PENDING_PAYMENT: "bg-yellow-500",
-      PAYMENT_FAILED: "bg-red-600 text-white",
-      PENDING: "bg-yellow-500",
-      PAID: "bg-green-500",
-      PREPARING: "bg-blue-500",
-      SHIPPED: "bg-purple-500",
-      DELIVERED: "bg-green-600",
-      CANCELLED: "bg-red-600 text-white",
-      RETURN_REQUESTED: "bg-orange-500",
-      RETURN_APPROVED: "bg-orange-600",
-      RETURN_COMPLETED: "bg-gray-500",
-      PARTIALLY_RETURNED: "bg-gray-600",
+  const getStatusStyle = (status: string) => {
+    const styleMap: Record<string, { backgroundColor: string; color: string }> = {
+      PENDING_PAYMENT: { backgroundColor: "var(--status-pending)", color: "white" },
+      PAYMENT_FAILED: { backgroundColor: "var(--color-danger)", color: "white" },
+      PENDING: { backgroundColor: "var(--status-pending)", color: "white" },
+      PAID: { backgroundColor: "var(--status-paid)", color: "white" },
+      PREPARING: { backgroundColor: "var(--status-preparing)", color: "white" },
+      SHIPPED: { backgroundColor: "var(--status-shipped)", color: "white" },
+      DELIVERED: { backgroundColor: "var(--status-delivered)", color: "white" },
+      CANCELLED: { backgroundColor: "var(--status-cancelled)", color: "white" },
+      RETURN_REQUESTED: { backgroundColor: "var(--status-return)", color: "white" },
+      RETURN_APPROVED: { backgroundColor: "#EA580C", color: "white" },
+      RETURN_COMPLETED: { backgroundColor: "#6B7280", color: "white" },
+      PARTIALLY_RETURNED: { backgroundColor: "#4B5563", color: "white" },
     }
-    return colorMap[status] || "bg-muted"
+    return styleMap[status] || { backgroundColor: "var(--color-muted)", color: "var(--color-foreground)" }
   }
 
   return (
-    <Badge className={`${getStatusColor(status)} ${className || ""}`}>
+    <Badge style={getStatusStyle(status)} className={className}>
       {getStatusLabel(status)}
     </Badge>
   )
