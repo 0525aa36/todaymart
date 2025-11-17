@@ -399,28 +399,28 @@ export function Header() {
             <CategoryNav />
 
             {/* 퀵 카테고리 링크 - 중앙 */}
-            <div className="flex items-center justify-center gap-20 flex-1">
+            <div className="flex items-center justify-center gap-5 sm:gap-8 md:gap-12 lg:gap-20 flex-1">
               <Link
                 href="/search?sort=best"
-                className="text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
+                className="text-sm sm:text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
               >
                 베스트
               </Link>
               <Link
                 href="/search?sort=new"
-                className="text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
+                className="text-sm sm:text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
               >
                 신상
               </Link>
               <Link
                 href="/search?sort=discount"
-                className="text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
+                className="text-sm sm:text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
               >
                 세일
               </Link>
               <Link
                 href="/search?sort=special"
-                className="text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
+                className="text-sm sm:text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
               >
                 특가
               </Link>
