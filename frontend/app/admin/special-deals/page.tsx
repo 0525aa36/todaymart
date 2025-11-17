@@ -148,8 +148,8 @@ export default function AdminSpecialDealsPage() {
     setFormData({
       title: deal.title,
       description: deal.description,
-      startTime: new Date(deal.startTime).toISOString().slice(0, 16),
-      endTime: new Date(deal.endTime).toISOString().slice(0, 16),
+      startTime: deal.startTime.slice(0, 16), // KST 시간 그대로 사용 (타임존 변환 방지)
+      endTime: deal.endTime.slice(0, 16), // KST 시간 그대로 사용 (타임존 변환 방지)
       discountRate: deal.discountRate,
       isActive: deal.isActive,
       displayOrder: deal.displayOrder,
@@ -164,8 +164,8 @@ export default function AdminSpecialDealsPage() {
     try {
       const payload = {
         ...formData,
-        startTime: new Date(formData.startTime).toISOString(),
-        endTime: new Date(formData.endTime).toISOString(),
+        startTime: formData.startTime + ':00', // datetime-local 형식에 초 추가 (KST 유지)
+        endTime: formData.endTime + ':00', // datetime-local 형식에 초 추가 (KST 유지)
         productIds: selectedProductIds,
       }
 
