@@ -62,6 +62,8 @@ interface Product {
   imageUrl: string
   imageUrls?: string
   seller?: Seller
+  isMdPick?: boolean
+  mdPickReason?: string
   createdAt: string
   updatedAt: string
 }
@@ -274,6 +276,28 @@ export default function AdminProductsPage() {
       } else {
         sonnerToast.error(getErrorMessage(error, "상품 삭제 중 오류가 발생했습니다"))
       }
+    }
+  }
+
+  const handleToggleMdPick = async (productId: number, currentStatus: boolean) => {
+    try {
+      let reason = null
+      if (!currentStatus) {
+        // MD 추천으로 설정하는 경우, 추천 이유 입력받기
+        reason = prompt("MD 추천 이유를 입력하세요:")
+        if (reason === null) return // 취소한 경우
+      }
+
+      await apiFetch(`/api/admin/products/${productId}/md-pick?reason=${encodeURIComponent(reason || '')}`, {
+        method: "POST",
+        auth: true,
+      })
+
+      sonnerToast.success(currentStatus ? "MD 추천이 해제되었습니다" : "MD 추천으로 설정되었습니다")
+      fetchProducts()
+    } catch (error: any) {
+      console.error("Error toggling MD pick:", error)
+      sonnerToast.error(getErrorMessage(error, "MD 추천 설정 중 오류가 발생했습니다"))
     }
   }
 
@@ -575,6 +599,7 @@ export default function AdminProductsPage() {
                     >
                       등록일
                     </SortableTableHead>
+                    <TableHead className="text-center">MD 추천</TableHead>
                     <TableHead className="text-center">작업</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -629,6 +654,16 @@ export default function AdminProductsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">{formatDate(product.createdAt)}</TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant={product.isMdPick ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleToggleMdPick(product.id, product.isMdPick || false)}
+                          className="h-8 px-3"
+                        >
+                          {product.isMdPick ? "✓ MD 추천" : "MD 추천"}
+                        </Button>
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-2 justify-center">
                           <Button

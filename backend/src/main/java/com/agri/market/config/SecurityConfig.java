@@ -105,6 +105,10 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger API documentation
                         .requestMatchers("/api/faqs/**").permitAll() // Public FAQ endpoints
                         .requestMatchers("/api/notices/**").permitAll() // Public notice endpoints
+                        .requestMatchers("/api/special-deals/ongoing").permitAll() // Public special deals - ongoing
+                        .requestMatchers("/api/special-deals/upcoming").permitAll() // Public special deals - upcoming
+                        .requestMatchers(HttpMethod.GET, "/api/special-deals/*").permitAll() // Public special deal by ID
+                        .requestMatchers(HttpMethod.GET, "/api/home-sections").permitAll() // Public home sections for dynamic homepage
                         .requestMatchers("/api/admin/**").hasRole("ADMIN") // Admin roles for admin endpoints
                         .anyRequest().authenticated()
                 )

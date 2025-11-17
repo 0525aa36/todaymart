@@ -606,4 +606,133 @@ public class ProductService {
 
         logger.info("Bulk stock update completed - {} items updated", request.getItems().size());
     }
+
+    // ==================== 트렌딩 및 MD 추천 시스템 ====================
+
+    /**
+     * 조회수 증가
+     */
+    @Transactional
+    public void incrementViewCount(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
+        product.setViewCount(product.getViewCount() + 1);
+        productRepository.save(product);
+    }
+
+    /**
+     * 인기 급상승 상품 조회 (조회수 기준)
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductListDto> getTrendingProductsByViews(Pageable pageable) {
+        Page<Product> products = productRepository.findByOrderByViewCountDescCreatedAtDesc(pageable);
+        return convertToProductListDtoPage(products, pageable);
+    }
+
+    /**
+     * 인기 급상승 상품 조회 (판매량 기준)
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductListDto> getTrendingProductsBySales(Pageable pageable) {
+        Page<Product> products = productRepository.findByOrderBySalesCountDescCreatedAtDesc(pageable);
+        return convertToProductListDtoPage(products, pageable);
+    }
+
+    /**
+     * 종합 인기도 기준 (조회수 + 판매량 * 10)
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductListDto> getTrendingProducts(Pageable pageable) {
+        // 조회수와 판매량을 모두 고려하여 정렬
+        // 판매량에 더 높은 가중치 (10배)
+        Page<Product> allProducts = productRepository.findAllWithImages(pageable);
+
+        List<Product> sorted = allProducts.getContent().stream()
+                .sorted((p1, p2) -> {
+                    long score1 = p1.getViewCount() + (p1.getSalesCount() * 10);
+                    long score2 = p2.getViewCount() + (p2.getSalesCount() * 10);
+                    return Long.compare(score2, score1); // 내림차순
+                })
+                .collect(Collectors.toList());
+
+        Page<Product> products = new PageImpl<>(sorted, pageable, allProducts.getTotalElements());
+        return convertToProductListDtoPage(products, pageable);
+    }
+
+    /**
+     * MD 추천 상품 조회
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductListDto> getMdPickProducts(Pageable pageable) {
+        Page<Product> products = productRepository.findByIsMdPickTrueOrderByCreatedAtDesc(pageable);
+        return convertToProductListDtoPage(products, pageable);
+    }
+
+    /**
+     * MD 추천 설정 토글
+     */
+    @Transactional
+    public Product toggleMdPick(Long productId, String reason) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
+
+        product.setIsMdPick(!product.getIsMdPick());
+        if (product.getIsMdPick()) {
+            product.setMdPickReason(reason);
+        } else {
+            product.setMdPickReason(null);
+        }
+
+        return productRepository.save(product);
+    }
+
+    /**
+     * 판매량 증가 (주문 완료시 호출)
+     */
+    @Transactional
+    public void incrementSalesCount(Long productId, Integer quantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
+        product.setSalesCount(product.getSalesCount() + quantity);
+        productRepository.save(product);
+    }
+
+    /**
+     * Product를 ProductListDto로 변환 (헬퍼 메서드)
+     */
+    private Page<ProductListDto> convertToProductListDtoPage(Page<Product> products, Pageable pageable) {
+        List<Long> productIds = products.getContent().stream()
+                .map(Product::getId)
+                .collect(Collectors.toList());
+
+        Map<Long, Double> ratingMap = new HashMap<>();
+        Map<Long, Long> countMap = new HashMap<>();
+
+        if (!productIds.isEmpty()) {
+            List<Map<String, Object>> ratings = reviewRepository.findAverageRatingsByProductIds(productIds);
+            ratings.forEach(row -> {
+                Long productId = ((Number) row.get("productId")).longValue();
+                Double avgRating = row.get("avgRating") != null ? ((Number) row.get("avgRating")).doubleValue() : null;
+                ratingMap.put(productId, avgRating);
+            });
+
+            List<Map<String, Object>> counts = reviewRepository.countReviewsByProductIds(productIds);
+            counts.forEach(row -> {
+                Long productId = ((Number) row.get("productId")).longValue();
+                Long reviewCount = ((Number) row.get("reviewCount")).longValue();
+                countMap.put(productId, reviewCount);
+            });
+        }
+
+        List<ProductListDto> productDtos = products.getContent().stream()
+                .map(product -> {
+                    product.getOptions().size();
+                    Double avgRating = ratingMap.get(product.getId());
+                    Long reviewCount = countMap.getOrDefault(product.getId(), 0L);
+                    return new ProductListDto(product, avgRating, reviewCount);
+                })
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(productDtos, pageable, products.getTotalElements());
+    }
 }

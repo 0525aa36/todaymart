@@ -1,11 +1,7 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ErrorBoundary } from '@/components/error-boundary'
 import './globals.css'
-
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: '오늘마트 - 농수산물 직송 쇼핑몰',
@@ -24,12 +20,18 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        <link
+          rel="stylesheet"
+          as="style"
+          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
+        />
         <script
           src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
           async
         />
       </head>
-      <body className={`font-sans antialiased`}>
+      <body className="antialiased">
         <ErrorBoundary>
           {children}
         </ErrorBoundary>

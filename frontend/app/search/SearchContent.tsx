@@ -34,6 +34,7 @@ export function SearchContent() {
   const router = useRouter()
   const [searchKeyword, setSearchKeyword] = useState(searchParams.get("keyword") || "")
   const [category, setCategory] = useState(searchParams.get("category") || "")
+  const [sortType, setSortType] = useState(searchParams.get("sort") || "")
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [totalElements, setTotalElements] = useState(0)
@@ -43,23 +44,52 @@ export function SearchContent() {
   useEffect(() => {
     const keyword = searchParams.get("keyword") || ""
     const cat = searchParams.get("category") || ""
+    const sort = searchParams.get("sort") || ""
     setSearchKeyword(keyword)
     setCategory(cat)
-    searchProducts(keyword, cat, 0)
+    setSortType(sort)
+    searchProducts(keyword, cat, sort, 0)
   }, [searchParams])
 
-  const searchProducts = async (keyword: string, cat: string, page: number) => {
+  const searchProducts = async (keyword: string, cat: string, sort: string, page: number) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (keyword) params.append("keyword", keyword)
       if (cat) params.append("category", cat)
       params.append("page", page.toString())
-      params.append("size", "12")
+      params.append("size", "20")
+
+      // sort 파라미터에 따라 정렬 설정
+      if (sort === "best") {
+        // 베스트: 판매량 순
+        params.append("sort", "salesCount,desc")
+      } else if (sort === "new") {
+        // 신상: 최신순
+        params.append("sort", "createdAt,desc")
+      } else if (sort === "discount") {
+        // 세일: 할인율 높은 순
+        params.append("sort", "discountRate,desc")
+      } else if (sort === "trending") {
+        // 인기: 조회수 순
+        params.append("sort", "viewCount,desc")
+      } else if (sort === "special") {
+        // 특가: 할인율이 있는 상품만 + 할인율 높은 순
+        params.append("sort", "discountRate,desc")
+      }
 
       const data = await apiFetch<SearchResponse>(`/api/products/search?${params.toString()}`)
-      setProducts(data.content)
-      setTotalElements(data.totalElements)
+
+      // 특가의 경우 할인율이 있는 상품만 필터링
+      if (sort === "special") {
+        const filteredContent = data.content.filter(p => p.discountRate && p.discountRate > 0)
+        setProducts(filteredContent)
+        setTotalElements(filteredContent.length)
+      } else {
+        setProducts(data.content)
+        setTotalElements(data.totalElements)
+      }
+
       setTotalPages(data.totalPages)
       setCurrentPage(data.number)
     } catch (error) {
@@ -71,14 +101,23 @@ export function SearchContent() {
   }
 
   const handlePageChange = (page: number) => {
-    searchProducts(searchKeyword, category, page)
+    searchProducts(searchKeyword, category, sortType, page)
+  }
+
+  const getPageTitle = () => {
+    if (sortType === "best") return "베스트 상품"
+    if (sortType === "new") return "신상품"
+    if (sortType === "discount") return "세일 상품"
+    if (sortType === "special") return "특가 상품"
+    if (sortType === "trending") return "인기 상품"
+    return "상품 검색"
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
           {/* Search Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-4">상품 검색</h1>
+            <h1 className="text-3xl font-bold mb-4">{getPageTitle()}</h1>
 
             {/* Search Result Info */}
             {!loading && (

@@ -88,4 +88,26 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "WHERE p.seller.id = :sellerId " +
            "ORDER BY p.createdAt DESC")
     List<Product> findBySellerIdWithImagesAndOptions(@Param("sellerId") Long sellerId);
+
+    // ==================== 트렌딩 및 MD 추천 쿼리 ====================
+
+    // 조회수 기준 인기 상품
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.seller " +
+           "ORDER BY p.viewCount DESC, p.createdAt DESC")
+    Page<Product> findByOrderByViewCountDescCreatedAtDesc(Pageable pageable);
+
+    // 판매량 기준 인기 상품
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.seller " +
+           "ORDER BY p.salesCount DESC, p.createdAt DESC")
+    Page<Product> findByOrderBySalesCountDescCreatedAtDesc(Pageable pageable);
+
+    // MD 추천 상품
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.seller " +
+           "WHERE p.isMdPick = true " +
+           "ORDER BY p.createdAt DESC")
+    Page<Product> findByIsMdPickTrueOrderByCreatedAtDesc(Pageable pageable);
+
+    // 모든 카테고리 목록 조회
+    @Query("SELECT DISTINCT p.category FROM Product p WHERE p.category IS NOT NULL ORDER BY p.category")
+    List<String> findDistinctCategories();
 }

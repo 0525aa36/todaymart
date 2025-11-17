@@ -24,7 +24,9 @@ import {
   MessageCircle,
   FolderTree,
   Warehouse,
-  RotateCcw
+  RotateCcw,
+  Zap,
+  Home
 } from 'lucide-react'
 import { API_BASE_URL } from '@/lib/api-client'
 
@@ -119,8 +121,10 @@ export default function AdminLayout({
     {
       label: '마케팅',
       items: [
+        { icon: Home, label: '홈 화면 관리', href: '/admin/home' },
         { icon: Ticket, label: '쿠폰 관리', href: '/admin/coupons' },
         { icon: Image, label: '배너 관리', href: '/admin/banners' },
+        { icon: Zap, label: '특가 관리', href: '/admin/special-deals' },
       ]
     },
     {

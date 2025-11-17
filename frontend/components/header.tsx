@@ -283,7 +283,7 @@ export function Header() {
               <div className="flex justify-center">
                 <form
                   onSubmit={handleSearch}
-                  className="relative w-full max-w-4xl"
+                  className="relative w-full max-w-2xl"
                 >
                   <Input
                     type="search"
@@ -394,25 +394,37 @@ export function Header() {
       {/* Navigation - 고정하지 않음 */}
       <nav className="w-full border-t bg-white shadow-sm">
         <div className="container mx-auto px-4 max-w-6xl">
-          <div className="flex items-center py-3 gap-8">
-            {/* 카테고리 버튼 */}
+          <div className="flex items-center py-3">
+            {/* 카테고리 버튼 - 왼쪽 */}
             <CategoryNav />
 
-            {/* 신상품, 베스트 링크 */}
-            {/* <div className="flex items-center gap-8">
+            {/* 퀵 카테고리 링크 - 중앙 */}
+            <div className="flex items-center justify-center gap-20 flex-1">
               <Link
-                href="/new-arrivals"
-                className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-              >
-                신상품
-              </Link>
-              <Link
-                href="/best"
-                className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
+                href="/search?sort=best"
+                className="text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
               >
                 베스트
               </Link>
-            </div> */}
+              <Link
+                href="/search?sort=new"
+                className="text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
+              >
+                신상
+              </Link>
+              <Link
+                href="/search?sort=discount"
+                className="text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
+              >
+                세일
+              </Link>
+              <Link
+                href="/search?sort=special"
+                className="text-base font-semibold hover:text-primary transition-colors whitespace-nowrap"
+              >
+                특가
+              </Link>
+            </div>
           </div>
         </div>
       </nav>

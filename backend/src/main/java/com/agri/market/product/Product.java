@@ -113,6 +113,20 @@ public class Product {
     @JoinColumn(name = "seller_id")
     private Seller seller;
 
+    // 인기도 추적
+    @Column(nullable = false)
+    private Long viewCount = 0L; // 조회수
+
+    @Column(nullable = false)
+    private Long salesCount = 0L; // 판매량 (주문 완료 기준)
+
+    // MD 추천 기능
+    @Column(nullable = false)
+    private Boolean isMdPick = false; // MD 추천 여부
+
+    @Column(length = 500)
+    private String mdPickReason; // MD 추천 이유
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

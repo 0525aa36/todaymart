@@ -139,4 +139,54 @@ public class ProductController {
             Pageable pageable) {
         return ResponseEntity.ok(productService.getProductsByCategoryCode(categoryCode, pageable));
     }
+
+    // ==================== 트렌딩 및 MD 추천 엔드포인트 ====================
+
+    @Operation(summary = "인기 급상승 상품 조회", description = "조회수와 판매량을 기반으로 인기 급상승 상품 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인기 상품 조회 성공",
+                    content = @Content(schema = @Schema(implementation = Page.class)))
+    })
+    @GetMapping("/trending")
+    public ResponseEntity<Page<ProductListDto>> getTrendingProducts(Pageable pageable) {
+        Page<ProductListDto> products = productService.getTrendingProducts(pageable);
+        return ResponseEntity.ok(products);
+    }
+
+    @Operation(summary = "MD 추천 상품 조회", description = "MD가 추천한 상품 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "MD 추천 상품 조회 성공",
+                    content = @Content(schema = @Schema(implementation = Page.class)))
+    })
+    @GetMapping("/md-picks")
+    public ResponseEntity<Page<ProductListDto>> getMdPickProducts(Pageable pageable) {
+        Page<ProductListDto> products = productService.getMdPickProducts(pageable);
+        return ResponseEntity.ok(products);
+    }
+
+    @Operation(summary = "상품 조회수 증가", description = "상품 상세 페이지 조회 시 호출하여 조회수를 증가시킵니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회수 증가 성공")
+    })
+    @PostMapping("/{productId}/view")
+    public ResponseEntity<Void> incrementViewCount(
+            @Parameter(description = "상품 ID", required = true) @PathVariable Long productId) {
+        productService.incrementViewCount(productId);
+        return ResponseEntity.ok().build();
+    }
+
+    // ==================== 관리자 전용 엔드포인트 ====================
+
+    @Operation(summary = "[관리자] MD 추천 설정", description = "상품을 MD 추천으로 설정하거나 해제합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "MD 추천 설정 성공",
+                    content = @Content(schema = @Schema(implementation = Product.class)))
+    })
+    @PostMapping("/admin/{productId}/md-pick")
+    public ResponseEntity<Product> toggleMdPick(
+            @Parameter(description = "상품 ID", required = true) @PathVariable Long productId,
+            @Parameter(description = "추천 이유") @RequestParam(required = false) String reason) {
+        Product product = productService.toggleMdPick(productId, reason);
+        return ResponseEntity.ok(product);
+    }
 }
