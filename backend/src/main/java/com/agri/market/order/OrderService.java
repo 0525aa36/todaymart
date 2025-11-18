@@ -105,6 +105,16 @@ public class OrderService {
             Product product = productRepository.findByIdWithLock(itemRequest.getProductId())
                     .orElseThrow(() -> new RuntimeException("Product not found with id: " + itemRequest.getProductId()));
 
+            // 최소 주문 수량 검증
+            if (product.getMinOrderQuantity() != null && itemRequest.getQuantity() < product.getMinOrderQuantity()) {
+                throw new RuntimeException(product.getName() + " 상품의 최소 주문 수량은 " + product.getMinOrderQuantity() + "개입니다.");
+            }
+
+            // 최대 주문 수량 검증
+            if (product.getMaxOrderQuantity() != null && itemRequest.getQuantity() > product.getMaxOrderQuantity()) {
+                throw new RuntimeException(product.getName() + " 상품의 최대 주문 수량은 " + product.getMaxOrderQuantity() + "개입니다.");
+            }
+
             if (product.getStock() < itemRequest.getQuantity()) {
                 throw new RuntimeException("Not enough stock for product: " + product.getName());
             }

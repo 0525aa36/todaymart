@@ -26,6 +26,8 @@ interface Product {
   shippingFee: number
   canCombineShipping: boolean
   combineShippingUnit: number | null
+  minOrderQuantity: number
+  maxOrderQuantity: number | null
 }
 
 interface ProductOption {
@@ -93,8 +95,27 @@ export function CartPage() {
     }
   }
 
-  const updateQuantity = async (itemId: number, newQuantity: number) => {
-    if (newQuantity < 1) return
+  const updateQuantity = async (itemId: number, newQuantity: number, product: Product) => {
+    const minQty = product.minOrderQuantity || 1
+    const maxQty = product.maxOrderQuantity
+
+    if (newQuantity < minQty) {
+      toast({
+        title: "수량 변경 불가",
+        description: `${product.name} 상품의 최소 주문 수량은 ${minQty}개입니다.`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (maxQty && newQuantity > maxQty) {
+      toast({
+        title: "수량 변경 불가",
+        description: `${product.name} 상품의 최대 주문 수량은 ${maxQty}개입니다.`,
+        variant: "destructive",
+      })
+      return
+    }
 
     const token = localStorage.getItem("token")
     if (!token) return
@@ -200,6 +221,41 @@ export function CartPage() {
 
   const totalShipping = selectedCartItems.reduce((sum, item) => sum + calculateShipping(item), 0)
   const finalTotal = totalProductPrice + totalShipping
+
+  // 최소/최대 주문 수량 검증
+  const validateOrderQuantities = (): boolean => {
+    for (const item of selectedCartItems) {
+      const product = item.product
+      const minQty = product.minOrderQuantity || 1
+      const maxQty = product.maxOrderQuantity
+
+      if (item.quantity < minQty) {
+        toast({
+          title: "주문 수량 오류",
+          description: `${product.name} 상품의 최소 주문 수량은 ${minQty}개입니다.`,
+          variant: "destructive",
+        })
+        return false
+      }
+
+      if (maxQty && item.quantity > maxQty) {
+        toast({
+          title: "주문 수량 오류",
+          description: `${product.name} 상품의 최대 주문 수량은 ${maxQty}개입니다.`,
+          variant: "destructive",
+        })
+        return false
+      }
+    }
+    return true
+  }
+
+  const handleCheckout = () => {
+    if (selectedItems.length === 0) return
+    if (validateOrderQuantities()) {
+      router.push("/checkout")
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -310,14 +366,21 @@ export function CartPage() {
                             <span className="text-lg font-bold">{item.price.toLocaleString()}원</span>
                           </div>
 
+                          {/* 최소 주문 수량 안내 */}
+                          {item.product.minOrderQuantity > 1 && (
+                            <div className="text-sm text-orange-600 mb-2">
+                              ⚠️ 최소 주문 수량: {item.product.minOrderQuantity}개
+                            </div>
+                          )}
+
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Button
                                 variant="outline"
                                 size="icon"
                                 className="h-8 w-8 bg-transparent"
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                disabled={item.quantity <= 1}
+                                onClick={() => updateQuantity(item.id, item.quantity - 1, item.product)}
+                                disabled={item.quantity <= (item.product.minOrderQuantity || 1)}
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
@@ -331,7 +394,11 @@ export function CartPage() {
                                 variant="outline"
                                 size="icon"
                                 className="h-8 w-8 bg-transparent"
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() => updateQuantity(item.id, item.quantity + 1, item.product)}
+                                disabled={
+                                  (item.product.maxOrderQuantity !== null && item.quantity >= item.product.maxOrderQuantity) ||
+                                  item.quantity >= item.product.stock
+                                }
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>
@@ -394,8 +461,13 @@ export function CartPage() {
                         <span className="text-2xl font-bold text-primary">{finalTotal.toLocaleString()}원</span>
                       </div>
 
-                      <Button className="w-full mb-3" size="lg" disabled={selectedItems.length === 0} asChild>
-                        <Link href="/checkout">주문하기</Link>
+                      <Button
+                        className="w-full mb-3"
+                        size="lg"
+                        disabled={selectedItems.length === 0}
+                        onClick={handleCheckout}
+                      >
+                        주문하기
                       </Button>
 
                       <Button variant="outline" className="w-full bg-transparent" asChild>

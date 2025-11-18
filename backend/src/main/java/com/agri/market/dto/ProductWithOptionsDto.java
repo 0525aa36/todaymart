@@ -26,6 +26,8 @@ public class ProductWithOptionsDto {
     private BigDecimal shippingFee;
     private Boolean canCombineShipping;
     private Integer combineShippingUnit;
+    private Integer minOrderQuantity;
+    private Integer maxOrderQuantity;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -90,4 +92,10 @@ public class ProductWithOptionsDto {
 
     public Integer getCombineShippingUnit() { return combineShippingUnit; }
     public void setCombineShippingUnit(Integer combineShippingUnit) { this.combineShippingUnit = combineShippingUnit; }
+
+    public Integer getMinOrderQuantity() { return minOrderQuantity; }
+    public void setMinOrderQuantity(Integer minOrderQuantity) { this.minOrderQuantity = minOrderQuantity; }
+
+    public Integer getMaxOrderQuantity() { return maxOrderQuantity; }
+    public void setMaxOrderQuantity(Integer maxOrderQuantity) { this.maxOrderQuantity = maxOrderQuantity; }
 }

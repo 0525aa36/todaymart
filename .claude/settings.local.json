@@ -106,7 +106,16 @@
       "Bash(git remote get-url:*)",
       "WebFetch(domain:band.us)",
       "Bash(JWT_SECRET=\"l+M2HT323RdnuAjRZB/KsXeREnG47s70ff/m1nty6fZK3dLSrXOgKek14a1Lzl+6twRjlfs4lShBy6MveP9yuA==\" NAVER_CLIENT_ID=\"mclMxOndgnb3NwKPSLcx\" NAVER_CLIENT_SECRET=\"bdkPlBthqK\" KAKAO_CLIENT_ID=\"56380206602abece46af0dabc59a7c66\" KAKAO_CLIENT_SECRET=\"b06HyFFbPBgEndovP5UGf3uLPkYPaTFv\" GOOGLE_SHEETS_ENABLED=true GOOGLE_SHEETS_CREDENTIALS_PATH=./google-credentials.json WEBHOOK_SECRET=\"test-webhook-secret\" TOSS_PAYMENTS_CLIENT_KEY=\"test_gck_ex6BJGQOVDKR16DAee4Q3W4w2zNb\" TOSS_PAYMENTS_SECRET_KEY=\"test_gsk_5OWRapdA8dWg4pRQMmvPro1zEqZK\" SENDGRID_API_KEY=\"test\" ./gradlew bootRun:*)",
-      "Bash(pnpm list:*)"
+      "Bash(pnpm list:*)",
+      "Bash(\"AMPLIFY_DIFF_DEPLOY\"=\"false\" )",
+      "Bash(\"AMPLIFY_MONOREPO_APP_ROOT\"=\"frontend\" )",
+      "Bash(\"NEXT_PUBLIC_API_BASE_URL\"=\"https://api.todaymart.co.kr\" )",
+      "Bash(\"NEXT_PUBLIC_API_URL\"=\"https://api.todaymart.co.kr\" )",
+      "Bash(\"NEXT_PUBLIC_TOSS_CLIENT_KEY\"=\"live_gck_Z61JOxRQVE1OQkWQZ9EyVW0X9bAq\" )",
+      "Bash(Key=stickiness.enabled,Value=true )",
+      "Bash(Key=stickiness.type,Value=lb_cookie )",
+      "Bash(Key=stickiness.lb_cookie.duration_seconds,Value=86400 )",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []

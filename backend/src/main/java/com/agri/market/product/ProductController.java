@@ -87,6 +87,8 @@ public class ProductController {
         dto.setShippingFee(product.getShippingFee());
         dto.setCanCombineShipping(product.getCanCombineShipping());
         dto.setCombineShippingUnit(product.getCombineShippingUnit());
+        dto.setMinOrderQuantity(product.getMinOrderQuantity());
+        dto.setMaxOrderQuantity(product.getMaxOrderQuantity());
 
         // 옵션 정보 추가
         List<ProductOptionResponse> options = product.getOptions().stream()

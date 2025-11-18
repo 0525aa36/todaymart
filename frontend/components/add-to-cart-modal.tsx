@@ -30,6 +30,8 @@ interface Product {
   options: ProductOption[]
   stock: number
   stockStatus: "SOLD_OUT" | "LOW_STOCK" | "IN_STOCK"
+  minOrderQuantity: number
+  maxOrderQuantity: number | null
 }
 
 interface AddToCartModalProps {
@@ -59,7 +61,8 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
       console.log("Product data:", data)
       console.log("Product options:", data.options)
       setProduct(data)
-      setQuantity(1)
+      // 초기 수량을 최소 주문 수량으로 설정
+      setQuantity(data.minOrderQuantity || 1)
       setSelectedOptionId(undefined)
     } catch (error) {
       console.error("Error fetching product:", error)
@@ -69,25 +72,35 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
   }
 
   const handleQuantityChange = (delta: number) => {
-    const maxStock = product?.stock || 999
-    const newQuantity = prev => {
+    if (!product) return
+
+    const minQty = product.minOrderQuantity || 1
+    const maxQty = product.maxOrderQuantity || product.stock
+    const maxStock = product.stock || 999
+
+    setQuantity(prev => {
       const next = prev + delta
 
-      // 재고 한도 도달 시 알림
-      if (next > maxStock) {
-        toast.warning(`최대 ${maxStock}개까지만 구매 가능합니다`)
+      // 최소 주문 수량 검증
+      if (next < minQty) {
+        toast.warning(`최소 주문 수량은 ${minQty}개입니다`)
         return prev
       }
 
-      // 최소 수량 1개
-      if (next < 1) {
-        return 1
+      // 최대 주문 수량 검증 (설정된 경우)
+      if (product.maxOrderQuantity && next > product.maxOrderQuantity) {
+        toast.warning(`최대 주문 수량은 ${product.maxOrderQuantity}개입니다`)
+        return prev
+      }
+
+      // 재고 한도 검증
+      if (next > maxStock) {
+        toast.warning(`재고는 ${maxStock}개만 남아있습니다`)
+        return prev
       }
 
       return next
-    }
-
-    setQuantity(newQuantity)
+    })
   }
 
   const handleAddToCart = async () => {
@@ -188,12 +201,17 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
             {/* 수량 선택 */}
             <div className="space-y-2">
               <Label>수량</Label>
+              {product.minOrderQuantity > 1 && (
+                <p className="text-sm text-orange-600">
+                  ⚠️ 최소 주문 수량: {product.minOrderQuantity}개
+                </p>
+              )}
               <div className="flex items-center gap-3">
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => handleQuantityChange(-1)}
-                  disabled={quantity <= 1 || product.stockStatus === "SOLD_OUT"}
+                  disabled={quantity <= (product.minOrderQuantity || 1) || product.stockStatus === "SOLD_OUT"}
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
@@ -202,7 +220,11 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
                   variant="outline"
                   size="icon"
                   onClick={() => handleQuantityChange(1)}
-                  disabled={quantity >= product.stock || product.stockStatus === "SOLD_OUT"}
+                  disabled={
+                    product.stockStatus === "SOLD_OUT" ||
+                    quantity >= product.stock ||
+                    (product.maxOrderQuantity !== null && quantity >= product.maxOrderQuantity)
+                  }
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
