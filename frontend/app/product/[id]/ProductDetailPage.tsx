@@ -57,6 +57,8 @@ interface Product {
   shippingFee: number
   canCombineShipping: boolean
   combineShippingUnit: number | null
+  minOrderQuantity: number
+  maxOrderQuantity: number | null
 }
 
 interface Review {
@@ -125,6 +127,11 @@ export function ProductDetailPage() {
       const data = await apiFetch<Product>(`/api/products/${productId}`)
       setProduct(data)
       setMainImage(data.imageUrl)
+
+      // 초기 수량을 최소 주문 수량으로 설정
+      if (data.minOrderQuantity > 1) {
+        setQuantity(data.minOrderQuantity)
+      }
 
       // 상품 고시 정보 불러오기
       try {
@@ -196,6 +203,29 @@ export function ProductDetailPage() {
       return
     }
 
+    if (!product) return
+
+    // 최소 주문 수량 검증
+    const minQty = product.minOrderQuantity || 1
+    if (quantity < minQty) {
+      toast({
+        title: "최소 주문 수량 미달",
+        description: `이 상품은 최소 ${minQty}개 이상 주문해야 합니다`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 최대 주문 수량 검증
+    if (product.maxOrderQuantity && quantity > product.maxOrderQuantity) {
+      toast({
+        title: "최대 주문 수량 초과",
+        description: `이 상품은 최대 ${product.maxOrderQuantity}개까지만 주문 가능합니다`,
+        variant: "destructive",
+      })
+      return
+    }
+
     // 옵션이 있는 상품인데 옵션을 선택하지 않은 경우
     if (productOptions.length > 0 && !selectedOption) {
       toast({
@@ -237,21 +267,42 @@ export function ProductDetailPage() {
   }
 
   const handleQuantityChange = (delta: number) => {
+    if (!product) return
+
+    const minQty = product.minOrderQuantity || 1
+    const maxQty = product.maxOrderQuantity
     const maxStock = selectedOption?.stock || product?.stock || 999
     const newQuantity = quantity + delta
 
-    // 재고 한도 도달 시 알림
-    if (newQuantity > maxStock) {
+    // 최소 주문 수량 검증
+    if (newQuantity < minQty) {
+      if (delta < 0) { // 감소 시도 시에만 알림
+        toast({
+          title: "최소 주문 수량",
+          description: `최소 ${minQty}개 이상 주문해야 합니다`,
+          variant: "destructive",
+        })
+      }
+      return
+    }
+
+    // 최대 주문 수량 검증 (설정된 경우)
+    if (maxQty && newQuantity > maxQty) {
       toast({
-        title: "재고 한도 도달",
-        description: `최대 ${maxStock}개까지만 구매 가능합니다`,
+        title: "최대 주문 수량 초과",
+        description: `최대 ${maxQty}개까지만 주문 가능합니다`,
         variant: "destructive",
       })
       return
     }
 
-    // 최소 수량 1개
-    if (newQuantity < 1) {
+    // 재고 한도 도달 시 알림
+    if (newQuantity > maxStock) {
+      toast({
+        title: "재고 한도 도달",
+        description: `재고는 ${maxStock}개만 남아있습니다`,
+        variant: "destructive",
+      })
       return
     }
 
@@ -267,6 +318,29 @@ export function ProductDetailPage() {
         variant: "destructive",
       })
       router.push("/login")
+      return
+    }
+
+    if (!product) return
+
+    // 최소 주문 수량 검증
+    const minQty = product.minOrderQuantity || 1
+    if (quantity < minQty) {
+      toast({
+        title: "최소 주문 수량 미달",
+        description: `이 상품은 최소 ${minQty}개 이상 주문해야 합니다`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 최대 주문 수량 검증
+    if (product.maxOrderQuantity && quantity > product.maxOrderQuantity) {
+      toast({
+        title: "최대 주문 수량 초과",
+        description: `이 상품은 최대 ${product.maxOrderQuantity}개까지만 주문 가능합니다`,
+        variant: "destructive",
+      })
       return
     }
 

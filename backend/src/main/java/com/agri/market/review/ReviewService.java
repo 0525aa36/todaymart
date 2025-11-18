@@ -47,16 +47,20 @@ public class ReviewService {
     }
 
     // 상품별 리뷰 조회
+    @Transactional(readOnly = true)
     public Page<Review> getReviewsByProductId(Long productId, Pageable pageable) {
-        return reviewRepository.findByProductId(productId, pageable);
+        // Product와 User를 함께 로딩하여 LAZY 로딩 문제 방지
+        return reviewRepository.findByProductIdWithProductAndUser(productId, pageable);
     }
 
     // 사용자별 리뷰 조회
+    @Transactional(readOnly = true)
     public Page<Review> getReviewsByUserId(Long userId, Pageable pageable) {
         return reviewRepository.findByUserId(userId, pageable);
     }
 
     // 이메일로 사용자 리뷰 조회
+    @Transactional(readOnly = true)
     public Page<Review> getReviewsByUserEmail(String userEmail, Pageable pageable) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
@@ -64,6 +68,7 @@ public class ReviewService {
     }
 
     // 리뷰 상세 조회
+    @Transactional(readOnly = true)
     public Optional<Review> getReviewById(Long id) {
         return reviewRepository.findById(id);
     }

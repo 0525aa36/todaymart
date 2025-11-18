@@ -199,11 +199,11 @@ export default function PaymentPage() {
       // 주문 상품명 생성: 첫 번째 상품명 + 외 N개
       let orderName = `주문 ${order.id}` // 기본값
       if (order.orderItems && order.orderItems.length > 0) {
-        const firstProduct = order.orderItems[0].product?.name || `상품 ${order.orderItems[0].id}`
+        const firstProductName = order.orderItems[0].productName || `상품 ${order.orderItems[0].id}`
         if (order.orderItems.length === 1) {
-          orderName = firstProduct
+          orderName = firstProductName
         } else {
-          orderName = `${firstProduct} 외 ${order.orderItems.length - 1}개`
+          orderName = `${firstProductName} 외 ${order.orderItems.length - 1}개`
         }
       }
 

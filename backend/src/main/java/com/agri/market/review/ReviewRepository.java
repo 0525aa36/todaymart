@@ -17,6 +17,14 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     // 상품별 리뷰 조회
     Page<Review> findByProductId(Long productId, Pageable pageable);
 
+    // 상품별 리뷰 조회 - Product, User를 함께 로딩
+    @Query("SELECT r FROM Review r JOIN FETCH r.product JOIN FETCH r.user WHERE r.product.id = :productId")
+    List<Review> findByProductIdWithProductAndUser(@Param("productId") Long productId);
+
+    @Query(value = "SELECT r FROM Review r JOIN FETCH r.product JOIN FETCH r.user WHERE r.product.id = :productId",
+           countQuery = "SELECT COUNT(r) FROM Review r WHERE r.product.id = :productId")
+    Page<Review> findByProductIdWithProductAndUser(@Param("productId") Long productId, Pageable pageable);
+
     // 사용자별 리뷰 조회
     Page<Review> findByUserId(Long userId, Pageable pageable);
 
