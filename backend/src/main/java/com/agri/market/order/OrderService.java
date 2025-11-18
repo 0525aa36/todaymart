@@ -7,6 +7,7 @@ import com.agri.market.coupon.Coupon;
 import com.agri.market.coupon.UserCoupon;
 import com.agri.market.coupon.UserCouponService;
 import com.agri.market.dto.OrderRequest;
+import com.agri.market.dto.OrderResponse;
 import com.agri.market.exception.BusinessException;
 import com.agri.market.exception.ForbiddenException;
 import com.agri.market.notification.NotificationService;
@@ -32,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -338,6 +340,44 @@ public class OrderService {
         });
 
         return orders;
+    }
+
+    /**
+     * 사용자의 주문 목록을 OrderResponse DTO로 반환 (트랜잭션 내에서 변환)
+     * @param userEmail 사용자 이메일
+     * @return OrderResponse 리스트
+     */
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getOrderResponsesByUser(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
+
+        List<Order> orders = orderRepository.findByUserWithItems(user);
+
+        // 트랜잭션 내에서 모든 연관 엔티티를 초기화하고 DTO로 변환
+        return orders.stream()
+                .map(order -> {
+                    // Lazy loading 초기화
+                    order.getUser().getName();
+                    if (order.getOrderItems() != null) {
+                        order.getOrderItems().forEach(item -> {
+                            if (item.getProduct() != null) {
+                                item.getProduct().getName();
+                                item.getProduct().getImageUrl();
+                            }
+                            if (item.getProductOption() != null) {
+                                item.getProductOption().getName();
+                            }
+                        });
+                    }
+                    if (order.getAppliedCoupon() != null) {
+                        order.getAppliedCoupon().getName();
+                    }
+
+                    // DTO로 변환 (트랜잭션 내에서)
+                    return OrderResponse.from(order);
+                })
+                .collect(Collectors.toList());
     }
 
     /**

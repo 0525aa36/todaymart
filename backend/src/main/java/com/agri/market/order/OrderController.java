@@ -61,10 +61,8 @@ public class OrderController {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String userEmail = userDetails.getUsername();
 
-        List<Order> orders = orderService.getOrdersByUser(userEmail);
-        List<OrderResponse> orderResponses = orders.stream()
-                .map(OrderResponse::from)
-                .collect(java.util.stream.Collectors.toList());
+        // 트랜잭션 내에서 DTO 변환이 이루어지는 메서드 사용
+        List<OrderResponse> orderResponses = orderService.getOrderResponsesByUser(userEmail);
         return ResponseEntity.ok(orderResponses);
     }
 

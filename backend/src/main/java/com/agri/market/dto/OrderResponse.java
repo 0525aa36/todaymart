@@ -84,10 +84,23 @@ public class OrderResponse {
             response.setQuantity(item.getQuantity());
             response.setPrice(item.getPrice());
 
+            // Product 정보 - 안전하게 처리
             if (item.getProduct() != null) {
-                response.setProductId(item.getProduct().getId());
-                response.setProductName(item.getProduct().getName());
-                response.setProductImageUrl(item.getProduct().getImageUrl());
+                try {
+                    response.setProductId(item.getProduct().getId());
+                    response.setProductName(item.getProduct().getName());
+                    response.setProductImageUrl(item.getProduct().getImageUrl());
+                } catch (Exception e) {
+                    // LAZY loading 실패 시 기본값 설정
+                    response.setProductId(null);
+                    response.setProductName("상품 정보 없음");
+                    response.setProductImageUrl("/placeholder.svg");
+                }
+            } else {
+                // Product가 null인 경우 기본값 설정
+                response.setProductId(null);
+                response.setProductName("상품 정보 없음");
+                response.setProductImageUrl("/placeholder.svg");
             }
 
             if (item.getProductOption() != null) {
