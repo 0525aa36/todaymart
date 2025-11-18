@@ -621,10 +621,27 @@ export default function EditProductPage() {
 
               <div>
                 <Label htmlFor="detailDescription">상품 설명 (마크다운 형식)</Label>
+                <p className="text-xs text-gray-500 mt-1 mb-2">
+                  아래 상세페이지 이미지/동영상을 드래그해서 이곳에 드롭하면 마크다운 형식으로 삽입됩니다.
+                </p>
                 <Textarea
                   id="detailDescription"
                   value={formData.detailDescription}
                   onChange={(e) => setFormData({ ...formData, detailDescription: e.target.value })}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    const url = e.dataTransfer.getData('text/plain')
+                    if (url) {
+                      const fileName = url.split('/').pop() || 'media'
+                      const markdown = `![${fileName}](${url})\n\n`
+                      // 기존 내용 끝에 추가 (앞에 줄바꿈이 없으면 추가)
+                      const currentValue = formData.detailDescription
+                      const needsNewline = currentValue && !currentValue.endsWith('\n')
+                      const newValue = currentValue + (needsNewline ? '\n\n' : '') + markdown
+                      setFormData({ ...formData, detailDescription: newValue })
+                    }
+                  }}
                   rows={10}
                   placeholder="# 상품 설명&#10;&#10;## 주요 특징&#10;- 특징 1&#10;- 특징 2&#10;&#10;마크다운 형식으로 상세한 설명을 작성하세요"
                   className="font-mono text-sm"
@@ -839,19 +856,20 @@ export default function EditProductPage() {
 
               {/* Detail Page Images - Right after Main Images */}
               <div className="pt-4 border-t">
-                <Label className="text-base font-semibold">상세페이지 이미지 (선택사항)</Label>
-                <p className="text-xs text-gray-500 mt-1">상품 상세페이지에 표시될 이미지들</p>
+                <Label className="text-base font-semibold">상세페이지 이미지/동영상 (선택사항)</Label>
+                <p className="text-xs text-gray-500 mt-1">상품 상세페이지에 표시될 이미지 및 동영상 (드래그해서 마크다운에 삽입)</p>
                 <div className="mt-3">
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                      <p className="text-sm text-gray-500">상세 이미지 업로드</p>
+                      <p className="text-sm text-gray-500">이미지 또는 동영상 업로드</p>
+                      <p className="text-xs text-gray-400 mt-1">이미지: JPG, PNG, GIF / 동영상: MP4, WebM</p>
                     </div>
                     <input
                       type="file"
                       className="hidden"
                       multiple
-                      accept="image/*"
+                      accept="image/*,video/mp4,video/webm,video/ogg"
                       onChange={(e) => handleDetailImageUpload(e.target.files)}
                       disabled={uploadingDetail}
                     />
@@ -859,25 +877,42 @@ export default function EditProductPage() {
                 </div>
                 {detailImages.length > 0 && (
                   <div className="mt-2 space-y-2">
-                    <p className="text-xs text-gray-600">업로드된 이미지 {detailImages.length}개</p>
-                    {detailImages.map((url, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded group">
-                        <img src={url} alt="" className="w-16 h-16 object-cover rounded" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-gray-600 truncate">{url.split('/').pop()}</p>
-                          <p className="text-xs text-gray-400">순서: {index + 1}</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeDetailImage(index)}
-                          className="opacity-0 group-hover:opacity-100"
+                    <p className="text-xs text-gray-600">업로드된 미디어 {detailImages.length}개</p>
+                    {detailImages.map((url, index) => {
+                      const isVideo = url.match(/\.(mp4|webm|ogg)$/i)
+                      return (
+                        <div
+                          key={index}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', url)
+                            e.dataTransfer.effectAllowed = 'copy'
+                          }}
+                          className="flex items-center gap-2 p-2 bg-gray-50 rounded group cursor-move hover:bg-gray-100 transition-colors"
                         >
-                          <Trash2 className="h-3 w-3 text-red-500" />
-                        </Button>
-                      </div>
-                    ))}
+                          {isVideo ? (
+                            <video src={url} className="w-16 h-16 object-cover rounded" />
+                          ) : (
+                            <img src={url} alt="" className="w-16 h-16 object-cover rounded" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-600 truncate">{url.split('/').pop()}</p>
+                            <p className="text-xs text-gray-400">
+                              순서: {index + 1} {isVideo && '(동영상)'}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeDetailImage(index)}
+                            className="opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 className="h-3 w-3 text-red-500" />
+                          </Button>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

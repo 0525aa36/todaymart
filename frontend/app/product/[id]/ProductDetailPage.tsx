@@ -782,15 +782,72 @@ export function ProductDetailPage() {
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        img: ({node, ...props}) => (
-                          <span className="block my-6">
-                            <img
-                              {...props}
-                              className="max-w-full h-auto mx-auto rounded-lg shadow-sm"
-                              style={{ maxWidth: '800px' }}
-                            />
-                          </span>
-                        ),
+                        p: ({node, children}) => {
+                          // 이미지/동영상만 있는 경우 <p> 태그 없이 렌더링
+                          const hasOnlyMedia = node?.children?.every((child: any) =>
+                            child.type === 'element' && child.tagName === 'img'
+                          );
+
+                          if (hasOnlyMedia) {
+                            return <>{children}</>;
+                          }
+
+                          return <p>{children}</p>;
+                        },
+                        img: ({node, ...props}) => {
+                          const src = props.src || '';
+
+                          // YouTube 동영상 임베드 처리
+                          if (src.includes('youtube.com') || src.includes('youtu.be')) {
+                            let videoId = '';
+                            if (src.includes('youtube.com/watch?v=')) {
+                              videoId = src.split('v=')[1]?.split('&')[0] || '';
+                            } else if (src.includes('youtu.be/')) {
+                              videoId = src.split('youtu.be/')[1]?.split('?')[0] || '';
+                            }
+
+                            if (videoId) {
+                              return (
+                                <div className="my-6 mx-auto" style={{ maxWidth: '800px' }}>
+                                  <div className="relative" style={{ paddingBottom: '56.25%' }}>
+                                    <iframe
+                                      src={`https://www.youtube.com/embed/${videoId}`}
+                                      className="absolute top-0 left-0 w-full h-full rounded-lg shadow-sm"
+                                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                      allowFullScreen
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            }
+                          }
+
+                          // 비디오 파일 처리 (.mp4, .webm, .ogg)
+                          if (src.match(/\.(mp4|webm|ogg)$/i)) {
+                            return (
+                              <div className="my-6 mx-auto" style={{ maxWidth: '800px' }}>
+                                <video
+                                  controls
+                                  className="w-full h-auto rounded-lg shadow-sm"
+                                  src={src}
+                                >
+                                  동영상을 재생할 수 없습니다.
+                                </video>
+                              </div>
+                            );
+                          }
+
+                          // 일반 이미지 처리
+                          return (
+                            <span className="block my-6">
+                              <img
+                                {...props}
+                                className="max-w-full h-auto mx-auto rounded-lg shadow-sm"
+                                style={{ maxWidth: '800px' }}
+                              />
+                            </span>
+                          );
+                        },
                       }}
                     >
                       {product.detailDescription}
