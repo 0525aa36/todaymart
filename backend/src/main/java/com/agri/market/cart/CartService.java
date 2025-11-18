@@ -100,8 +100,8 @@ public class CartService {
             cartItem.setProductOption(productOption);
             cartItem.setQuantity(request.getQuantity());
 
-            // 가격 계산: 기본 가격 + 옵션 추가 가격
-            BigDecimal itemPrice = product.getPrice();
+            // 가격 계산: 할인된 가격 + 옵션 추가 가격
+            BigDecimal itemPrice = product.getDiscountedPrice();
             if (productOption != null && productOption.getAdditionalPrice() != null) {
                 itemPrice = itemPrice.add(productOption.getAdditionalPrice());
             }
