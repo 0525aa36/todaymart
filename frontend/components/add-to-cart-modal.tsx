@@ -15,6 +15,8 @@ import { toast } from "sonner"
 interface ProductOption {
   id: number
   name: string
+  optionName?: string
+  optionValue?: string
   additionalPrice: number
 }
 
@@ -152,12 +154,17 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
                     <SelectValue placeholder="옵션을 선택해주세요" />
                   </SelectTrigger>
                   <SelectContent>
-                    {product.options.map((option) => (
-                      <SelectItem key={option.id} value={option.id.toString()}>
-                        {option.name}
-                        {option.additionalPrice > 0 && ` (+${option.additionalPrice.toLocaleString()}원)`}
-                      </SelectItem>
-                    ))}
+                    {product.options.map((option) => {
+                      const displayText = option.optionName && option.optionValue
+                        ? `${option.optionName}: ${option.optionValue}`
+                        : option.name
+                      return (
+                        <SelectItem key={option.id} value={option.id.toString()}>
+                          {displayText}
+                          {option.additionalPrice > 0 && ` (+${option.additionalPrice.toLocaleString()}원)`}
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </div>
