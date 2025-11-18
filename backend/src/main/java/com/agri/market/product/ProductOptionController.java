@@ -49,8 +49,10 @@ public class ProductOptionController {
     }
 
     // 상품 옵션 삭제
-    @DeleteMapping("/options/{optionId}")
-    public ResponseEntity<Void> deleteProductOption(@PathVariable Long optionId) {
+    @DeleteMapping("/{productId}/options/{optionId}")
+    public ResponseEntity<Void> deleteProductOption(
+            @PathVariable Long productId,
+            @PathVariable Long optionId) {
         productService.deleteProductOption(optionId);
         return ResponseEntity.ok().build();
     }
