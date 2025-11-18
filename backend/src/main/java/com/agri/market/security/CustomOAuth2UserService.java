@@ -159,9 +159,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     user.setBirthDate(null);
                 }
             } else {
-                // 카카오는 birthyear를 제공하지 않을 수 있으므로 null 허용
-                logger.info("생년월일 정보 없음, 나중에 계정 설정에서 입력 가능");
-                user.setBirthDate(null);
+                // 카카오는 birthyear를 제공하지 않을 수 있으므로 기본값 설정
+                logger.info("생년월일 정보 없음, 기본값(1900-01-01) 설정 - 나중에 계정 설정에서 변경 가능");
+                user.setBirthDate(java.time.LocalDate.of(1900, 1, 1));
             }
 
             if (gender != null && !gender.isEmpty()) {
