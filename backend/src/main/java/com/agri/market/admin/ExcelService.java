@@ -6,6 +6,7 @@ import com.agri.market.order.OrderItem;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,6 +30,7 @@ public class ExcelService {
         this.orderRepository = orderRepository;
     }
 
+    @Transactional(readOnly = true)
     public ByteArrayOutputStream exportOrdersToExcel(LocalDate fromDate, LocalDate toDate) throws IOException {
         LocalDateTime startDateTime = fromDate != null ? fromDate.atStartOfDay() : null;
         LocalDateTime endDateTime = toDate != null ? toDate.atTime(LocalTime.MAX) : null;
@@ -72,7 +74,12 @@ public class ExcelService {
                 }
                 row.createCell(8).setCellValue(fullAddress); // 주소
 
-                row.createCell(9).setCellValue(item.getProduct().getName()); // 상품명
+                // 상품명 + 옵션 정보
+                String productName = item.getProduct().getName();
+                if (item.getProductOption() != null) {
+                    productName += " (" + item.getProductOption().getOptionValue() + ")";
+                }
+                row.createCell(9).setCellValue(productName); // 상품명 + 옵션
                 row.createCell(10).setCellValue(item.getQuantity()); // 수량
                 row.createCell(11).setCellValue(order.getDeliveryMessage() != null ? order.getDeliveryMessage() : ""); // 배송 메세지
                 row.createCell(12).setCellValue(order.getTrackingNumber() != null ? order.getTrackingNumber() : ""); // 송장번호
