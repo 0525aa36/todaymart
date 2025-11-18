@@ -80,11 +80,17 @@ public class GoogleSheetsService {
             log.info("Starting sync for seller: {} (ID: {})", seller.getName(), sellerId);
             log.info("Spreadsheet ID: {}", seller.getSpreadsheetId());
 
-            // 판매자의 주문 내역 조회
+            // 판매자의 주문 내역 조회 - 결제 완료된 주문만
             List<Order> orders = orderRepository.findAll().stream()
-                    .filter(order -> order.getOrderItems().stream()
-                            .anyMatch(item -> item.getProduct().getSeller() != null
-                                    && item.getProduct().getSeller().getId().equals(sellerId)))
+                    .filter(order -> {
+                        // 결제 완료 상태인 주문만 필터링 (PAID, PREPARING, SHIPPED, DELIVERED)
+                        String status = order.getOrderStatus().name();
+                        return (status.equals("PAID") || status.equals("PREPARING") ||
+                                status.equals("SHIPPED") || status.equals("DELIVERED")) &&
+                               order.getOrderItems().stream()
+                                    .anyMatch(item -> item.getProduct().getSeller() != null
+                                            && item.getProduct().getSeller().getId().equals(sellerId));
+                    })
                     .collect(Collectors.toList());
 
             log.info("Found {} orders for seller {}", orders.size(), seller.getName());
@@ -150,6 +156,7 @@ public class GoogleSheetsService {
                 "고객명",
                 "고객이메일",
                 "상품명",
+                "옵션",
                 "수량",
                 "단가",
                 "금액",
@@ -172,12 +179,19 @@ public class GoogleSheetsService {
                     // 주문 시간을 한국 시간대로 변환
                     ZonedDateTime kstTime = order.getCreatedAt().atZone(ZoneId.systemDefault()).withZoneSameInstant(KST);
 
+                    // 옵션 정보 가져오기
+                    String optionValue = "";
+                    if (item.getProductOption() != null) {
+                        optionValue = item.getProductOption().getOptionValue();
+                    }
+
                     values.add(Arrays.asList(
                             order.getId().toString(),
                             kstTime.format(DATE_FORMATTER),
                             order.getUser().getName(),
                             order.getUser().getEmail(),
                             item.getProduct().getName(),
+                            optionValue,  // 옵션 값 추가
                             item.getQuantity().toString(),
                             item.getPrice().toString(),
                             item.getPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())).toString(),
@@ -496,37 +510,37 @@ public class GoogleSheetsService {
                                           List<List<Object>> productData,
                                           List<List<Object>> optionData,
                                           List<List<Object>> imageData) throws IOException {
-        // 1. 상품목록 시트 업데이트
+        // 1. 상품목록 시트 업데이트 - 시트 이름을 ProductList로 변경
         ClearValuesRequest clearRequest = new ClearValuesRequest();
         sheetsService.spreadsheets().values()
-                .clear(spreadsheetId, "상품목록!A:Z", clearRequest)
+                .clear(spreadsheetId, "ProductList!A:Z", clearRequest)
                 .execute();
 
         ValueRange productBody = new ValueRange().setValues(productData);
         sheetsService.spreadsheets().values()
-                .update(spreadsheetId, "상품목록!A1", productBody)
+                .update(spreadsheetId, "ProductList!A1", productBody)
                 .setValueInputOption("RAW")
                 .execute();
 
-        // 2. 상품옵션 시트 업데이트
+        // 2. 상품옵션 시트 업데이트 - 시트 이름을 ProductOptions로 변경
         sheetsService.spreadsheets().values()
-                .clear(spreadsheetId, "상품옵션!A:Z", clearRequest)
+                .clear(spreadsheetId, "ProductOptions!A:Z", clearRequest)
                 .execute();
 
         ValueRange optionBody = new ValueRange().setValues(optionData);
         sheetsService.spreadsheets().values()
-                .update(spreadsheetId, "상품옵션!A1", optionBody)
+                .update(spreadsheetId, "ProductOptions!A1", optionBody)
                 .setValueInputOption("RAW")
                 .execute();
 
-        // 3. 상품이미지 시트 업데이트
+        // 3. 상품이미지 시트 업데이트 - 시트 이름을 ProductImages로 변경
         sheetsService.spreadsheets().values()
-                .clear(spreadsheetId, "상품이미지!A:Z", clearRequest)
+                .clear(spreadsheetId, "ProductImages!A:Z", clearRequest)
                 .execute();
 
         ValueRange imageBody = new ValueRange().setValues(imageData);
         sheetsService.spreadsheets().values()
-                .update(spreadsheetId, "상품이미지!A1", imageBody)
+                .update(spreadsheetId, "ProductImages!A1", imageBody)
                 .setValueInputOption("RAW")
                 .execute();
     }
@@ -558,13 +572,13 @@ public class GoogleSheetsService {
 
         List<Request> requests = new ArrayList<>();
 
-        Integer productListSheetId = sheetIds.get("상품목록");
+        Integer productListSheetId = sheetIds.get("ProductList");
         if (productListSheetId == null) {
-            log.warn("상품목록 시트를 찾을 수 없습니다. 서식 적용을 건너뜁니다.");
+            log.warn("ProductList 시트를 찾을 수 없습니다. 서식 적용을 건너뜁니다.");
             return;
         }
 
-        // 상품목록 시트 헤더 행 배경색 및 굵게
+        // ProductList 시트 헤더 행 배경색 및 굵게
         requests.add(new Request()
                 .setRepeatCell(new RepeatCellRequest()
                         .setRange(new GridRange()
@@ -594,9 +608,9 @@ public class GoogleSheetsService {
                                         .setFrozenRowCount(1)))
                         .setFields("gridProperties.frozenRowCount")));
 
-        Integer productOptionSheetId = sheetIds.get("상품옵션");
+        Integer productOptionSheetId = sheetIds.get("ProductOptions");
         if (productOptionSheetId != null) {
-            // 상품옵션 시트 헤더
+            // ProductOptions 시트 헤더
             requests.add(new Request()
                     .setRepeatCell(new RepeatCellRequest()
                             .setRange(new GridRange()
@@ -638,7 +652,7 @@ public class GoogleSheetsService {
      * 필요한 시트가 없으면 생성 (미구현 - TODO)
      */
     private void ensureSheetsExist(String spreadsheetId, Map<String, Integer> existingSheets) {
-        // TODO: 상품목록, 상품옵션, 상품이미지 시트가 없으면 생성
+        // TODO: ProductList, ProductOptions, ProductImages 시트가 없으면 생성
         // 지금은 수동으로 시트를 만들어야 함
     }
 }

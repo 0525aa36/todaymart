@@ -115,7 +115,8 @@
       "Bash(Key=stickiness.enabled,Value=true )",
       "Bash(Key=stickiness.type,Value=lb_cookie )",
       "Bash(Key=stickiness.lb_cookie.duration_seconds,Value=86400 )",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(pnpm run build:*)"
     ],
     "deny": [],
     "ask": []
