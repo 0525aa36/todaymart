@@ -96,6 +96,12 @@ export function RegisterPage() {
       setErrors(prev => ({ ...prev, password: "비밀번호는 최소 8자 이상이어야 합니다." }))
       return false
     }
+    // 비밀번호 복잡성 검증: 영문, 숫자, 특수문자 포함 확인
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/
+    if (!passwordRegex.test(formData.password)) {
+      setErrors(prev => ({ ...prev, password: "비밀번호는 영문, 숫자, 특수문자(@$!%*#?&)를 모두 포함해야 합니다." }))
+      return false
+    }
     setErrors(prev => ({ ...prev, password: "" }))
     return true
   }
@@ -228,10 +234,23 @@ export function RegisterPage() {
         title: "회원가입 완료",
         description: "오늘마트에 오신 것을 환영합니다!",
       })
-    } catch (error) {
+    } catch (error: any) {
+      // 서버에서 온 구체적인 에러 메시지 처리
+      let errorMessage = "회원가입 중 오류가 발생했습니다."
+
+      if (error.status === 400) {
+        // 유효성 검사 실패의 경우
+        errorMessage = "입력하신 정보를 다시 확인해주세요.\n"
+        errorMessage += "• 비밀번호는 영문, 숫자, 특수문자(@$!%*#?&)를 모두 포함해야 합니다\n"
+        errorMessage += "• 전화번호는 010-1234-5678 형식이어야 합니다\n"
+        errorMessage += "• 생년월일은 YYYY-MM-DD 형식이어야 합니다"
+      } else if (error.payload?.message) {
+        errorMessage = error.payload.message
+      }
+
       toast({
         title: "회원가입 실패",
-        description: getErrorMessage(error, "회원가입 중 오류가 발생했습니다."),
+        description: errorMessage,
         variant: "destructive",
       })
     }
@@ -435,12 +454,17 @@ export function RegisterPage() {
                       <Input
                         id="password"
                         type="password"
-                        placeholder="8자 이상 입력"
+                        placeholder="영문, 숫자, 특수문자 포함 8자 이상"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         onBlur={validatePassword}
                         className={errors.password ? "border-red-500" : ""}
                       />
+                      {!errors.password && formData.password && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          ✓ 영문, 숫자, 특수문자(@$!%*#?&)를 모두 포함해야 합니다
+                        </p>
+                      )}
                       {errors.password && <p className="text-sm text-red-500 mt-1">{errors.password}</p>}
                     </div>
 
