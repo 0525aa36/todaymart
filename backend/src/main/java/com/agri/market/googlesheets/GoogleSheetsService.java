@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,6 +32,7 @@ import java.util.stream.Collectors;
 public class GoogleSheetsService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     @Autowired(required = false)
     @Qualifier("googleSheetsClient")
@@ -151,9 +154,11 @@ public class GoogleSheetsService {
                 "단가",
                 "금액",
                 "주문상태",
+                "우편번호",
                 "배송지",
                 "수령인",
                 "연락처",
+                "배송 요청사항",
                 "송장번호"
         ));
 
@@ -164,9 +169,12 @@ public class GoogleSheetsService {
                 if (item.getProduct().getSeller() != null
                         && item.getProduct().getSeller().getId().equals(sellerId)) {
 
+                    // 주문 시간을 한국 시간대로 변환
+                    ZonedDateTime kstTime = order.getCreatedAt().atZone(ZoneId.systemDefault()).withZoneSameInstant(KST);
+
                     values.add(Arrays.asList(
                             order.getId().toString(),
-                            order.getCreatedAt().format(DATE_FORMATTER),
+                            kstTime.format(DATE_FORMATTER),
                             order.getUser().getName(),
                             order.getUser().getEmail(),
                             item.getProduct().getName(),
@@ -174,9 +182,11 @@ public class GoogleSheetsService {
                             item.getPrice().toString(),
                             item.getPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())).toString(),
                             getOrderStatusKorean(order.getOrderStatus().name()),
+                            order.getShippingPostcode() != null ? order.getShippingPostcode() : "",
                             order.getShippingAddressLine1() + " " + (order.getShippingAddressLine2() != null ? order.getShippingAddressLine2() : ""),
                             order.getRecipientName(),
                             order.getRecipientPhone(),
+                            order.getDeliveryMessage() != null ? order.getDeliveryMessage() : "",
                             order.getTrackingNumber() != null ? order.getTrackingNumber() : ""
                     ));
                 }
