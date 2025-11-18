@@ -18,11 +18,12 @@ import { apiFetch, getErrorMessage } from "@/lib/api-client"
 
 interface OrderItem {
   id: number
-  product: {
-    id: number
-    name: string
-    imageUrl: string
-  }
+  productId: number | null
+  productName: string
+  productImageUrl: string
+  productOptionId?: number | null
+  productOptionName?: string
+  optionValue?: string
   quantity: number
   price: number
 }
@@ -95,7 +96,7 @@ export function OrdersPage() {
       filtered = filtered.filter(
         (order) =>
           order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          order.orderItems.some((item) => item.product.name.toLowerCase().includes(searchQuery.toLowerCase()))
+          order.orderItems.some((item) => item.productName?.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     }
 
@@ -232,14 +233,17 @@ export function OrdersPage() {
                         <div key={index} className="flex gap-4">
                           <div className="relative w-20 h-20 flex-shrink-0">
                             <Image
-                              src={item.product.imageUrl || "/placeholder.svg"}
-                              alt={item.product.name}
+                              src={item.productImageUrl || "/placeholder.svg"}
+                              alt={item.productName || "상품"}
                               fill
                               className="object-cover rounded-lg"
                             />
                           </div>
                           <div className="flex-1">
-                            <h4 className="font-medium mb-1">{item.product.name}</h4>
+                            <h4 className="font-medium mb-1">{item.productName || "상품 정보 없음"}</h4>
+                            {item.optionValue && (
+                              <p className="text-sm text-muted-foreground">옵션: {item.optionValue}</p>
+                            )}
                             <p className="text-sm text-muted-foreground mb-2">수량: {item.quantity}개</p>
                             <p className="font-semibold">{(item.price * item.quantity).toLocaleString()}원</p>
                           </div>

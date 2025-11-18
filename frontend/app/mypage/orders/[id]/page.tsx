@@ -28,12 +28,12 @@ import {
 
 interface OrderItem {
   id: number
-  product: {
-    id: number
-    name: string
-    imageUrl: string
-    price: number
-  }
+  productId: number | null
+  productName: string
+  productImageUrl: string
+  productOptionId?: number | null
+  productOptionName?: string
+  optionValue?: string
   quantity: number
   price: number
 }
@@ -290,14 +290,17 @@ export default function OrderDetailPage() {
                 <div key={item.id} className="flex gap-4">
                   <div className="relative w-24 h-24 flex-shrink-0">
                     <Image
-                      src={item.product.imageUrl || "/placeholder.svg"}
-                      alt={item.product.name}
+                      src={item.productImageUrl || "/placeholder.svg"}
+                      alt={item.productName || "상품"}
                       fill
                       className="object-cover rounded-lg"
                     />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-medium mb-2">{item.product.name}</h4>
+                    <h4 className="font-medium mb-2">{item.productName || "상품 정보 없음"}</h4>
+                    {item.optionValue && (
+                      <p className="text-sm text-muted-foreground">옵션: {item.optionValue}</p>
+                    )}
                     <p className="text-sm text-muted-foreground mb-2">수량: {item.quantity}개</p>
                     <p className="font-semibold">{(item.price * item.quantity).toLocaleString()}원</p>
                   </div>
