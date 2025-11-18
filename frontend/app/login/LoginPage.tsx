@@ -25,6 +25,7 @@ export function LoginPage() {
 
   const handleSocialLogin = (provider: "naver" | "kakao") => {
     // OAuth2 로그인 엔드포인트로 리다이렉트
+    console.log(`[OAuth] Redirecting to: ${API_BASE_URL}/oauth2/authorization/${provider}`)
     window.location.href = `${API_BASE_URL}/oauth2/authorization/${provider}`
   }
 
