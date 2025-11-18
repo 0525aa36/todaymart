@@ -17,20 +17,12 @@ const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || ""
 
 interface OrderItem {
   id: number
-  product: {
-    id: number
-    name: string
-    price: number
-    discountedPrice: number
-    discountRate: number | null
-    imageUrl: string
-  }
-  productOption?: {
-    id: number
-    name: string
-    optionValue: string
-    additionalPrice: number
-  } | null
+  productId: number | null
+  productName: string
+  productImageUrl: string
+  productOptionId?: number | null
+  productOptionName?: string
+  optionValue?: string
   quantity: number
   price: number
 }
@@ -259,43 +251,22 @@ export default function PaymentPage() {
                   <div key={item.id} className="flex gap-4 pb-4 border-b last:border-b-0 last:pb-0">
                     <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                       <Image
-                        src={item.product.imageUrl || "/placeholder.svg"}
-                        alt={item.product.name}
+                        src={item.productImageUrl || "/placeholder.svg"}
+                        alt={item.productName || "상품"}
                         fill
                         className="object-cover"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm mb-1">{item.product.name}</h4>
+                      <h4 className="font-medium text-sm mb-1">{item.productName || "상품 정보 없음"}</h4>
 
-                      {item.productOption && (
+                      {item.optionValue && (
                         <div className="text-xs text-muted-foreground mb-2">
-                          <span className="font-medium">옵션:</span> {item.productOption.optionValue || item.productOption.name}
-                          {item.productOption.additionalPrice !== 0 && (
-                            <span className="ml-1">
-                              ({item.productOption.additionalPrice > 0 ? "+" : ""}
-                              {item.productOption.additionalPrice.toLocaleString()}원)
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {item.product.discountRate && item.product.discountRate > 0 && (
-                        <div className="text-xs text-gray-400 line-through mb-1">
-                          {item.product.price.toLocaleString()}원
-                          {item.productOption && item.productOption.additionalPrice !== 0 && (
-                            <span className="ml-1">
-                              ({item.productOption.additionalPrice > 0 ? "+" : ""}
-                              {item.productOption.additionalPrice.toLocaleString()}원)
-                            </span>
-                          )}
+                          <span className="font-medium">옵션:</span> {item.optionValue}
                         </div>
                       )}
 
                       <div className="flex items-center gap-2 mb-2">
-                        {item.product.discountRate && item.product.discountRate > 0 && (
-                          <span className="text-sm font-bold text-orange-500">{item.product.discountRate}%</span>
-                        )}
                         <span className="text-sm font-bold">{item.price.toLocaleString()}원</span>
                         <span className="text-xs text-muted-foreground">× {item.quantity}개</span>
                       </div>

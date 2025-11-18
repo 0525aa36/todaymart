@@ -14,12 +14,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface OrderItem {
   id: number
-  product: {
-    id: number
-    name: string
-    imageUrl: string
-    price: number
-  }
+  productId: number | null
+  productName: string
+  productImageUrl: string
+  productOptionId?: number | null
+  productOptionName?: string
+  optionValue?: string
   quantity: number
   price: number
 }
@@ -209,7 +209,10 @@ export function ReturnRequestDialog({
                         }
                       />
                       <div className="flex-1">
-                        <p className="font-medium">{item.product.name}</p>
+                        <p className="font-medium">{item.productName || "상품 정보 없음"}</p>
+                        {item.optionValue && (
+                          <p className="text-sm text-muted-foreground">옵션: {item.optionValue}</p>
+                        )}
                         <p className="text-sm text-muted-foreground">
                           수량: {item.quantity}개 | 금액: {(item.price * item.quantity).toLocaleString()}원
                         </p>
