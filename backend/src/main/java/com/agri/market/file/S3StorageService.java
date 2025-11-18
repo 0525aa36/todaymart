@@ -26,11 +26,12 @@ public class S3StorageService implements StorageService {
     // 허용된 파일 확장자 (화이트리스트)
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList(
             ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", // 이미지
+            ".mp4", ".webm", ".ogg", ".mov", ".avi", // 비디오
             ".pdf", ".doc", ".docx", ".xls", ".xlsx" // 문서
     );
 
-    // 최대 파일 크기 (10MB)
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+    // 최대 파일 크기 (50MB - 비디오 파일을 위해 증가)
+    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024;
 
     private final S3Client s3Client;
 
@@ -53,7 +54,7 @@ public class S3StorageService implements StorageService {
 
         // 파일 크기 체크
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new RuntimeException("파일 크기가 너무 큽니다. 최대 10MB까지 업로드 가능합니다.");
+            throw new RuntimeException("파일 크기가 너무 큽니다. 최대 50MB까지 업로드 가능합니다.");
         }
 
         // 원본 파일명 정리
@@ -81,6 +82,7 @@ public class S3StorageService implements StorageService {
             // Content-Type 검증 (추가 보안)
             String contentType = file.getContentType();
             if (contentType == null || (!contentType.startsWith("image/") &&
+                                       !contentType.startsWith("video/") &&
                                        !contentType.startsWith("application/"))) {
                 throw new RuntimeException("허용되지 않는 파일 타입입니다: " + contentType);
             }
