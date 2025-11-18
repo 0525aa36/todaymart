@@ -36,10 +36,9 @@ interface Order {
   finalAmount?: number
   recipientName: string
   orderItems?: OrderItem[]
-  user: {
-    id: number
-    email: string
-  }
+  userId: number
+  userEmail: string
+  userName?: string
 }
 
 export default function PaymentPage() {
@@ -113,7 +112,7 @@ export default function PaymentPage() {
           console.log("[Payment] 테스트 환경으로 결제를 진행합니다. 실제 출금되지 않습니다.")
         }
 
-        const customerKey = `customer_${order.user.id}_${Date.now()}`
+        const customerKey = `customer_${order.userId}_${Date.now()}`
 
         console.log("[Payment] Loading payment widget...")
         const paymentWidget = await loadPaymentWidget(clientKey, customerKey)
