@@ -39,6 +39,7 @@ import { AdminPagination } from "@/components/admin/AdminPagination"
 import { AdminLoadingSpinner } from "@/components/admin/AdminLoadingSpinner"
 import { LoadingButton } from "@/components/admin/LoadingButton"
 import { SortableTableHead, SortDirection } from "@/components/ui/sortable-table-head"
+import { Download } from "lucide-react"
 
 interface OrderItem {
   id: number
@@ -99,6 +100,7 @@ export default function AdminOrdersPage() {
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
   const [googleSheetsEnabled, setGoogleSheetsEnabled] = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
+  const [exportingExcel, setExportingExcel] = useState(false)
 
   // Sorting states
   const [sortKey, setSortKey] = useState<string | null>(null)
@@ -287,6 +289,54 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const handleExportExcel = async () => {
+    setExportingExcel(true)
+    try {
+      // Build query parameters based on current filters
+      const params = new URLSearchParams()
+
+      // Add date range if needed (you can add date filter UI later)
+      // params.append('from', '2024-01-01')
+      // params.append('to', '2024-12-31')
+
+      const url = `/api/admin/orders/export${params.toString() ? '?' + params.toString() : ''}`
+
+      const blob = await apiFetch(url, {
+        auth: true,
+        parseResponse: 'blob'
+      })
+
+      // Create download link
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+
+      // Generate filename with current date
+      const now = new Date()
+      const dateStr = now.toISOString().split('T')[0]
+      link.download = `orders_${dateStr}.xlsx`
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(downloadUrl)
+
+      toast({
+        title: "다운로드 완료",
+        description: "주문 내역 엑셀 파일이 다운로드되었습니다.",
+      })
+    } catch (error) {
+      console.error("Error exporting Excel:", error)
+      toast({
+        title: "다운로드 실패",
+        description: getErrorMessage(error, "엑셀 파일 다운로드 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    } finally {
+      setExportingExcel(false)
+    }
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString("ko-KR", {
@@ -401,16 +451,27 @@ export default function AdminOrdersPage() {
               </p>
             )}
           </div>
-          {googleSheetsEnabled && (
+          <div className="flex gap-2">
             <LoadingButton
-              onClick={handleSyncToGoogleSheets}
-              isLoading={syncing}
-              loadingText="동기화 중..."
+              onClick={handleExportExcel}
+              isLoading={exportingExcel}
+              loadingText="다운로드 중..."
+              variant="outline"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              구글 시트 동기화
+              <Download className="h-4 w-4 mr-2" />
+              엑셀 다운로드
             </LoadingButton>
-          )}
+            {googleSheetsEnabled && (
+              <LoadingButton
+                onClick={handleSyncToGoogleSheets}
+                isLoading={syncing}
+                loadingText="동기화 중..."
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                구글 시트 동기화
+              </LoadingButton>
+            )}
+          </div>
         </div>
 
         {/* Filters */}
