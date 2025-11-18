@@ -15,6 +15,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, Search } from "lucide-react"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
+import { formatOrderDate } from "@/lib/format-date"
 
 interface OrderItem {
   id: number
@@ -104,12 +105,7 @@ export function OrdersPage() {
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
+    return formatOrderDate(dateString)
   }
 
   const statusFilters = [
