@@ -25,7 +25,9 @@ public class ProductRequest {
     @NotBlank(message = "원산지는 필수입니다")
     private String origin;
 
-    private String description;
+    private String summary; // 상품 요약
+
+    private String detailDescription; // 상품 설명 (마크다운 형식)
 
     @NotNull(message = "가격은 필수입니다")
     @DecimalMin(value = "0.0", inclusive = true, message = "가격은 0 이상이어야 합니다")

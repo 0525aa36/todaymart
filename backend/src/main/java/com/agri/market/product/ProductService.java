@@ -123,7 +123,8 @@ public class ProductService {
         product.setName(request.getName());
         product.setCategory(request.getCategory()); // 하위 호환성을 위해 유지
         product.setOrigin(request.getOrigin());
-        product.setDescription(request.getDescription());
+        product.setSummary(request.getSummary());
+        product.setDetailDescription(request.getDetailDescription());
         product.setPrice(request.getPrice());
         product.setDiscountRate(request.getDiscountRate());
         product.setStock(request.getStock());
@@ -164,7 +165,8 @@ public class ProductService {
         product.setName(request.getName());
         product.setCategory(request.getCategory()); // 하위 호환성을 위해 유지
         product.setOrigin(request.getOrigin());
-        product.setDescription(request.getDescription());
+        product.setSummary(request.getSummary());
+        product.setDetailDescription(request.getDetailDescription());
         product.setPrice(request.getPrice());
         product.setDiscountRate(request.getDiscountRate());
         product.setStock(request.getStock());

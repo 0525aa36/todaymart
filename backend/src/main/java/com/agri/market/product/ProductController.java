@@ -62,7 +62,8 @@ public class ProductController {
         dto.setName(product.getName());
         dto.setCategory(product.getCategory());
         dto.setOrigin(product.getOrigin());
-        dto.setDescription(product.getDescription());
+        dto.setSummary(product.getSummary());
+        dto.setDetailDescription(product.getDetailDescription());
         dto.setPrice(product.getPrice());
         dto.setDiscountRate(product.getDiscountRate());
         dto.setStock(product.getStock());

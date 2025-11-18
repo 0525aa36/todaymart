@@ -40,7 +40,10 @@ public class Product {
     private String origin;
 
     @Column(columnDefinition = "TEXT")
-    private String description;
+    private String summary; // 상품 요약 (기존 description)
+
+    @Column(columnDefinition = "TEXT")
+    private String detailDescription; // 상품 설명 (마크다운 형식)
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;

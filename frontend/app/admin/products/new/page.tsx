@@ -50,7 +50,8 @@ export default function NewProductPage() {
     name: "",
     category: "",
     origin: "",
-    description: "",
+    summary: "",
+    detailDescription: "",
     price: "",
     discountRate: "",
     stock: "",
@@ -297,7 +298,8 @@ export default function NewProductPage() {
       name: formData.name,
       category: formData.category,
       origin: formData.origin,
-      description: formData.description,
+      summary: formData.summary,
+      detailDescription: formData.detailDescription,
       price: parseFloat(formData.price),
       discountRate: formData.discountRate ? parseFloat(formData.discountRate) : null,
       stock: parseInt(formData.stock),
@@ -499,13 +501,25 @@ export default function NewProductPage() {
               </div>
 
               <div>
-                <Label htmlFor="description">상품 설명</Label>
+                <Label htmlFor="summary">상품 요약</Label>
                 <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={4}
-                  placeholder="상품에 대한 자세한 설명을 입력하세요"
+                  id="summary"
+                  value={formData.summary}
+                  onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
+                  rows={3}
+                  placeholder="상품의 간단한 요약을 입력하세요"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="detailDescription">상품 설명 (마크다운 형식)</Label>
+                <Textarea
+                  id="detailDescription"
+                  value={formData.detailDescription}
+                  onChange={(e) => setFormData({ ...formData, detailDescription: e.target.value })}
+                  rows={10}
+                  placeholder="# 상품 설명&#10;&#10;## 주요 특징&#10;- 특징 1&#10;- 특징 2&#10;&#10;마크다운 형식으로 상세한 설명을 작성하세요"
+                  className="font-mono text-sm"
                 />
               </div>
 

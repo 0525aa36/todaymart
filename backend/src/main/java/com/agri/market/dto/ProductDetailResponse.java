@@ -14,7 +14,8 @@ public class ProductDetailResponse {
     private String name;
     private String category;
     private String origin;
-    private String description;
+    private String summary; // 상품 요약 (기존 description)
+    private String detailDescription; // 상품 설명 (마크다운 형식)
     private BigDecimal price;
     private BigDecimal discountRate;
     private BigDecimal discountedPrice;
@@ -34,7 +35,8 @@ public class ProductDetailResponse {
         dto.setName(product.getName());
         dto.setCategory(product.getCategory());
         dto.setOrigin(product.getOrigin());
-        dto.setDescription(product.getDescription());
+        dto.setSummary(product.getSummary());
+        dto.setDetailDescription(product.getDetailDescription());
         dto.setPrice(product.getPrice());
         dto.setDiscountRate(product.getDiscountRate());
         dto.setDiscountedPrice(product.getDiscountedPrice());

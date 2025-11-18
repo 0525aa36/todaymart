@@ -9,7 +9,8 @@ public class ProductWithOptionsDto {
     private String name;
     private String category;
     private String origin;
-    private String description;
+    private String summary; // 상품 요약 (기존 description)
+    private String detailDescription; // 상품 설명 (마크다운 형식)
     private BigDecimal price;
     private BigDecimal discountRate;
     private Integer stock;
@@ -39,8 +40,11 @@ public class ProductWithOptionsDto {
     public String getOrigin() { return origin; }
     public void setOrigin(String origin) { this.origin = origin; }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getSummary() { return summary; }
+    public void setSummary(String summary) { this.summary = summary; }
+
+    public String getDetailDescription() { return detailDescription; }
+    public void setDetailDescription(String detailDescription) { this.detailDescription = detailDescription; }
 
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal price) { this.price = price; }

@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import {
   Dialog,
   DialogContent,
@@ -32,7 +34,6 @@ import { useState, useEffect, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ShoppingCart, Heart, Share2, Minus, Plus, Star, Truck, Shield, RefreshCw, ChevronRight, Home } from "lucide-react"
 import { ApiError, apiFetch, getErrorMessage } from "@/lib/api-client"
-import { marked } from "marked"
 import { ProductNoticeDisplay, ProductNoticeData } from "@/components/product/ProductNoticeDisplay"
 
 interface Product {
@@ -40,7 +41,8 @@ interface Product {
   name: string
   category: string
   origin: string
-  description: string
+  summary?: string
+  detailDescription?: string
   price: number
   discountedPrice: number
   discountRate: number | null
@@ -458,12 +460,6 @@ export function ProductDetailPage() {
     return categoryMap[category.toLowerCase()] || category
   }
 
-  // Convert markdown to HTML
-  const descriptionHtml = useMemo(() => {
-    if (!product) return ""
-    return marked(product.description) as string
-  }, [product])
-
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -527,9 +523,11 @@ export function ProductDetailPage() {
             <div className="md:col-span-3">
               <div className="mb-4">
                 <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
-                <p className="text-muted-foreground mb-4">
-                  {product.description.replace(/<[^>]*>/g, '').substring(0, 100)}
-                </p>
+                {product.summary && (
+                  <p className="text-muted-foreground mb-4">
+                    {product.summary.substring(0, 100)}
+                  </p>
+                )}
 
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex items-center">
@@ -594,16 +592,13 @@ export function ProductDetailPage() {
                       <SelectContent>
                         {productOptions.map((option) => (
                           <SelectItem key={option.id} value={option.id.toString()}>
-                            {option.optionValue}
+                            {option.optionName}: {option.optionValue}
                             {option.additionalPrice !== 0 && (
                               <span className="text-muted-foreground ml-2">
                                 ({option.additionalPrice > 0 ? "+" : ""}
                                 {option.additionalPrice.toLocaleString()}원)
                               </span>
                             )}
-                            <span className="text-xs text-muted-foreground ml-2">
-                              (재고: {option.stock}개)
-                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -622,7 +617,7 @@ export function ProductDetailPage() {
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
                   <p className="text-orange-600 font-semibold text-center">품절임박</p>
                   <p className="text-orange-500 text-sm text-center mt-1 font-medium">
-                    서둘러 주문하세요! (재고 {selectedOption?.stock || product.stock}개)
+                    서둘러 주문하세요!
                   </p>
                 </div>
               )}
@@ -780,6 +775,28 @@ export function ProductDetailPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* 상품 설명 (마크다운) */}
+                {product.detailDescription && (
+                  <div className="prose prose-lg max-w-none mt-8 mb-8 p-6 bg-white rounded-lg border">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        img: ({node, ...props}) => (
+                          <span className="block my-6">
+                            <img
+                              {...props}
+                              className="max-w-full h-auto mx-auto rounded-lg shadow-sm"
+                              style={{ maxWidth: '800px' }}
+                            />
+                          </span>
+                        ),
+                      }}
+                    >
+                      {product.detailDescription}
+                    </ReactMarkdown>
+                  </div>
+                )}
 
                 {/* 상세페이지 이미지 */}
                 {product.detailImageUrls && product.detailImageUrls.trim() && (
