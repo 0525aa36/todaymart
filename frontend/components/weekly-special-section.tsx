@@ -186,7 +186,7 @@ export function WeeklySpecialSection({ specialDealId }: WeeklySpecialSectionProp
                   {/* 오른쪽: 정보 */}
                   <div className="space-y-6">
                     <div>
-                      <h2 className="text-4xl font-bold text-gray-900">{deal.title}</h2>
+                      <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">{deal.title}</h2>
                     </div>
                     {deal.description && (
                       <p className="text-lg text-gray-600">{deal.description}</p>
@@ -195,11 +195,11 @@ export function WeeklySpecialSection({ specialDealId }: WeeklySpecialSectionProp
                       <CountdownTimer
                         endTime={deal.endTime}
                         onExpire={() => fetchSpecialDeals()}
-                        className="text-3xl font-bold"
+                        className="text-xl sm:text-2xl md:text-3xl font-bold"
                       />
                     </div>
                     <div className="space-y-4">
-                      <h3 className="text-2xl font-bold text-gray-900">{product.name}</h3>
+                      <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{product.name}</h3>
                       <div className="space-y-2">
                         {product.discountRate > 0 && (
                           <div className="text-lg text-gray-400 line-through">
@@ -218,7 +218,7 @@ export function WeeklySpecialSection({ specialDealId }: WeeklySpecialSectionProp
                       {/* 장바구니 담기 버튼 - 가격 아래로 이동 */}
                       <Button
                         variant="outline"
-                        className="min-w-[300px] transition-colors border-primary text-primary hover:bg-primary hover:text-white hover:border-primary text-lg py-5"
+                        className="w-full sm:min-w-[300px] transition-colors border-primary text-primary hover:bg-primary hover:text-white hover:border-primary text-lg py-5"
                         onClick={() => handleCartButtonClick(product.id)}
                       >
                         <ShoppingCart className="h-5 w-5 mr-2" />
@@ -240,7 +240,7 @@ export function WeeklySpecialSection({ specialDealId }: WeeklySpecialSectionProp
                 {/* 헤더 */}
                 <div className="text-center mb-8">
                   <div className="mb-3">
-                    <h2 className="text-3xl font-bold text-gray-900">{deal.title}</h2>
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{deal.title}</h2>
                   </div>
                   {deal.description && (
                     <p className="text-gray-600 mb-3">{deal.description}</p>
@@ -309,20 +309,20 @@ export function WeeklySpecialSection({ specialDealId }: WeeklySpecialSectionProp
             <section key={deal.id} className="py-10 bg-gradient-to-br from-primary-50 to-secondary/10 border-y">
               <div className="container mx-auto px-4 max-w-6xl">
                 {/* 헤더 */}
-                <div className="flex items-center justify-between mb-8">
-                  <div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+                  <div className="flex-1">
                     <div className="mb-2">
-                      <h2 className="text-2xl font-bold text-gray-900">{deal.title}</h2>
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 break-words">{deal.title}</h2>
                     </div>
                     {deal.description && (
                       <p className="text-sm text-gray-600">{deal.description}</p>
                     )}
                   </div>
-                  <div className="text-primary">
+                  <div className="text-primary text-center sm:text-right">
                     <CountdownTimer
                       endTime={deal.endTime}
                       onExpire={() => fetchSpecialDeals()}
-                      className="text-lg font-bold"
+                      className="text-base sm:text-lg font-bold"
                     />
                   </div>
                 </div>
@@ -425,8 +425,8 @@ export function WeeklySpecialSection({ specialDealId }: WeeklySpecialSectionProp
               <div className="container mx-auto px-4 max-w-6xl">
                 {/* 헤더 */}
                 <div className="text-center mb-8">
-                  <div className="mb-2">
-                    <h2 className="text-3xl font-bold text-gray-900">{deal.title}</h2>
+                  <div className="mb-2 px-2">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 break-words">{deal.title}</h2>
                   </div>
                   {deal.description && (
                     <p className="text-gray-600 mb-2">{deal.description}</p>
@@ -495,8 +495,8 @@ export function WeeklySpecialSection({ specialDealId }: WeeklySpecialSectionProp
             <div className="container mx-auto px-4 max-w-6xl">
               {/* 헤더를 상단 중앙으로 */}
               <div className="text-center mb-6">
-                <div className="mb-2">
-                  <h2 className="text-2xl font-bold text-gray-900">{deal.title}</h2>
+                <div className="mb-2 px-2">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 break-words">{deal.title}</h2>
                 </div>
                 {deal.description && (
                   <p className="text-sm text-gray-600 mb-2">{deal.description}</p>
