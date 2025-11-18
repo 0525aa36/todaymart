@@ -171,10 +171,30 @@ public class PaymentService {
         if ("PAID".equalsIgnoreCase(webhookRequest.getStatus())) {
             order.setOrderStatus(OrderStatus.PAID);
             payment.setStatus(PaymentStatus.PAID);
+            logger.info("Webhook: Payment PAID for order {}", webhookRequest.getOrderId());
         } else if ("FAILED".equalsIgnoreCase(webhookRequest.getStatus())) {
             order.setOrderStatus(OrderStatus.PAYMENT_FAILED);
             payment.setStatus(PaymentStatus.FAILED);
             orderService.restoreStock(order.getId());
+            logger.info("Webhook: Payment FAILED for order {}, restoring stock", webhookRequest.getOrderId());
+        } else if ("CANCELLED".equalsIgnoreCase(webhookRequest.getStatus()) ||
+                   "CANCELED".equalsIgnoreCase(webhookRequest.getStatus())) {
+            // 토스에서 결제 취소된 경우
+            order.setOrderStatus(OrderStatus.CANCELLED);
+            payment.setStatus(PaymentStatus.FAILED);
+
+            // 취소 정보 저장
+            if (webhookRequest.getCancellationReason() != null) {
+                order.setCancellationReason(webhookRequest.getCancellationReason());
+                payment.setRefundReason(webhookRequest.getCancellationReason());
+            }
+            order.setCancelledAt(LocalDateTime.now());
+            payment.setRefundedAt(LocalDateTime.now());
+
+            // 재고 복구
+            orderService.restoreStock(order.getId());
+            logger.info("Webhook: Payment CANCELLED for order {}, restoring stock. Reason: {}",
+                       webhookRequest.getOrderId(), webhookRequest.getCancellationReason());
         }
 
         if (webhookRequest.getTransactionId() != null && !webhookRequest.getTransactionId().isEmpty()) {
@@ -183,6 +203,9 @@ public class PaymentService {
 
         orderRepository.save(order);
         paymentRepository.save(payment);
+
+        logger.info("Webhook processed successfully for order {} with status {}",
+                   webhookRequest.getOrderId(), webhookRequest.getStatus());
     }
 
     /**
