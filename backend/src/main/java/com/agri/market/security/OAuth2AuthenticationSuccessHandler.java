@@ -33,6 +33,12 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     @Value("${frontend.url}")
     private String frontendUrl;
 
+    @Value("${cookie.secure}")
+    private boolean cookieSecure;
+
+    @Value("${cookie.same-site}")
+    private String cookieSameSite;
+
     public OAuth2AuthenticationSuccessHandler(JwtTokenProvider jwtTokenProvider,
                                                RefreshTokenService refreshTokenService,
                                                UserRepository userRepository) {
@@ -63,10 +69,10 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         // 리프레시 토큰을 httpOnly 쿠키로 설정
         jakarta.servlet.http.Cookie refreshTokenCookie = new jakarta.servlet.http.Cookie("refreshToken", refreshToken.getToken());
         refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(false);
+        refreshTokenCookie.setSecure(cookieSecure); // Use configuration value
         refreshTokenCookie.setPath("/");
         refreshTokenCookie.setMaxAge(30 * 24 * 60 * 60); // 30일
-        refreshTokenCookie.setAttribute("SameSite", "Lax");
+        refreshTokenCookie.setAttribute("SameSite", cookieSameSite); // Use configuration value
         response.addCookie(refreshTokenCookie);
 
         // 프론트엔드 리다이렉트 URL 생성 (액세스 토큰을 쿼리 파라미터로 전달)
