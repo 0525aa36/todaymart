@@ -96,7 +96,7 @@ export function ProductCard({
         body: JSON.stringify({
           productId: Number(productId),
           quantity,
-          optionId
+          productOptionId: optionId
         })
       })
 

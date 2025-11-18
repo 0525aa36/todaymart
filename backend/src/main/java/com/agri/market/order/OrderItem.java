@@ -1,6 +1,7 @@
 package com.agri.market.order;
 
 import com.agri.market.product.Product;
+import com.agri.market.product.ProductOption;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -27,6 +28,11 @@ public class OrderItem {
     @JoinColumn(name = "product_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "images", "options"})
     private Product product;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_option_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "product"})
+    private ProductOption productOption;
 
     @Column(nullable = false)
     private Integer quantity;

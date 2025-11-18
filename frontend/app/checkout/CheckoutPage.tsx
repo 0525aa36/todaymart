@@ -242,6 +242,7 @@ export function CheckoutPage() {
           items: orderItems.map((item) => ({
             productId: item.product.id,
             quantity: item.quantity,
+            productOptionId: item.productOption?.id || null,
           })),
         }),
       })

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { Minus, Plus } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 import { LoadingSpinner } from "@/components/loading-spinner"
@@ -21,6 +22,8 @@ interface Product {
   id: number
   name: string
   price: number
+  discountedPrice: number
+  discountRate: number | null
   imageUrl: string
   options: ProductOption[]
   stock: number
@@ -51,6 +54,8 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
     try {
       setLoading(true)
       const data = await apiFetch<Product>(`/api/products/${productId}`)
+      console.log("Product data:", data)
+      console.log("Product options:", data.options)
       setProduct(data)
       setQuantity(1)
       setSelectedOptionId(undefined)
@@ -98,7 +103,7 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
   }
 
   const selectedOption = product?.options?.find(opt => opt.id === selectedOptionId)
-  const totalPrice = product ? (product.price + (selectedOption?.additionalPrice || 0)) * quantity : 0
+  const totalPrice = product ? (product.discountedPrice + (selectedOption?.additionalPrice || 0)) * quantity : 0
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -126,7 +131,15 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
               </div>
               <div className="flex-1">
                 <h3 className="font-medium text-sm mb-1">{product.name}</h3>
-                <p className="text-lg font-bold">{product.price.toLocaleString()}원</p>
+                {product.discountRate && product.discountRate > 0 && (
+                  <div className="text-sm text-gray-400 line-through">{product.price.toLocaleString()}원</div>
+                )}
+                <div className="flex items-center gap-2 mt-1">
+                  {product.discountRate && product.discountRate > 0 && (
+                    <span className="text-lg font-bold text-orange-500">{product.discountRate}%</span>
+                  )}
+                  <p className="text-lg font-bold">{product.discountedPrice.toLocaleString()}원</p>
+                </div>
               </div>
             </div>
 

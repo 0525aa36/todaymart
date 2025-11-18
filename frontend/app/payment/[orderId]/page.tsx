@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import { apiFetch } from "@/lib/api-client"
 import { Loader2 } from "lucide-react"
 import { AdminLoadingSpinner, LOADING_MESSAGES } from "@/components/admin/AdminLoadingSpinner"
+import Image from "next/image"
 
 const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || ""
 
@@ -19,7 +20,17 @@ interface OrderItem {
   product: {
     id: number
     name: string
+    price: number
+    discountedPrice: number
+    discountRate: number | null
+    imageUrl: string
   }
+  productOption?: {
+    id: number
+    name: string
+    optionValue: string
+    additionalPrice: number
+  } | null
   quantity: number
   price: number
 }
@@ -236,6 +247,68 @@ export default function PaymentPage() {
       <main className="flex-1 py-8 bg-muted/30">
         <div className="container mx-auto px-4 max-w-2xl">
           <h1 className="text-3xl font-bold mb-8">결제</h1>
+
+          {/* 주문 상품 목록 */}
+          {order.orderItems && order.orderItems.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>주문 상품</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {order.orderItems.map((item) => (
+                  <div key={item.id} className="flex gap-4 pb-4 border-b last:border-b-0 last:pb-0">
+                    <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      <Image
+                        src={item.product.imageUrl || "/placeholder.svg"}
+                        alt={item.product.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm mb-1">{item.product.name}</h4>
+
+                      {item.productOption && (
+                        <div className="text-xs text-muted-foreground mb-2">
+                          <span className="font-medium">옵션:</span> {item.productOption.optionValue || item.productOption.name}
+                          {item.productOption.additionalPrice !== 0 && (
+                            <span className="ml-1">
+                              ({item.productOption.additionalPrice > 0 ? "+" : ""}
+                              {item.productOption.additionalPrice.toLocaleString()}원)
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {item.product.discountRate && item.product.discountRate > 0 && (
+                        <div className="text-xs text-gray-400 line-through mb-1">
+                          {item.product.price.toLocaleString()}원
+                          {item.productOption && item.productOption.additionalPrice !== 0 && (
+                            <span className="ml-1">
+                              ({item.productOption.additionalPrice > 0 ? "+" : ""}
+                              {item.productOption.additionalPrice.toLocaleString()}원)
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 mb-2">
+                        {item.product.discountRate && item.product.discountRate > 0 && (
+                          <span className="text-sm font-bold text-orange-500">{item.product.discountRate}%</span>
+                        )}
+                        <span className="text-sm font-bold">{item.price.toLocaleString()}원</span>
+                        <span className="text-xs text-muted-foreground">× {item.quantity}개</span>
+                      </div>
+
+                      <div className="text-sm font-semibold text-right">
+                        {(item.price * item.quantity).toLocaleString()}원
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="mb-6">
             <CardHeader>

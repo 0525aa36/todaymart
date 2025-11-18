@@ -14,6 +14,8 @@ import com.agri.market.notification.NotificationType;
 import com.agri.market.payment.Payment;
 import com.agri.market.payment.PaymentRepository;
 import com.agri.market.product.Product;
+import com.agri.market.product.ProductOption;
+import com.agri.market.product.ProductOptionRepository;
 import com.agri.market.product.ProductRepository;
 import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
@@ -38,6 +40,7 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final ProductOptionRepository productOptionRepository;
     private final CartRepository cartRepository;
     private final PaymentRepository paymentRepository;
 
@@ -47,12 +50,14 @@ public class OrderService {
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
                         UserRepository userRepository, ProductRepository productRepository,
+                        ProductOptionRepository productOptionRepository,
                         CartRepository cartRepository, PaymentRepository paymentRepository,
                         NotificationService notificationService, UserCouponService userCouponService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.productOptionRepository = productOptionRepository;
         this.cartRepository = cartRepository;
         this.paymentRepository = paymentRepository;
         this.notificationService = notificationService;
@@ -104,14 +109,44 @@ public class OrderService {
                 throw new RuntimeException("Not enough stock for product: " + product.getName());
             }
 
+            // 옵션 처리
+            ProductOption productOption = null;
+            if (itemRequest.getProductOptionId() != null) {
+                productOption = productOptionRepository.findById(itemRequest.getProductOptionId())
+                        .orElseThrow(() -> new RuntimeException("Product option not found with id: " + itemRequest.getProductOptionId()));
+
+                // 옵션이 해당 상품에 속하는지 검증
+                if (!productOption.getProduct().getId().equals(product.getId())) {
+                    throw new RuntimeException("Product option does not belong to this product");
+                }
+
+                // 옵션 재고 확인
+                if (productOption.getStock() < itemRequest.getQuantity()) {
+                    throw new RuntimeException("Not enough stock for option: " + productOption.getName());
+                }
+            }
+
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(order);
             orderItem.setProduct(product);
+            orderItem.setProductOption(productOption);
             orderItem.setQuantity(itemRequest.getQuantity());
-            orderItem.setPrice(product.getPrice()); // Price at the time of order
+
+            // 가격 계산: 할인된 가격 + 옵션 추가 가격
+            BigDecimal itemPrice = product.getDiscountedPrice();
+            System.out.println("[OrderService] Product: " + product.getName() +
+                             ", Original Price: " + product.getPrice() +
+                             ", Discounted Price: " + product.getDiscountedPrice());
+            if (productOption != null && productOption.getAdditionalPrice() != null) {
+                System.out.println("[OrderService] Option: " + productOption.getName() +
+                                 ", Additional Price: " + productOption.getAdditionalPrice());
+                itemPrice = itemPrice.add(productOption.getAdditionalPrice());
+            }
+            System.out.println("[OrderService] Final Item Price: " + itemPrice);
+            orderItem.setPrice(itemPrice);
             orderItems.add(orderItem);
 
-            totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
+            totalAmount = totalAmount.add(itemPrice.multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
 
             // 합포장 배송비 계산
             BigDecimal itemShippingFee = BigDecimal.ZERO;
@@ -227,7 +262,7 @@ public class OrderService {
      */
     @Transactional(readOnly = true)
     public Optional<Order> getOrderByIdWithAuth(Long orderId, String userEmail, Authentication authentication) {
-        Optional<Order> orderOpt = orderRepository.findById(orderId);
+        Optional<Order> orderOpt = orderRepository.findByIdWithItems(orderId);
 
         if (orderOpt.isEmpty()) {
             return Optional.empty();

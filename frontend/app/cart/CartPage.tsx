@@ -19,6 +19,8 @@ interface Product {
   id: number
   name: string
   price: number
+  discountedPrice: number
+  discountRate: number | null
   imageUrl: string
   stock: number
   shippingFee: number
@@ -289,7 +291,22 @@ export function CartPage() {
                             </div>
                           )}
 
+                          {item.product.discountRate && item.product.discountRate > 0 && (
+                            <div className="text-sm text-gray-400 line-through mb-1">
+                              {item.product.price.toLocaleString()}원
+                              {item.productOption && item.productOption.additionalPrice !== 0 && (
+                                <span className="ml-1">
+                                  ({item.productOption.additionalPrice > 0 ? "+" : ""}
+                                  {item.productOption.additionalPrice.toLocaleString()}원)
+                                </span>
+                              )}
+                            </div>
+                          )}
+
                           <div className="flex items-center gap-2 mb-3">
+                            {item.product.discountRate && item.product.discountRate > 0 && (
+                              <span className="text-lg font-bold text-orange-500">{item.product.discountRate}%</span>
+                            )}
                             <span className="text-lg font-bold">{item.price.toLocaleString()}원</span>
                           </div>
 
