@@ -808,8 +808,8 @@ export function ProductDetailPage() {
 
                             if (videoId) {
                               return (
-                                <div className="my-6 mx-auto" style={{ maxWidth: '800px' }}>
-                                  <div className="relative" style={{ paddingBottom: '56.25%' }}>
+                                <div className="my-6 w-full px-4 sm:px-0 sm:max-w-3xl mx-auto">
+                                  <div className="relative aspect-video">
                                     <iframe
                                       src={`https://www.youtube.com/embed/${videoId}`}
                                       className="absolute top-0 left-0 w-full h-full rounded-lg shadow-sm"
@@ -825,11 +825,12 @@ export function ProductDetailPage() {
                           // 비디오 파일 처리 (.mp4, .webm, .ogg)
                           if (src.match(/\.(mp4|webm|ogg)$/i)) {
                             return (
-                              <div className="my-6 mx-auto" style={{ maxWidth: '800px' }}>
+                              <div className="my-6 w-full px-4 sm:px-0 sm:max-w-3xl mx-auto">
                                 <video
                                   controls
                                   className="w-full h-auto rounded-lg shadow-sm"
                                   src={src}
+                                  playsInline
                                 >
                                   동영상을 재생할 수 없습니다.
                                 </video>
@@ -839,11 +840,11 @@ export function ProductDetailPage() {
 
                           // 일반 이미지 처리
                           return (
-                            <span className="block my-6">
+                            <span className="block my-6 w-full px-4 sm:px-0 sm:max-w-3xl mx-auto">
                               <img
                                 {...props}
-                                className="max-w-full h-auto mx-auto rounded-lg shadow-sm"
-                                style={{ maxWidth: '800px' }}
+                                className="w-full h-auto rounded-lg shadow-sm"
+                                loading="lazy"
                               />
                             </span>
                           );
@@ -860,11 +861,12 @@ export function ProductDetailPage() {
                   <div className="space-y-6 mt-8">
                     <div className="space-y-6 flex flex-col items-center">
                       {product.detailImageUrls.split(',').filter(url => url.trim()).map((url, index) => (
-                        <div key={index} className="max-w-2xl w-full">
+                        <div key={index} className="w-full px-4 sm:px-0 sm:max-w-3xl">
                           <img
                             src={url.trim()}
                             alt={`${product.name} 상세 이미지 ${index + 1}`}
                             className="w-full h-auto rounded-lg shadow-sm"
+                            loading="lazy"
                           />
                         </div>
                       ))}
