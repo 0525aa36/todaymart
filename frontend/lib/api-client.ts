@@ -2,7 +2,11 @@
 
 const DEFAULT_API_BASE_URL = "http://localhost:8081"
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL
+// Support both NEXT_PUBLIC_API_BASE_URL and NEXT_PUBLIC_API_URL for backwards compatibility
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  DEFAULT_API_BASE_URL
 
 type ApiParseMode = "json" | "text" | "none" | "blob"
 
