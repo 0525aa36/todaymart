@@ -2,6 +2,7 @@ package com.agri.market.order;
 
 import com.agri.market.dto.CancelOrderRequest;
 import com.agri.market.dto.OrderRequest;
+import com.agri.market.dto.OrderResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -55,13 +56,16 @@ public class OrderController {
             @ApiResponse(responseCode = "401", description = "인증 필요")
     })
     @GetMapping
-    public ResponseEntity<List<Order>> getOrdersByUser() {
+    public ResponseEntity<List<OrderResponse>> getOrdersByUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String userEmail = userDetails.getUsername();
 
         List<Order> orders = orderService.getOrdersByUser(userEmail);
-        return ResponseEntity.ok(orders);
+        List<OrderResponse> orderResponses = orders.stream()
+                .map(OrderResponse::from)
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(orderResponses);
     }
 
     @PostMapping("/{orderId}/complete")
@@ -74,18 +78,19 @@ public class OrderController {
             security = @SecurityRequirement(name = "Bearer Authentication"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "주문 조회 성공",
-                    content = @Content(schema = @Schema(implementation = Order.class))),
+                    content = @Content(schema = @Schema(implementation = OrderResponse.class))),
             @ApiResponse(responseCode = "404", description = "주문을 찾을 수 없음"),
             @ApiResponse(responseCode = "401", description = "인증 필요")
     })
     @GetMapping("/{orderId}")
-    public ResponseEntity<Order> getOrderById(
+    public ResponseEntity<OrderResponse> getOrderById(
             @Parameter(description = "주문 ID", required = true) @PathVariable Long orderId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String userEmail = userDetails.getUsername();
 
         return orderService.getOrderByIdWithAuth(orderId, userEmail, authentication)
+                .map(OrderResponse::from)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
