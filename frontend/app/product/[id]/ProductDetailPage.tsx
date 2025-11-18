@@ -786,7 +786,7 @@ export function ProductDetailPage() {
                   <div className="space-y-6 mt-8">
                     <div className="space-y-6 flex flex-col items-center">
                       {product.detailImageUrls.split(',').filter(url => url.trim()).map((url, index) => (
-                        <div key={index} className="max-w-xl w-full">
+                        <div key={index} className="max-w-2xl w-full">
                           <img
                             src={url.trim()}
                             alt={`${product.name} 상세 이미지 ${index + 1}`}
