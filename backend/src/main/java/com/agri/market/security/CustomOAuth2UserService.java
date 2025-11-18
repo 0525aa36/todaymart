@@ -1,9 +1,5 @@
 package com.agri.market.security;
 
-import com.agri.market.coupon.Coupon;
-import com.agri.market.coupon.CouponRepository;
-import com.agri.market.coupon.UserCoupon;
-import com.agri.market.coupon.UserCouponRepository;
 import com.agri.market.security.oauth2.KakaoOAuth2UserInfo;
 import com.agri.market.security.oauth2.NaverOAuth2UserInfo;
 import com.agri.market.security.oauth2.OAuth2UserInfo;
@@ -55,18 +51,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private static final Logger logger = LoggerFactory.getLogger(CustomOAuth2UserService.class);
 
     private final UserRepository userRepository;
-    private final CouponRepository couponRepository;
-    private final UserCouponRepository userCouponRepository;
 
-    @Value("${coupon.welcome.code:WELCOME}")
-    private String welcomeCouponCode;
-
-    public CustomOAuth2UserService(UserRepository userRepository,
-                                   CouponRepository couponRepository,
-                                   UserCouponRepository userCouponRepository) {
+    public CustomOAuth2UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.couponRepository = couponRepository;
-        this.userCouponRepository = userCouponRepository;
     }
 
     @Override
@@ -174,11 +161,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
             logger.info("신규 OAuth2 사용자 생성: {} ({})", email, provider);
 
-            // User를 먼저 저장
+            // User 저장
             user = userRepository.save(user);
-
-            // 저장된 User로 웰컴 쿠폰 발급
-            issueWelcomeCoupon(user);
         }
 
         return new CustomOAuth2User(user, oauth2User.getAttributes());
@@ -196,36 +180,4 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         return null;
     }
 
-    /**
-     * 신규 가입 사용자에게 웰컴 쿠폰 자동 발급
-     */
-    private void issueWelcomeCoupon(User user) {
-        try {
-            Optional<Coupon> welcomeCouponOpt = couponRepository.findByCode(welcomeCouponCode);
-
-            if (welcomeCouponOpt.isEmpty()) {
-                logger.info("웰컴 쿠폰(code: {})이 존재하지 않아 자동 발급을 건너뜁니다.", welcomeCouponCode);
-                return;
-            }
-
-            Coupon welcomeCoupon = welcomeCouponOpt.get();
-
-            if (!welcomeCoupon.isValid()) {
-                logger.warn("웰컴 쿠폰(code: {})이 유효하지 않아 발급할 수 없습니다.", welcomeCouponCode);
-                return;
-            }
-
-            UserCoupon userCoupon = new UserCoupon();
-            userCoupon.setUser(user);
-            userCoupon.setCoupon(welcomeCoupon);
-            userCoupon.setExpiresAt(welcomeCoupon.getEndDate());
-
-            userCouponRepository.save(userCoupon);
-            logger.info("사용자 {}({})에게 웰컴 쿠폰(code: {})을 발급했습니다.",
-                    user.getName(), user.getEmail(), welcomeCouponCode);
-
-        } catch (Exception e) {
-            logger.error("웰컴 쿠폰 발급 중 오류 발생 (사용자: {}): {}", user.getEmail(), e.getMessage(), e);
-        }
-    }
 }

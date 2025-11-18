@@ -10,7 +10,6 @@ import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api-client';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import BannerCarousel from '@/components/banner-carousel';
-import SignupPromotionModal from '@/components/signup-promotion-modal';
 import { NoticePopup } from '@/components/notice-popup';
 import { WeeklySpecialSection } from '@/components/weekly-special-section';
 import { MdPickSection } from '@/components/md-pick-section';
@@ -263,7 +262,6 @@ export function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <SignupPromotionModal />
       <NoticePopup />
       <Header />
 
