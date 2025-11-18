@@ -99,7 +99,11 @@
       "Bash(new-task-def.json)",
       "Bash(docker.exe build:*)",
       "WebFetch(domain:www.kurly.com)",
-      "Bash(/dev/null)"
+      "Bash(/dev/null)",
+      "Bash(/tmp/updated-task-def.json)",
+      "Bash(updated-task-def.json)",
+      "Bash(/tmp/add-sendgrid-env.sh)",
+      "Bash(git remote get-url:*)"
     ],
     "deny": [],
     "ask": []
