@@ -91,6 +91,14 @@ public class CartService {
             // 기존 아이템 수량 증가
             CartItem cartItem = existingCartItem.get();
             cartItem.setQuantity(cartItem.getQuantity() + request.getQuantity());
+
+            // 가격 재계산: 할인된 가격 + 옵션 추가 가격
+            BigDecimal itemPrice = product.getDiscountedPrice();
+            if (productOption != null && productOption.getAdditionalPrice() != null) {
+                itemPrice = itemPrice.add(productOption.getAdditionalPrice());
+            }
+            cartItem.setPrice(itemPrice);
+
             cartItemRepository.save(cartItem);
         } else {
             // 새 아이템 추가

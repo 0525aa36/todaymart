@@ -349,13 +349,8 @@ export function CartPage() {
 
                           {item.product.discountRate && item.product.discountRate > 0 && (
                             <div className="text-sm text-gray-400 line-through mb-1">
-                              {item.product.price.toLocaleString()}원
-                              {item.productOption && item.productOption.additionalPrice !== 0 && (
-                                <span className="ml-1">
-                                  ({item.productOption.additionalPrice > 0 ? "+" : ""}
-                                  {item.productOption.additionalPrice.toLocaleString()}원)
-                                </span>
-                              )}
+                              {/* 원가 + 옵션 추가 가격 */}
+                              {(item.product.price + (item.productOption?.additionalPrice || 0)).toLocaleString()}원
                             </div>
                           )}
 
@@ -363,6 +358,7 @@ export function CartPage() {
                             {item.product.discountRate && item.product.discountRate > 0 && (
                               <span className="text-lg font-bold text-orange-500">{item.product.discountRate}%</span>
                             )}
+                            {/* item.price는 이미 할인가 + 옵션가격이 포함된 최종 가격 */}
                             <span className="text-lg font-bold">{item.price.toLocaleString()}원</span>
                           </div>
 
