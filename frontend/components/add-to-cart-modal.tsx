@@ -63,7 +63,13 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
       setProduct(data)
       // 초기 수량을 최소 주문 수량으로 설정
       setQuantity(data.minOrderQuantity || 1)
-      setSelectedOptionId(undefined)
+      // 옵션이 있으면 첫 번째 옵션을 기본 선택
+      if (data.options && data.options.length > 0) {
+        setSelectedOptionId(data.options[0].id)
+        console.log("Default option selected:", data.options[0])
+      } else {
+        setSelectedOptionId(undefined)
+      }
     } catch (error) {
       console.error("Error fetching product:", error)
     } finally {
@@ -105,8 +111,15 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
 
   const handleAddToCart = async () => {
     if (product && !addingToCart) {
+      // 옵션이 있는 상품인데 옵션을 선택하지 않았을 경우
+      if (product.options && product.options.length > 0 && !selectedOptionId) {
+        toast.warning("옵션을 선택해주세요")
+        return
+      }
+
       try {
         setAddingToCart(true)
+        console.log("[AddToCartModal] Adding to cart - productId:", productId, "quantity:", quantity, "optionId:", selectedOptionId)
         await onAddToCart(productId, quantity, selectedOptionId)
         onClose()
       } catch (error) {
