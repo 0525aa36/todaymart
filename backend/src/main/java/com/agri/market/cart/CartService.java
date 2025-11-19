@@ -51,8 +51,12 @@ public class CartService {
         // 옵션 처리
         ProductOption productOption = null;
         if (request.getProductOptionId() != null) {
+            System.out.println("[CartService] Product Option ID received: " + request.getProductOptionId());
             productOption = productOptionRepository.findById(request.getProductOptionId())
                     .orElseThrow(() -> new RuntimeException("Product option not found with id: " + request.getProductOptionId()));
+
+            System.out.println("[CartService] Product Option found: " + productOption.getName() +
+                             ", Additional Price: " + productOption.getAdditionalPrice());
 
             // 옵션이 해당 상품에 속하는지 검증
             if (!productOption.getProduct().getId().equals(product.getId())) {
@@ -63,6 +67,8 @@ public class CartService {
             if (productOption.getStock() < request.getQuantity()) {
                 throw new RuntimeException("Not enough stock for option: " + productOption.getName());
             }
+        } else {
+            System.out.println("[CartService] No Product Option ID received");
         }
 
         Cart cart = cartRepository.findByUserWithItems(user)
@@ -94,9 +100,12 @@ public class CartService {
 
             // 가격 재계산: 할인된 가격 + 옵션 추가 가격
             BigDecimal itemPrice = product.getDiscountedPrice();
+            System.out.println("[CartService - Update Existing] Base discounted price: " + itemPrice);
             if (productOption != null && productOption.getAdditionalPrice() != null) {
+                System.out.println("[CartService - Update Existing] Adding option price: " + productOption.getAdditionalPrice());
                 itemPrice = itemPrice.add(productOption.getAdditionalPrice());
             }
+            System.out.println("[CartService - Update Existing] Final item price: " + itemPrice);
             cartItem.setPrice(itemPrice);
 
             cartItemRepository.save(cartItem);
@@ -110,9 +119,12 @@ public class CartService {
 
             // 가격 계산: 할인된 가격 + 옵션 추가 가격
             BigDecimal itemPrice = product.getDiscountedPrice();
+            System.out.println("[CartService] Base discounted price: " + itemPrice);
             if (productOption != null && productOption.getAdditionalPrice() != null) {
+                System.out.println("[CartService] Adding option price: " + productOption.getAdditionalPrice());
                 itemPrice = itemPrice.add(productOption.getAdditionalPrice());
             }
+            System.out.println("[CartService] Final item price: " + itemPrice);
             cartItem.setPrice(itemPrice);
 
             cartItemRepository.save(cartItem);
