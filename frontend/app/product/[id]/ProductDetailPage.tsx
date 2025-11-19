@@ -237,14 +237,18 @@ export function ProductDetailPage() {
     }
 
     try {
+      const cartData = {
+        productId: Number(productId),
+        quantity: quantity,
+        productOptionId: selectedOption?.id || null,
+      }
+      console.log("[ProductDetailPage] Adding to cart - selectedOption:", selectedOption)
+      console.log("[ProductDetailPage] Sending to cart API:", cartData)
+
       await apiFetch("/api/cart/items", {
         method: "POST",
         auth: true,
-        body: JSON.stringify({
-          productId: Number(productId),
-          quantity: quantity,
-          productOptionId: selectedOption?.id || null,
-        }),
+        body: JSON.stringify(cartData),
         parseResponse: "none",
       })
 
