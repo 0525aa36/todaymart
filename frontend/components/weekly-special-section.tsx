@@ -94,14 +94,17 @@ export function WeeklySpecialSection({ specialDealId }: WeeklySpecialSectionProp
         return
       }
 
+      const requestBody = {
+        productId: Number(productId),
+        quantity,
+        productOptionId: optionId  // optionId가 아닌 productOptionId로 수정
+      }
+      console.log("[WeeklySpecialSection] Sending to cart API:", requestBody)
+
       await apiFetch("/api/cart/items", {
         method: "POST",
         auth: true,
-        body: JSON.stringify({
-          productId: Number(productId),
-          quantity,
-          optionId
-        })
+        body: JSON.stringify(requestBody)
       })
 
       toast.success("장바구니에 상품이 추가되었습니다!")
