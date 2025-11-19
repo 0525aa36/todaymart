@@ -90,14 +90,17 @@ export function ProductCard({
         return
       }
 
+      const requestBody = {
+        productId: Number(productId),
+        quantity,
+        productOptionId: optionId
+      }
+      console.log("[ProductCard] Sending to cart API:", requestBody)
+
       await apiFetch("/api/cart/items", {
         method: "POST",
         auth: true,
-        body: JSON.stringify({
-          productId: Number(productId),
-          quantity,
-          productOptionId: optionId
-        })
+        body: JSON.stringify(requestBody)
       })
 
       toast.success("장바구니에 상품이 추가되었습니다!")

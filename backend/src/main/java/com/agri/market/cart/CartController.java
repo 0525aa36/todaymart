@@ -20,6 +20,10 @@ public class CartController {
 
     @PostMapping("/items")
     public ResponseEntity<Cart> addItemToCart(@Valid @RequestBody AddToCartRequest request) {
+        System.out.println("[CartController] Received request - ProductId: " + request.getProductId() +
+                         ", Quantity: " + request.getQuantity() +
+                         ", ProductOptionId: " + request.getProductOptionId());
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String userEmail = userDetails.getUsername();
