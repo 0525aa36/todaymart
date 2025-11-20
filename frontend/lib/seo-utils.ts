@@ -96,8 +96,6 @@ export function generateSEOMetadata({
       creator: '@todaymart',
       site: '@todaymart',
     },
-    viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
-    themeColor: '#10b981',
   }
 
   // 상품 페이지인 경우 추가 메타데이터

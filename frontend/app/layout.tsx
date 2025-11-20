@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'sonner'
 import { ErrorBoundary } from '@/components/error-boundary'
 import './globals.css'
@@ -6,6 +6,13 @@ import './globals.css'
 const SITE_NAME = '오늘마트'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://todaymart.co.kr'
 const SITE_DESCRIPTION = '신선한 농수산물을 농가에서 직접 배송받으세요. 오늘 주문하면 내일 도착! 산지직송으로 더욱 신선하고 저렴한 농수산물을 만나보세요.'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#10b981',
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
