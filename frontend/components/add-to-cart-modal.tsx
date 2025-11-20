@@ -154,7 +154,9 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
                   src={product.imageUrl || "/placeholder.svg"}
                   alt={product.name}
                   fill
+                  sizes="80px"
                   className="object-cover"
+                  quality={75}
                 />
               </div>
               <div className="flex-1">

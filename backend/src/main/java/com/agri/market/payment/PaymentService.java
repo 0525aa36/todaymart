@@ -1,5 +1,6 @@
 package com.agri.market.payment;
 
+import com.agri.market.cart.CartRepository;
 import com.agri.market.config.TossPaymentsConfig;
 import com.agri.market.dto.WebhookRequest;
 import com.agri.market.exception.ForbiddenException;
@@ -43,6 +44,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final OrderService orderService;
     private final UserRepository userRepository;
+    private final CartRepository cartRepository;
     private final TossPaymentsConfig tossPaymentsConfig;
     private final RestTemplate restTemplate;
 
@@ -54,11 +56,13 @@ public class PaymentService {
 
     public PaymentService(PaymentRepository paymentRepository, OrderRepository orderRepository,
                          OrderService orderService, UserRepository userRepository,
-                         TossPaymentsConfig tossPaymentsConfig, RestTemplate restTemplate) {
+                         CartRepository cartRepository, TossPaymentsConfig tossPaymentsConfig,
+                         RestTemplate restTemplate) {
         this.paymentRepository = paymentRepository;
         this.orderRepository = orderRepository;
         this.orderService = orderService;
         this.userRepository = userRepository;
+        this.cartRepository = cartRepository;
         this.tossPaymentsConfig = tossPaymentsConfig;
         this.restTemplate = restTemplate;
     }
@@ -172,6 +176,12 @@ public class PaymentService {
             order.setOrderStatus(OrderStatus.PAID);
             payment.setStatus(PaymentStatus.PAID);
             logger.info("Webhook: Payment PAID for order {}", webhookRequest.getOrderId());
+
+            // 결제 완료 시 장바구니 삭제
+            cartRepository.findByUser(order.getUser()).ifPresent(cart -> {
+                cartRepository.delete(cart);
+                logger.info("Cart cleared for user {} after successful payment", order.getUser().getEmail());
+            });
         } else if ("FAILED".equalsIgnoreCase(webhookRequest.getStatus())) {
             order.setOrderStatus(OrderStatus.PAYMENT_FAILED);
             payment.setStatus(PaymentStatus.FAILED);
@@ -434,6 +444,12 @@ public class PaymentService {
                 // 주문 상태 업데이트
                 order.setOrderStatus(OrderStatus.PAID);
                 orderRepository.save(order);
+
+                // 결제 완료 시 장바구니 삭제
+                cartRepository.findByUser(order.getUser()).ifPresent(cart -> {
+                    cartRepository.delete(cart);
+                    logger.info("Cart cleared for user {} after payment confirmation", order.getUser().getEmail());
+                });
 
                 return result;
             } else {

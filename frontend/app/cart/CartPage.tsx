@@ -324,7 +324,9 @@ export function CartPage() {
                             src={item.product.imageUrl || "/placeholder.svg"}
                             alt={item.product.name}
                             fill
+                            sizes="96px"
                             className="object-cover rounded-lg"
+                            quality={75}
                           />
                         </Link>
 

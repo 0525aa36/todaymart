@@ -255,8 +255,8 @@ public class OrderService {
             NotificationType.NEW_ORDER
         );
 
-        // Clear cart after order creation (assuming order is created from cart)
-        cartRepository.findByUser(user).ifPresent(cartRepository::delete);
+        // 장바구니는 결제 완료 후에만 삭제 (주문 생성 시점에는 삭제하지 않음)
+        // cartRepository.findByUser(user).ifPresent(cartRepository::delete);
 
         return savedOrder;
     }

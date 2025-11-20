@@ -591,8 +591,10 @@ export function ProductDetailPage() {
                   src={mainImage || "/placeholder.svg"}
                   alt={product.name}
                   fill
+                  sizes="(max-width: 768px) 100vw, 40vw"
                   className="object-cover"
-                  unoptimized
+                  priority
+                  quality={90}
                 />
               </div>
             </div>
@@ -940,12 +942,18 @@ export function ProductDetailPage() {
                     <div className="space-y-6 flex flex-col items-center">
                       {product.detailImageUrls.split(',').filter(url => url.trim()).map((url, index) => (
                         <div key={index} className="w-full px-4 sm:px-0 sm:max-w-3xl">
-                          <img
-                            src={url.trim()}
-                            alt={`${product.name} 상세 이미지 ${index + 1}`}
-                            className="w-full h-auto rounded-lg shadow-sm"
-                            loading="lazy"
-                          />
+                          <div className="relative w-full">
+                            <Image
+                              src={url.trim()}
+                              alt={`${product.name} 상세 이미지 ${index + 1}`}
+                              width={1200}
+                              height={800}
+                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 60vw"
+                              className="w-full h-auto rounded-lg shadow-sm"
+                              loading="lazy"
+                              quality={85}
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>

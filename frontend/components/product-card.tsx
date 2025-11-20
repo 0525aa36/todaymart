@@ -138,7 +138,10 @@ export function ProductCard({
               src={image || "/placeholder.svg"}
               alt={name}
               fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className={`object-cover group-hover:scale-105 transition-transform duration-300 ${stockStatus === "SOLD_OUT" ? "opacity-50" : ""}`}
+              priority={false}
+              quality={85}
             />
           </Link>
 

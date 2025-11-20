@@ -6,6 +6,7 @@ import Autoplay from "embla-carousel-autoplay"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { apiFetch, API_BASE_URL } from "@/lib/api-client"
+import Image from "next/image"
 
 interface Banner {
   id: number
@@ -87,20 +88,28 @@ export default function BannerCarousel() {
               {banner.linkUrl ? (
                 <a
                   href={banner.linkUrl}
-                  className="block h-[280px] md:h-[360px]"
+                  className="block relative h-[280px] md:h-[360px]"
                 >
-                  <img
+                  <Image
                     src={banner.imageUrl.startsWith('http') ? banner.imageUrl : `${API_BASE_URL}${banner.imageUrl}`}
                     alt={banner.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="100vw"
+                    className="object-cover"
+                    priority={selectedIndex === 0 && banners.indexOf(banner) === 0}
+                    quality={90}
                   />
                 </a>
               ) : (
-                <div className="h-[280px] md:h-[360px]">
-                  <img
+                <div className="relative h-[280px] md:h-[360px]">
+                  <Image
                     src={banner.imageUrl.startsWith('http') ? banner.imageUrl : `${API_BASE_URL}${banner.imageUrl}`}
                     alt={banner.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="100vw"
+                    className="object-cover"
+                    priority={selectedIndex === 0 && banners.indexOf(banner) === 0}
+                    quality={90}
                   />
                 </div>
               )}
