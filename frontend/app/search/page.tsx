@@ -5,10 +5,11 @@ import { generateSEOMetadata } from '@/lib/seo-utils';
 export async function generateMetadata({
   searchParams
 }: {
-  searchParams: { keyword?: string; category?: string }
+  searchParams: Promise<{ keyword?: string; category?: string }>
 }): Promise<Metadata> {
-  const keyword = searchParams.keyword || '';
-  const category = searchParams.category || '';
+  const params = await searchParams;
+  const keyword = params.keyword || '';
+  const category = params.category || '';
 
   // 카테고리 이름 매핑
   const categoryNames: Record<string, string> = {
@@ -58,11 +59,11 @@ export async function generateMetadata({
 
   // canonical URL 생성 (검색 파라미터 포함)
   let url = '/search';
-  const params = new URLSearchParams();
-  if (keyword) params.append('keyword', keyword);
-  if (category) params.append('category', category);
-  if (params.toString()) {
-    url += `?${params.toString()}`;
+  const urlParams = new URLSearchParams();
+  if (keyword) urlParams.append('keyword', keyword);
+  if (category) urlParams.append('category', category);
+  if (urlParams.toString()) {
+    url += `?${urlParams.toString()}`;
   }
 
   return generateSEOMetadata({
