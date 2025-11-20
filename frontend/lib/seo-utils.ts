@@ -40,76 +40,100 @@ export function generateSEOMetadata({
   author,
   noindex = false,
 }: GenerateMetadataParams): Metadata {
-  const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`
-  const canonicalUrl = url.startsWith('http') ? url : `${SITE_URL}${url}`
+  try {
+    const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
+    const canonicalUrl = url?.startsWith('http') ? url : `${SITE_URL}${url}`;
 
-  // 이미지 URL 정규화
-  const normalizedImages = images.map(img => {
-    if (img.startsWith('http')) return img
-    if (img.startsWith('/')) return `${SITE_URL}${img}`
-    return `${SITE_URL}/${img}`
-  })
+    // 이미지 URL 정규화 - 안전하게 처리
+    let normalizedImages: string[] = [];
+    if (images && Array.isArray(images) && images.length > 0) {
+      normalizedImages = images.map(img => {
+        if (!img) return `${SITE_URL}${DEFAULT_IMAGE}`;
+        if (img.startsWith('http')) return img;
+        if (img.startsWith('/')) return `${SITE_URL}${img}`;
+        return `${SITE_URL}/${img}`;
+      }).filter(Boolean);
+    } else {
+      normalizedImages = [`${SITE_URL}${DEFAULT_IMAGE}`];
+    }
 
-  const metadata: Metadata = {
-    title: fullTitle,
-    description,
-    keywords: keywords.join(', '),
-    authors: author ? [{ name: author }] : [{ name: SITE_NAME }],
-    creator: SITE_NAME,
-    publisher: SITE_NAME,
-    metadataBase: new URL(SITE_URL),
-    alternates: {
-      canonical: canonicalUrl,
-    },
-    robots: {
-      index: !noindex,
-      follow: !noindex,
-      googleBot: {
+    // metadataBase를 안전하게 생성
+    let metadataBase;
+    try {
+      metadataBase = new URL(SITE_URL);
+    } catch (e) {
+      console.warn('Invalid SITE_URL for metadataBase:', e);
+      metadataBase = undefined;
+    }
+
+    const metadata: Metadata = {
+      title: fullTitle,
+      description: description || DEFAULT_DESCRIPTION,
+      keywords: keywords?.length > 0 ? keywords.join(', ') : undefined,
+      authors: author ? [{ name: author }] : [{ name: SITE_NAME }],
+      creator: SITE_NAME,
+      publisher: SITE_NAME,
+      ...(metadataBase && { metadataBase }),
+      alternates: {
+        canonical: canonicalUrl,
+      },
+      robots: {
         index: !noindex,
         follow: !noindex,
-        'max-image-preview': 'large',
-        'max-snippet': -1,
+        googleBot: {
+          index: !noindex,
+          follow: !noindex,
+          'max-image-preview': 'large',
+          'max-snippet': -1,
+        },
       },
-    },
-    openGraph: {
-      type: type as any,
-      title: fullTitle,
-      description,
-      url: canonicalUrl,
-      siteName: SITE_NAME,
-      locale: 'ko_KR',
-      images: normalizedImages.map(image => ({
-        url: image,
-        width: 1200,
-        height: 630,
-        alt: title,
-      })),
-      ...(publishedTime && { publishedTime }),
-      ...(modifiedTime && { modifiedTime }),
-      ...(author && { authors: [author] }),
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: fullTitle,
-      description,
-      images: normalizedImages,
-      creator: '@todaymart',
-      site: '@todaymart',
-    },
-  }
+      openGraph: {
+        type: type as any,
+        title: fullTitle,
+        description: description || DEFAULT_DESCRIPTION,
+        url: canonicalUrl,
+        siteName: SITE_NAME,
+        locale: 'ko_KR',
+        images: normalizedImages.map(image => ({
+          url: image,
+          width: 1200,
+          height: 630,
+          alt: title || SITE_NAME,
+        })),
+        ...(publishedTime && { publishedTime }),
+        ...(modifiedTime && { modifiedTime }),
+        ...(author && { authors: [author] }),
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: fullTitle,
+        description: description || DEFAULT_DESCRIPTION,
+        images: normalizedImages,
+        creator: '@todaymart',
+        site: '@todaymart',
+      },
+    };
 
-  // 상품 페이지인 경우 추가 메타데이터
-  if (type === 'product' && price) {
-    ;(metadata as any).other = {
-      'product:price:amount': price.toString(),
-      'product:price:currency': currency,
-      ...(availability && { 'product:availability': availability }),
-      ...(brand && { 'product:brand': brand }),
-      ...(category && { 'product:category': category }),
+    // 상품 페이지인 경우 추가 메타데이터
+    if (type === 'product' && price) {
+      (metadata as any).other = {
+        'product:price:amount': price.toString(),
+        'product:price:currency': currency,
+        ...(availability && { 'product:availability': availability }),
+        ...(brand && { 'product:brand': brand }),
+        ...(category && { 'product:category': category }),
+      };
     }
-  }
 
-  return metadata
+    return metadata;
+  } catch (error) {
+    console.error('Error in generateSEOMetadata:', error);
+    // 오류 발생 시 기본 메타데이터 반환
+    return {
+      title: `${title || '오늘마트'} | ${SITE_NAME}`,
+      description: description || DEFAULT_DESCRIPTION,
+    };
+  }
 }
 
 // JSON-LD 스키마 생성 헬퍼

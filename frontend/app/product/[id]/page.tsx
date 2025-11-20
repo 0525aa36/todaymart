@@ -14,6 +14,7 @@ interface Product {
   discountedPrice: number;
   discountRate?: number;
   imageUrl?: string;
+  imageUrls?: string; // 쉼표로 구분된 이미지 URL 문자열
   detailImageUrls?: string[] | string; // API에서 문자열 또는 배열로 올 수 있음
   category?: string;
   categoryName?: string;
@@ -48,7 +49,18 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
+    const id = resolvedParams?.id;
+
+    if (!id) {
+      console.error('generateMetadata: No ID provided');
+      return generateSEOMetadata({
+        title: '상품 정보 로딩 중',
+        description: '상품 정보를 불러오는 중입니다.',
+        noindex: true,
+      });
+    }
+
     const product = await getProduct(id);
 
     if (!product) {
@@ -59,66 +71,103 @@ export async function generateMetadata({
       });
     }
 
-  // 이미지 URL 정규화
-  const images = [];
-  if (product.imageUrl) {
-    images.push(product.imageUrl.startsWith('http') ? product.imageUrl : `${API_URL}${product.imageUrl}`);
-  }
-  if (product.detailImageUrls) {
-    // detailImageUrls가 배열인지 문자열인지 확인
-    const detailUrls = Array.isArray(product.detailImageUrls)
-      ? product.detailImageUrls
-      : typeof product.detailImageUrls === 'string' && product.detailImageUrls.trim()
-        ? product.detailImageUrls.split(',').map(url => url.trim())
-        : [];
+    // 이미지 URL 정규화 - 안전하게 처리
+    const images = [];
 
-    detailUrls.slice(0, 3).forEach(url => {
-      if (url) {
-        images.push(url.startsWith('http') ? url : `${API_URL}${url}`);
+    try {
+      if (product.imageUrl) {
+        const imageUrl = String(product.imageUrl).trim();
+        if (imageUrl) {
+          images.push(imageUrl.startsWith('http') ? imageUrl : `${API_URL}${imageUrl}`);
+        }
       }
-    });
-  }
 
-  // 재고 상태
-  const availability = product.stockStatus === 'SOLD_OUT' ? 'out of stock' : 'in stock';
+      // detailImageUrls 처리 - 더 안전하게
+      if (product.detailImageUrls) {
+        let detailUrls = [];
 
-  // 가격 정보
-  const price = product.discountedPrice || product.price;
-  const originalPrice = product.price;
+        if (Array.isArray(product.detailImageUrls)) {
+          detailUrls = product.detailImageUrls;
+        } else if (typeof product.detailImageUrls === 'string') {
+          const trimmed = product.detailImageUrls.trim();
+          if (trimmed && trimmed.includes(',')) {
+            detailUrls = trimmed.split(',').map(url => url.trim());
+          } else if (trimmed) {
+            detailUrls = [trimmed];
+          }
+        }
 
-  // 설명 생성
-  let description = product.summary || product.description || `${product.name} - 오늘마트에서 신선하게 배송해드립니다.`;
+        detailUrls.slice(0, 3).forEach(url => {
+          if (url && typeof url === 'string') {
+            const trimmedUrl = url.trim();
+            if (trimmedUrl) {
+              images.push(trimmedUrl.startsWith('http') ? trimmedUrl : `${API_URL}${trimmedUrl}`);
+            }
+          }
+        });
+      }
 
-  // 할인율이 있으면 추가
-  if (product.discountRate && product.discountRate > 0) {
-    description = `[${product.discountRate}% 할인] ${description}`;
-  }
+      // imageUrls도 처리 (쉼표로 구분된 문자열)
+      if (!images.length && product.imageUrls) {
+        const imageUrls = typeof product.imageUrls === 'string'
+          ? product.imageUrls.split(',').map(url => url.trim())
+          : [];
 
-  // 원산지 정보가 있으면 추가
-  if (product.origin) {
-    description += ` 원산지: ${product.origin}`;
-  }
+        imageUrls.slice(0, 3).forEach(url => {
+          if (url) {
+            images.push(url.startsWith('http') ? url : `${API_URL}${url}`);
+          }
+        });
+      }
+    } catch (imageError) {
+      console.error('Error processing images:', imageError);
+      // 이미지 처리 실패해도 계속 진행
+    }
 
-  // 평점 정보가 있으면 추가
-  if (product.averageRating && product.reviewCount) {
-    description += ` | 평점 ${product.averageRating}점 (리뷰 ${product.reviewCount}개)`;
-  }
+    // 재고 상태
+    const availability = product.stockStatus === 'SOLD_OUT' ? 'out of stock' : 'in stock';
 
-  // 키워드 생성
-  const keywords = [
-    product.name,
-    product.categoryName || product.category || '농수산물',
-    '신선식품',
-    '산지직송',
-    '오늘마트',
-    product.origin || '국내산',
-  ];
+    // 가격 정보
+    const price = product.discountedPrice || product.price || 0;
+
+    // 설명 생성 - 안전하게
+    let description = product.summary || product.description || `${product.name || '상품'} - 오늘마트에서 신선하게 배송해드립니다.`;
+
+    // 할인율이 있으면 추가
+    if (product.discountRate && product.discountRate > 0) {
+      description = `[${product.discountRate}% 할인] ${description}`;
+    }
+
+    // 원산지 정보가 있으면 추가
+    if (product.origin) {
+      description += ` 원산지: ${product.origin}`;
+    }
+
+    // 평점 정보가 있으면 추가
+    if (product.averageRating && product.reviewCount) {
+      description += ` | 평점 ${product.averageRating}점 (리뷰 ${product.reviewCount}개)`;
+    }
+
+    // 설명이 너무 길면 자르기
+    if (description.length > 160) {
+      description = description.substring(0, 157) + '...';
+    }
+
+    // 키워드 생성
+    const keywords = [
+      product.name || '',
+      product.categoryName || product.category || '농수산물',
+      '신선식품',
+      '산지직송',
+      '오늘마트',
+      product.origin || '국내산',
+    ].filter(Boolean);
 
     return generateSEOMetadata({
-      title: product.name,
+      title: product.name || '상품',
       description,
       keywords,
-      images,
+      images: images.length > 0 ? images : undefined,
       url: `/product/${product.id}`,
       type: 'product',
       price,
