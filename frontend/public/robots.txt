@@ -1,0 +1,30 @@
+# 오늘마트 Robots.txt
+# https://todaymart.co.kr
+
+User-agent: *
+Allow: /
+
+# 크롤링 허용 페이지
+Allow: /product/
+Allow: /category/
+Allow: /search
+Allow: /help
+Allow: /terms
+Allow: /privacy
+
+# 크롤링 차단 페이지 (사용자 개인 정보)
+Disallow: /mypage/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /payment/
+Disallow: /login
+Disallow: /register
+Disallow: /admin/
+Disallow: /api/
+
+# 검색엔진별 크롤링 딜레이
+Crawl-delay: 1
+
+# 사이트맵 위치
+Sitemap: https://todaymart.co.kr/sitemap.xml
+Sitemap: https://api.todaymart.co.kr/sitemap.xml
