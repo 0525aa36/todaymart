@@ -14,7 +14,7 @@ interface Product {
   discountedPrice: number;
   discountRate?: number;
   imageUrl?: string;
-  detailImageUrls?: string[];
+  detailImageUrls?: string[] | string; // API에서 문자열 또는 배열로 올 수 있음
   category?: string;
   categoryName?: string;
   averageRating?: number;
@@ -57,9 +57,18 @@ export async function generateMetadata({
   if (product.imageUrl) {
     images.push(product.imageUrl.startsWith('http') ? product.imageUrl : `${API_URL}${product.imageUrl}`);
   }
-  if (product.detailImageUrls && product.detailImageUrls.length > 0) {
-    product.detailImageUrls.slice(0, 3).forEach(url => {
-      images.push(url.startsWith('http') ? url : `${API_URL}${url}`);
+  if (product.detailImageUrls) {
+    // detailImageUrls가 배열인지 문자열인지 확인
+    const detailUrls = Array.isArray(product.detailImageUrls)
+      ? product.detailImageUrls
+      : typeof product.detailImageUrls === 'string' && product.detailImageUrls.trim()
+        ? product.detailImageUrls.split(',').map(url => url.trim())
+        : [];
+
+    detailUrls.slice(0, 3).forEach(url => {
+      if (url) {
+        images.push(url.startsWith('http') ? url : `${API_URL}${url}`);
+      }
     });
   }
 
