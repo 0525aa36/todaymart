@@ -27,9 +27,15 @@ async function getProduct(id: string): Promise<Product | null> {
   try {
     const response = await fetch(`${API_URL}/api/products/${id}`, {
       next: { revalidate: 60 }, // 1분마다 재검증
+      cache: 'no-store', // 개발 중에는 캐시 비활성화
     });
-    if (!response.ok) return null;
-    return await response.json();
+    if (!response.ok) {
+      console.error(`Failed to fetch product ${id}: ${response.status}`);
+      return null;
+    }
+    const data = await response.json();
+    console.log(`Product ${id} data:`, JSON.stringify(data).substring(0, 200));
+    return data;
   } catch (error) {
     console.error('Error fetching product for metadata:', error);
     return null;
@@ -41,16 +47,17 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
-  const { id } = await params;
-  const product = await getProduct(id);
+  try {
+    const { id } = await params;
+    const product = await getProduct(id);
 
-  if (!product) {
-    return generateSEOMetadata({
-      title: '상품을 찾을 수 없습니다',
-      description: '요청하신 상품을 찾을 수 없습니다.',
-      noindex: true,
-    });
-  }
+    if (!product) {
+      return generateSEOMetadata({
+        title: '상품을 찾을 수 없습니다',
+        description: '요청하신 상품을 찾을 수 없습니다.',
+        noindex: true,
+      });
+    }
 
   // 이미지 URL 정규화
   const images = [];
@@ -107,17 +114,25 @@ export async function generateMetadata({
     product.origin || '국내산',
   ];
 
-  return generateSEOMetadata({
-    title: product.name,
-    description,
-    keywords,
-    images,
-    url: `/product/${product.id}`,
-    type: 'product',
-    price,
-    availability,
-    category: product.categoryName || product.category,
-  });
+    return generateSEOMetadata({
+      title: product.name,
+      description,
+      keywords,
+      images,
+      url: `/product/${product.id}`,
+      type: 'product',
+      price,
+      availability,
+      category: product.categoryName || product.category,
+    });
+  } catch (error) {
+    console.error('Error in generateMetadata:', error);
+    return generateSEOMetadata({
+      title: '상품 정보 로딩 중',
+      description: '상품 정보를 불러오는 중입니다.',
+      noindex: true,
+    });
+  }
 }
 
 export default function Page() {
