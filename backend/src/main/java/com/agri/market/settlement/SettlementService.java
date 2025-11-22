@@ -63,9 +63,7 @@ public class SettlementService {
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
-        List<Order> paidOrders = orderRepository.findOrdersForExport(startDateTime, endDateTime).stream()
-                .filter(order -> order.getOrderStatus() == OrderStatus.PAID)
-                .toList();
+        List<Order> paidOrders = orderRepository.findOrdersForExport(startDateTime, endDateTime, OrderStatus.PAID);
 
         // 해당 판매자의 상품 매출 및 주문 건수 계산
         BigDecimal totalSales = calculateSalesForSeller(paidOrders, seller);
