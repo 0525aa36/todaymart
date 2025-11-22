@@ -71,7 +71,9 @@ export function OrdersPage() {
 
     try {
       const data = await apiFetch<Order[]>("/api/orders", { auth: true })
-      setOrders(data)
+      // 결제 대기 상태 주문은 마이페이지에서 제외
+      const filteredData = data.filter(order => order.orderStatus !== "PENDING_PAYMENT")
+      setOrders(filteredData)
     } catch (error) {
       console.error("Error fetching orders:", error)
       toast({
@@ -110,7 +112,8 @@ export function OrdersPage() {
 
   const statusFilters = [
     { value: "ALL", label: "전체", count: orders.length },
-    { value: "PENDING_PAYMENT", label: "결제 대기", count: orders.filter((o) => o.orderStatus === "PENDING_PAYMENT").length },
+    // 결제 대기는 마이페이지에서 표시하지 않음
+    // { value: "PENDING_PAYMENT", label: "결제 대기", count: orders.filter((o) => o.orderStatus === "PENDING_PAYMENT").length },
     { value: "PAID", label: "결제완료", count: orders.filter((o) => o.orderStatus === "PAID").length },
     { value: "PREPARING", label: "상품 준비중", count: orders.filter((o) => o.orderStatus === "PREPARING").length },
     { value: "SHIPPED", label: "배송중", count: orders.filter((o) => o.orderStatus === "SHIPPED").length },

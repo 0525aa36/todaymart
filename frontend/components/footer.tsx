@@ -53,7 +53,7 @@ export function Footer() {
             <h3 className="text-sm font-semibold mb-4 text-foreground/70">소셜 미디어</h3>
             <div className="flex gap-3">
               <a
-                href="https://www.instagram.com/todaymart_?igsh=ZG5iZXNmZ3VkOHBr&utm_source=qr"
+                href="https://www.instagram.com/todaymart_official/?next=%2Ftodaymart_%2F"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 flex items-center justify-center text-white hover:scale-110 transition-transform"

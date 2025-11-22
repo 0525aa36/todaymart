@@ -3,6 +3,7 @@ package com.agri.market.admin;
 import com.agri.market.order.Order;
 import com.agri.market.order.OrderRepository;
 import com.agri.market.order.OrderItem;
+import com.agri.market.order.OrderStatus;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -31,11 +32,11 @@ public class ExcelService {
     }
 
     @Transactional(readOnly = true)
-    public ByteArrayOutputStream exportOrdersToExcel(LocalDate fromDate, LocalDate toDate) throws IOException {
+    public ByteArrayOutputStream exportOrdersToExcel(LocalDate fromDate, LocalDate toDate, OrderStatus status) throws IOException {
         LocalDateTime startDateTime = fromDate != null ? fromDate.atStartOfDay() : null;
         LocalDateTime endDateTime = toDate != null ? toDate.atTime(LocalTime.MAX) : null;
 
-        List<Order> orders = orderRepository.findOrdersForExport(startDateTime, endDateTime);
+        List<Order> orders = orderRepository.findOrdersForExport(startDateTime, endDateTime, status);
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Orders");
@@ -61,8 +62,8 @@ public class ExcelService {
                 row.createCell(0).setCellValue(order.getId()); // 주문번호
                 row.createCell(1).setCellValue(orderDateTime); // 주문일시 (한국 시간)
                 row.createCell(2).setCellValue(""); // 기재X
-                row.createCell(3).setCellValue(order.getSenderName() != null ? order.getSenderName() : order.getUser().getName()); // 송하인
-                row.createCell(4).setCellValue(order.getSenderPhone() != null ? order.getSenderPhone() : order.getUser().getPhone()); // 송하인 연락처
+                row.createCell(3).setCellValue("오늘마트"); // 송하인
+                row.createCell(4).setCellValue("1644-1473"); // 송하인 연락처
                 row.createCell(5).setCellValue(order.getRecipientName()); // 수취인
                 row.createCell(6).setCellValue(order.getRecipientPhone()); // 수취인 연락처
                 row.createCell(7).setCellValue(order.getShippingPostcode()); // 우편번호

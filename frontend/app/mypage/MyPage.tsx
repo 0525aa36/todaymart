@@ -99,7 +99,9 @@ export function MyPage() {
 
     try {
       const data = await apiFetch<Order[]>("/api/orders", { auth: true })
-      setOrders(data)
+      // 결제 대기 상태 주문은 마이페이지에서 제외
+      const filteredData = data.filter(order => order.orderStatus !== "PENDING_PAYMENT")
+      setOrders(filteredData)
     } catch (error) {
       console.error("Error fetching orders:", error)
       toast({

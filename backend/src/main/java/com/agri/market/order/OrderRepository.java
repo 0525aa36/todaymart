@@ -73,10 +73,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "LEFT JOIN FETCH oi.productOption po " +
            "WHERE (:startDate IS NULL OR o.createdAt >= :startDate) " +
            "AND (:endDate IS NULL OR o.createdAt <= :endDate) " +
+           "AND (:status IS NULL OR o.orderStatus = :status) " +
            "ORDER BY o.createdAt DESC")
     List<Order> findOrdersForExport(
         @Param("startDate") LocalDateTime startDate,
-        @Param("endDate") LocalDateTime endDate
+        @Param("endDate") LocalDateTime endDate,
+        @Param("status") OrderStatus status
     );
 
     // 사용자별 주문 수 조회

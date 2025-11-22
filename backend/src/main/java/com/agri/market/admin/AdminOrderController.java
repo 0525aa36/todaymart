@@ -50,14 +50,15 @@ public class AdminOrderController {
     public ResponseEntity<Resource> exportOrders(
             @RequestParam(required = false) String format,
             @RequestParam(required = false) LocalDate from,
-            @RequestParam(required = false) LocalDate to) throws IOException {
+            @RequestParam(required = false) LocalDate to,
+            @RequestParam(required = false, defaultValue = "PAID") OrderStatus status) throws IOException {
 
         // Default to XLSX if format is not specified or invalid
         if (format == null || (!format.equalsIgnoreCase("xlsx") && !format.equalsIgnoreCase("csv"))) {
             format = "xlsx";
         }
 
-        ByteArrayOutputStream outputStream = excelService.exportOrdersToExcel(from, to); // Currently only supports XLSX
+        ByteArrayOutputStream outputStream = excelService.exportOrdersToExcel(from, to, status); // Currently only supports XLSX
 
         String filename = "orders_" + LocalDate.now().format(DateTimeFormatter.ISO_DATE) + "." + format;
         MediaType mediaType = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); // For XLSX
