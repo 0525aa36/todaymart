@@ -29,8 +29,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -635,5 +638,37 @@ public class OrderService {
         // 주문 상태를 PAID로 변경
         order.setOrderStatus(OrderStatus.PAID);
         orderRepository.save(order);
+    }
+
+    /**
+     * 여러 주문의 상태를 일괄 변경 (관리자용)
+     * @param orderIds 변경할 주문 ID 목록
+     * @param newStatus 새로운 주문 상태
+     * @return 성공한 주문 ID 목록과 실패한 주문 정보를 담은 Map
+     */
+    @Transactional
+    public Map<String, Object> bulkUpdateOrderStatus(List<Long> orderIds, OrderStatus newStatus) {
+        List<Long> successIds = new ArrayList<>();
+        List<Map<String, Object>> failedOrders = new ArrayList<>();
+
+        for (Long orderId : orderIds) {
+            try {
+                updateOrderStatus(orderId, newStatus);
+                successIds.add(orderId);
+            } catch (Exception e) {
+                Map<String, Object> failedOrder = new HashMap<>();
+                failedOrder.put("orderId", orderId);
+                failedOrder.put("error", e.getMessage());
+                failedOrders.add(failedOrder);
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("successCount", successIds.size());
+        result.put("failureCount", failedOrders.size());
+        result.put("successIds", successIds);
+        result.put("failedOrders", failedOrders);
+
+        return result;
     }
 }

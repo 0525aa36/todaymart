@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { OrderStatusBadge } from "@/components/order-status-badge"
 import {
   Select,
@@ -32,7 +33,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Search, Truck, Package2, Edit, RefreshCw } from "lucide-react"
+import { ChevronLeft, Search, Truck, Package2, Edit, RefreshCw, CheckSquare } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { AdminPagination } from "@/components/admin/AdminPagination"
@@ -89,11 +90,17 @@ export default function AdminOrdersPage() {
   const [selectedSellerId, setSelectedSellerId] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState("")
 
+  // Selection states
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(new Set())
+  const [isAllFilterSelected, setIsAllFilterSelected] = useState(false)
+
   // Dialog states
   const [statusDialogOpen, setStatusDialogOpen] = useState(false)
+  const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false)
   const [trackingDialogOpen, setTrackingDialogOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [newStatus, setNewStatus] = useState<string>("")
+  const [bulkNewStatus, setBulkNewStatus] = useState<string>("")
   const [trackingNumber, setTrackingNumber] = useState("")
   const [updating, setUpdating] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -126,7 +133,13 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     fetchOrders()
+    clearSelection()
   }, [selectedStatus, selectedSellerId])
+
+  const clearSelection = () => {
+    setSelectedOrderIds(new Set())
+    setIsAllFilterSelected(false)
+  }
 
   const fetchSellers = async () => {
     try {
@@ -164,6 +177,61 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const fetchAllFilteredOrderIds = async () => {
+    try {
+      let url = "/api/admin/orders/ids?"
+      if (selectedStatus !== "ALL") {
+        url += `orderStatus=${selectedStatus}&`
+      }
+      if (selectedSellerId !== "ALL") {
+        url += `sellerId=${selectedSellerId}&`
+      }
+
+      const ids = await apiFetch<number[]>(url, { auth: true })
+      return ids
+    } catch (error) {
+      console.error("Error fetching filtered order IDs:", error)
+      toast({
+        title: "오류",
+        description: "필터 결과 조회 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+      return []
+    }
+  }
+
+  const handleSelectAll = () => {
+    if (paginatedOrders.every(order => selectedOrderIds.has(order.orderId))) {
+      // Deselect all on current page
+      const newSelected = new Set(selectedOrderIds)
+      paginatedOrders.forEach(order => newSelected.delete(order.orderId))
+      setSelectedOrderIds(newSelected)
+      setIsAllFilterSelected(false)
+    } else {
+      // Select all on current page
+      const newSelected = new Set(selectedOrderIds)
+      paginatedOrders.forEach(order => newSelected.add(order.orderId))
+      setSelectedOrderIds(newSelected)
+    }
+  }
+
+  const handleSelectAllFiltered = async () => {
+    const allIds = await fetchAllFilteredOrderIds()
+    setSelectedOrderIds(new Set(allIds))
+    setIsAllFilterSelected(true)
+  }
+
+  const handleToggleOrder = (orderId: number) => {
+    const newSelected = new Set(selectedOrderIds)
+    if (newSelected.has(orderId)) {
+      newSelected.delete(orderId)
+      setIsAllFilterSelected(false)
+    } else {
+      newSelected.add(orderId)
+    }
+    setSelectedOrderIds(newSelected)
+  }
+
   const handleUpdateStatus = async () => {
     if (!selectedOrder || !newStatus) return
 
@@ -190,6 +258,45 @@ export default function AdminOrdersPage() {
       toast({
         title: "상태 변경 실패",
         description: getErrorMessage(error, "상태 변경 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleBulkUpdateStatus = async () => {
+    if (selectedOrderIds.size === 0 || !bulkNewStatus) return
+
+    setUpdating(true)
+    try {
+      const result = await apiFetch<any>(`/api/admin/orders/bulk-status`, {
+        method: "PUT",
+        auth: true,
+        body: JSON.stringify({
+          orderIds: Array.from(selectedOrderIds),
+          status: bulkNewStatus,
+        }),
+        parseResponse: "json",
+      })
+
+      const successCount = result.successCount || 0
+      const failureCount = result.failureCount || 0
+
+      toast({
+        title: "일괄 상태 변경 완료",
+        description: `${successCount}개 성공${failureCount > 0 ? `, ${failureCount}개 실패` : ''}`,
+        variant: failureCount > 0 ? "destructive" : "default",
+      })
+
+      setBulkStatusDialogOpen(false)
+      clearSelection()
+      fetchOrders()
+    } catch (error) {
+      console.error("Error bulk updating status:", error)
+      toast({
+        title: "일괄 상태 변경 실패",
+        description: getErrorMessage(error, "일괄 상태 변경 중 오류가 발생했습니다."),
         variant: "destructive",
       })
     } finally {
@@ -237,6 +344,11 @@ export default function AdminOrdersPage() {
     setStatusDialogOpen(true)
   }
 
+  const openBulkStatusDialog = () => {
+    setBulkNewStatus("")
+    setBulkStatusDialogOpen(true)
+  }
+
   const openTrackingDialog = (order: Order) => {
     setSelectedOrder(order)
     setTrackingNumber(order.trackingNumber || "")
@@ -251,7 +363,6 @@ export default function AdminOrdersPage() {
         setLastSyncTime(response.data.lastSyncTime)
       }
     } catch (error) {
-      // Google Sheets가 비활성화되어 있음
       setGoogleSheetsEnabled(false)
       console.log("Google Sheets sync not available")
     }
@@ -292,13 +403,7 @@ export default function AdminOrdersPage() {
   const handleExportExcel = async () => {
     setExportingExcel(true)
     try {
-      // Build query parameters based on current filters
       const params = new URLSearchParams()
-
-      // Add date range if needed (you can add date filter UI later)
-      // params.append('from', '2024-01-01')
-      // params.append('to', '2024-12-31')
-
       const url = `/api/admin/orders/export${params.toString() ? '?' + params.toString() : ''}`
 
       const blob = await apiFetch(url, {
@@ -306,12 +411,10 @@ export default function AdminOrdersPage() {
         parseResponse: 'blob'
       })
 
-      // Create download link
       const downloadUrl = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = downloadUrl
 
-      // Generate filename with current date
       const now = new Date()
       const dateStr = now.toISOString().split('T')[0]
       link.download = `orders_${dateStr}.xlsx`
@@ -350,7 +453,6 @@ export default function AdminOrdersPage() {
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
-      // Toggle direction
       if (sortDirection === "asc") {
         setSortDirection("desc")
       } else if (sortDirection === "desc") {
@@ -364,12 +466,10 @@ export default function AdminOrdersPage() {
   }
 
   const filteredOrders = orders.filter((order) => {
-    // Filter by status
     if (selectedStatus !== "ALL" && order.orderStatus !== selectedStatus) {
       return false
     }
 
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       return (
@@ -383,7 +483,6 @@ export default function AdminOrdersPage() {
     return true
   })
 
-  // Sort orders
   const sortedOrders = [...filteredOrders].sort((a, b) => {
     if (!sortKey || !sortDirection) return 0
 
@@ -420,7 +519,6 @@ export default function AdminOrdersPage() {
     return 0
   })
 
-  // Pagination
   const totalPages = Math.ceil(sortedOrders.length / itemsPerPage)
   const paginatedOrders = sortedOrders.slice(
     currentPage * itemsPerPage,
@@ -432,6 +530,9 @@ export default function AdminOrdersPage() {
     setCurrentPage(page)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
+  const isAllPageSelected = paginatedOrders.length > 0 && paginatedOrders.every(order => selectedOrderIds.has(order.orderId))
+  const isSomePageSelected = paginatedOrders.some(order => selectedOrderIds.has(order.orderId)) && !isAllPageSelected
 
   if (loading) {
     return <AdminLoadingSpinner size="lg" />
@@ -452,6 +553,12 @@ export default function AdminOrdersPage() {
             )}
           </div>
           <div className="flex gap-2">
+            {selectedOrderIds.size > 0 && (
+              <Button onClick={openBulkStatusDialog} className="bg-blue-600 hover:bg-blue-700">
+                <CheckSquare className="h-4 w-4 mr-2" />
+                선택상품 상태 변경 ({selectedOrderIds.size})
+              </Button>
+            )}
             <LoadingButton
               onClick={handleExportExcel}
               isLoading={exportingExcel}
@@ -474,15 +581,50 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Selection Banner */}
+        {selectedOrderIds.size > 0 && !isAllFilterSelected && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-3 flex items-center justify-between">
+              <span className="text-sm text-blue-900">
+                {selectedOrderIds.size}개 주문 선택됨
+              </span>
+              <Button
+                variant="link"
+                onClick={handleSelectAllFiltered}
+                className="text-blue-700 hover:text-blue-900 h-auto p-0"
+              >
+                필터 결과 전체 {filteredOrders.length}개 선택
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {isAllFilterSelected && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-3 flex items-center justify-between">
+              <span className="text-sm font-medium text-blue-900">
+                필터 결과 {selectedOrderIds.size}개 모두 선택됨
+              </span>
+              <Button
+                variant="link"
+                onClick={clearSelection}
+                className="text-blue-700 hover:text-blue-900 h-auto p-0"
+              >
+                선택 해제
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Filters - Reduced Height */}
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* Status Filter */}
-              <div className="space-y-2">
-                <Label htmlFor="status-filter" className="text-sm font-medium text-gray-700">주문 상태</Label>
+              <div className="space-y-1">
+                <Label htmlFor="status-filter" className="text-xs font-medium text-gray-700">주문 상태</Label>
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger id="status-filter" className="h-10">
+                  <SelectTrigger id="status-filter" className="h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -499,10 +641,10 @@ export default function AdminOrdersPage() {
               </div>
 
               {/* Seller Filter */}
-              <div className="space-y-2">
-                <Label htmlFor="seller-filter" className="text-sm font-medium text-gray-700">판매자</Label>
+              <div className="space-y-1">
+                <Label htmlFor="seller-filter" className="text-xs font-medium text-gray-700">판매자</Label>
                 <Select value={selectedSellerId} onValueChange={setSelectedSellerId}>
-                  <SelectTrigger id="seller-filter" className="h-10">
+                  <SelectTrigger id="seller-filter" className="h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -517,16 +659,16 @@ export default function AdminOrdersPage() {
               </div>
 
               {/* Search */}
-              <div className="space-y-2">
-                <Label htmlFor="search" className="text-sm font-medium text-gray-700">검색</Label>
+              <div className="space-y-1">
+                <Label htmlFor="search" className="text-xs font-medium text-gray-700">검색</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                   <Input
                     id="search"
                     placeholder="주문번호, 고객명, 상품명..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-10"
+                    className="pl-8 h-9 text-sm"
                   />
                 </div>
               </div>
@@ -552,6 +694,14 @@ export default function AdminOrdersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-b bg-gray-50/50">
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={isAllPageSelected}
+                            onCheckedChange={handleSelectAll}
+                            aria-label="전체 선택"
+                            className={isSomePageSelected ? "data-[state=checked]:bg-blue-600" : ""}
+                          />
+                        </TableHead>
                         <SortableTableHead
                           sortKey="orderNumber"
                           currentSortKey={sortKey}
@@ -606,6 +756,13 @@ export default function AdminOrdersPage() {
                     <TableBody>
                       {paginatedOrders.map((order, index) => (
                         <TableRow key={order.orderId ?? order.orderNumber ?? `order-${index}`} className="hover:bg-gray-50/50 transition-colors">
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedOrderIds.has(order.orderId)}
+                              onCheckedChange={() => handleToggleOrder(order.orderId)}
+                              aria-label={`주문 ${order.orderNumber} 선택`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium text-gray-900">{order.orderNumber}</TableCell>
                           <TableCell className="text-sm text-gray-600">{formatDate(order.createdAt)}</TableCell>
                           <TableCell>
@@ -726,6 +883,53 @@ export default function AdminOrdersPage() {
             </Button>
             <Button onClick={handleUpdateStatus} disabled={updating}>
               {updating ? "변경 중..." : "변경"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Status Update Dialog */}
+      <Dialog open={bulkStatusDialogOpen} onOpenChange={setBulkStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>선택 주문 일괄 상태 변경</DialogTitle>
+            <DialogDescription>
+              {selectedOrderIds.size}개 주문의 상태를 일괄 변경합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="bulk-new-status">새로운 상태</Label>
+              <Select value={bulkNewStatus} onValueChange={setBulkNewStatus}>
+                <SelectTrigger id="bulk-new-status">
+                  <SelectValue placeholder="상태를 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING_PAYMENT">결제 대기</SelectItem>
+                  <SelectItem value="PAYMENT_FAILED">결제 실패</SelectItem>
+                  <SelectItem value="PAID">결제 완료</SelectItem>
+                  <SelectItem value="PREPARING">상품 준비중</SelectItem>
+                  <SelectItem value="SHIPPED">배송중</SelectItem>
+                  <SelectItem value="DELIVERED">배송 완료</SelectItem>
+                  <SelectItem value="CANCELLED">주문 취소</SelectItem>
+                  <SelectItem value="RETURN_REQUESTED">반품 요청</SelectItem>
+                  <SelectItem value="RETURN_APPROVED">반품 승인</SelectItem>
+                  <SelectItem value="RETURN_COMPLETED">반품 완료</SelectItem>
+                  <SelectItem value="PARTIALLY_RETURNED">부분 반품 완료</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-sm text-muted-foreground bg-amber-50 p-3 rounded-md border border-amber-200">
+              <p className="font-medium text-amber-900 mb-1">주의사항</p>
+              <p className="text-amber-800">선택된 {selectedOrderIds.size}개 주문의 상태가 모두 변경됩니다. 일부 주문은 실패할 수 있습니다.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkStatusDialogOpen(false)} disabled={updating}>
+              취소
+            </Button>
+            <Button onClick={handleBulkUpdateStatus} disabled={updating || !bulkNewStatus}>
+              {updating ? "변경 중..." : `${selectedOrderIds.size}개 주문 상태 변경`}
             </Button>
           </DialogFooter>
         </DialogContent>

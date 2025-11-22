@@ -187,6 +187,61 @@ public class AdminOrderController {
         }
     }
 
+    /**
+     * 여러 주문의 상태를 일괄 변경
+     */
+    @PutMapping("/bulk-status")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> bulkUpdateOrderStatus(@RequestBody com.agri.market.dto.admin.BulkOrderStatusUpdateRequest request) {
+        try {
+            OrderStatus newStatus = OrderStatus.valueOf(request.getStatus());
+
+            // 일괄 업데이트 수행
+            Map<String, Object> result = orderService.bulkUpdateOrderStatus(request.getOrderIds(), newStatus);
+
+            // 각 성공한 주문에 대해 감사 로그 기록
+            @SuppressWarnings("unchecked")
+            List<Long> successIds = (List<Long>) result.get("successIds");
+            for (Long orderId : successIds) {
+                auditLogService.log(
+                    ActionType.ORDER_STATUS_CHANGE,
+                    "ORDER",
+                    orderId,
+                    "BULK_UPDATE",
+                    newStatus.toString(),
+                    request.getReason()
+                );
+            }
+
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid status value: " + request.getStatus());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Bulk update failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 현재 필터 조건에 맞는 모든 주문 ID 조회 (필터 결과 전체 선택 기능용)
+     */
+    @GetMapping("/ids")
+    public ResponseEntity<List<Long>> getOrderIds(
+            @RequestParam(required = false) OrderStatus orderStatus,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) Long sellerId) {
+
+        // getAllOrders를 재사용하여 ID만 추출
+        Pageable unpaged = Pageable.unpaged(); // 페이징 없이 모든 결과 조회
+        Page<Order> orders = orderService.getAllOrders(orderStatus, startDate, endDate, sellerId, unpaged);
+
+        List<Long> orderIds = orders.getContent().stream()
+                .map(Order::getId)
+                .toList();
+
+        return ResponseEntity.ok(orderIds);
+    }
+
     @GetMapping("/sellers")
     public ResponseEntity<List<Seller>> getAllSellers() {
         List<Seller> sellers = sellerRepository.findAll();
