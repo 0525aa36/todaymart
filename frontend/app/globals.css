@@ -214,4 +214,41 @@
   .animate-fadeIn {
     animation: fadeIn 0.4s ease-out forwards;
   }
+
+  /* Sonner Toast Customization */
+  [data-sonner-toast] {
+    position: relative !important;
+  }
+
+  [data-sonner-toast] button[data-close-button] {
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    left: auto !important;
+    background-color: transparent !important;
+    color: var(--color-primary) !important;
+    border: none !important;
+    opacity: 0.8 !important;
+    transition: opacity 0.2s ease !important;
+  }
+
+  [data-sonner-toast] button[data-close-button]:hover {
+    opacity: 1 !important;
+    background-color: rgba(35, 116, 124, 0.1) !important;
+  }
+
+  [data-sonner-toast] button[data-close-button] svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  [data-sonner-toast] [data-content] {
+    padding-right: 36px !important;
+  }
+
+  /* Toast icon color (체크박스, 정보 아이콘 등) */
+  [data-sonner-toast] [data-icon] svg {
+    color: var(--color-primary) !important;
+  }
 }

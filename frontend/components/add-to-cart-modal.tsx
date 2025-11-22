@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Minus, Plus } from "lucide-react"
+import { Minus, Plus, ShoppingCart, ShoppingBag, CheckCircle2 } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import Image from "next/image"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 interface ProductOption {
   id: number
@@ -42,15 +43,21 @@ interface AddToCartModalProps {
 }
 
 export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddToCartModalProps) {
+  const router = useRouter()
   const [product, setProduct] = useState<Product | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [selectedOptionId, setSelectedOptionId] = useState<number | undefined>()
   const [loading, setLoading] = useState(false)
   const [addingToCart, setAddingToCart] = useState(false)
+  const [isAdded, setIsAdded] = useState(false)
 
   useEffect(() => {
     if (isOpen && productId) {
+      setIsAdded(false)
       fetchProduct()
+    } else if (!isOpen) {
+      // 모달이 닫힐 때 상태 초기화
+      setIsAdded(false)
     }
   }, [isOpen, productId])
 
@@ -121,13 +128,22 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
         setAddingToCart(true)
         console.log("[AddToCartModal] Adding to cart - productId:", productId, "quantity:", quantity, "optionId:", selectedOptionId)
         await onAddToCart(productId, quantity, selectedOptionId)
-        onClose()
+        setIsAdded(true)
       } catch (error) {
         // 에러는 onAddToCart에서 처리됨
       } finally {
         setAddingToCart(false)
       }
     }
+  }
+
+  const handleContinueShopping = () => {
+    onClose()
+  }
+
+  const handleGoToCart = () => {
+    onClose()
+    router.push('/cart')
   }
 
   const selectedOption = product?.options?.find(opt => opt.id === selectedOptionId)
@@ -144,6 +160,43 @@ export function AddToCartModal({ productId, isOpen, onClose, onAddToCart }: AddT
           <div className="py-8 flex flex-col items-center gap-2">
             <LoadingSpinner size="lg" />
             <p className="text-sm text-muted-foreground">상품 정보를 불러오는 중...</p>
+          </div>
+        ) : isAdded ? (
+          <div className="space-y-6 py-4">
+            {/* 성공 메시지 */}
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-10 w-10 text-green-600" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-1">장바구니에 담았습니다</h3>
+                <p className="text-sm text-muted-foreground">
+                  {product?.name}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {quantity}개 · {totalPrice.toLocaleString()}원
+                </p>
+              </div>
+            </div>
+
+            {/* 버튼 */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={handleContinueShopping}
+                className="flex-1"
+              >
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                계속 쇼핑하기
+              </Button>
+              <Button
+                onClick={handleGoToCart}
+                className="flex-1 bg-primary hover:bg-primary/90"
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                장바구니로 이동
+              </Button>
+            </div>
           </div>
         ) : product ? (
           <div className="space-y-4">
