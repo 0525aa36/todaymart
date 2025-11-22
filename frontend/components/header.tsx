@@ -433,53 +433,49 @@ export function Header() {
       {isScrolled && (
         <div className="fixed top-0 left-0 right-0 z-[100] bg-white border-b shadow-md animate-in slide-in-from-top duration-200">
           <div className="container mx-auto px-4 max-w-6xl">
-            <div className="flex items-center justify-between py-2">
-              {/* <div className="flex items-center gap-6">
-                <CategoryNav />
-                <Link
-                  href="/new-arrivals"
-                  className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-                >
-                  신상품
-                </Link>
-                <Link
-                  href="/best"
-                  className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-                >
-                  베스트
-                </Link>
-              </div> */}
+            <div className="flex items-center justify-between py-2 gap-2">
+              {/* 로고 - 모바일/데스크탑 공통 */}
+              <Link href="/" className="flex items-center flex-shrink-0">
+                <Image
+                  src="/logo_main.png"
+                  alt="오늘마트 로고"
+                  width={80}
+                  height={27}
+                  className="object-contain md:w-[100px] md:h-[33px]"
+                  unoptimized
+                />
+              </Link>
 
-              {/* 우측 아이콘 및 검색창 */}
+              {/* 검색창 - 모바일/데스크탑 공통 */}
+              <form
+                onSubmit={handleSearch}
+                className="relative flex-1 max-w-md"
+              >
+                <Input
+                  type="search"
+                  placeholder="검색"
+                  className="w-full pl-3 pr-9 bg-primary/17 border-primary/17 h-8 text-sm placeholder:text-xs"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  variant="ghost"
+                  className="absolute right-0 top-0 h-full w-8"
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </form>
+
+              {/* 우측 아이콘 */}
               <div className="flex items-center gap-2 flex-shrink-0">
-                {/* 미니 검색창 */}
-                <form
-                  onSubmit={handleSearch}
-                  className="relative hidden md:block"
-                >
-                  <Input
-                    type="search"
-                    placeholder="검색"
-                    className="w-40 pl-3 pr-9 bg-primary/17 border-primary/17 h-8 text-sm placeholder:text-xs"
-                    value={searchKeyword}
-                    onChange={(e) => setSearchKeyword(e.target.value)}
-                  />
-                  <Button
-                    type="submit"
-                    size="icon"
-                    variant="ghost"
-                    className="absolute right-0 top-0 h-full w-8"
-                  >
-                    <Search className="h-4 w-4" />
-                  </Button>
-                </form>
-
                 {user && (
                   <Link href="/mypage/wishlist">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hidden md:flex h-9 w-9"
+                      className="h-9 w-9"
                       title="찜한 상품"
                     >
                       <Heart className="h-5 w-5" />

@@ -14,16 +14,10 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
 public class ExcelService {
-
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final OrderRepository orderRepository;
 
@@ -42,7 +36,7 @@ public class ExcelService {
         Sheet sheet = workbook.createSheet("Orders");
 
         // Create header row - 본사 요청 양식
-        String[] headers = {"주문번호", "주문일시", "기재X", "송하인", "송하인 연락처", "수취인", "수취인 연락처", "우편번호", "주소", "상품명", "수량", "배송 메세지", "송장번호"};
+        String[] headers = {"주문번호", "기재X", "송하인", "송하인 연락처", "수취인", "수취인 연락처", "우편번호", "주소", "상품명", "수량", "배송 메세지", "송장번호"};
         Row headerRow = sheet.createRow(0);
         for (int i = 0; i < headers.length; i++) {
             Cell cell = headerRow.createCell(i);
@@ -53,37 +47,32 @@ public class ExcelService {
         int rowNum = 1;
 
         for (Order order : orders) {
-            // 주문 시간을 한국 시간대로 변환
-            ZonedDateTime kstTime = order.getCreatedAt().atZone(ZoneId.systemDefault()).withZoneSameInstant(KST);
-            String orderDateTime = kstTime.format(DATE_FORMATTER);
-
             for (OrderItem item : order.getOrderItems()) {
                 Row row = sheet.createRow(rowNum++);
                 row.createCell(0).setCellValue(order.getId()); // 주문번호
-                row.createCell(1).setCellValue(orderDateTime); // 주문일시 (한국 시간)
-                row.createCell(2).setCellValue(""); // 기재X
-                row.createCell(3).setCellValue("오늘마트"); // 송하인
-                row.createCell(4).setCellValue("1644-1473"); // 송하인 연락처
-                row.createCell(5).setCellValue(order.getRecipientName()); // 수취인
-                row.createCell(6).setCellValue(order.getRecipientPhone()); // 수취인 연락처
-                row.createCell(7).setCellValue(order.getShippingPostcode()); // 우편번호
+                row.createCell(1).setCellValue(""); // 기재X
+                row.createCell(2).setCellValue("오늘마트"); // 송하인
+                row.createCell(3).setCellValue("1644-1473"); // 송하인 연락처
+                row.createCell(4).setCellValue(order.getRecipientName()); // 수취인
+                row.createCell(5).setCellValue(order.getRecipientPhone()); // 수취인 연락처
+                row.createCell(6).setCellValue(order.getShippingPostcode()); // 우편번호
 
                 // 주소 합치기
                 String fullAddress = order.getShippingAddressLine1();
                 if (order.getShippingAddressLine2() != null && !order.getShippingAddressLine2().trim().isEmpty()) {
                     fullAddress += " " + order.getShippingAddressLine2();
                 }
-                row.createCell(8).setCellValue(fullAddress); // 주소
+                row.createCell(7).setCellValue(fullAddress); // 주소
 
                 // 상품명 + 옵션 정보
                 String productName = item.getProduct().getName();
                 if (item.getProductOption() != null) {
                     productName += " (" + item.getProductOption().getOptionValue() + ")";
                 }
-                row.createCell(9).setCellValue(productName); // 상품명 + 옵션
-                row.createCell(10).setCellValue(item.getQuantity()); // 수량
-                row.createCell(11).setCellValue(order.getDeliveryMessage() != null ? order.getDeliveryMessage() : ""); // 배송 메세지
-                row.createCell(12).setCellValue(order.getTrackingNumber() != null ? order.getTrackingNumber() : ""); // 송장번호
+                row.createCell(8).setCellValue(productName); // 상품명 + 옵션
+                row.createCell(9).setCellValue(item.getQuantity()); // 수량
+                row.createCell(10).setCellValue(order.getDeliveryMessage() != null ? order.getDeliveryMessage() : ""); // 배송 메세지
+                row.createCell(11).setCellValue(order.getTrackingNumber() != null ? order.getTrackingNumber() : ""); // 송장번호
             }
         }
 
