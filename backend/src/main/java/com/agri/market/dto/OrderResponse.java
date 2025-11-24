@@ -43,6 +43,7 @@ public class OrderResponse {
     private String cancellationReason;
     private LocalDateTime cancelledAt;
     private String trackingNumber;
+    private String courierCompany;
 
     // Delivery information
     private LocalDateTime shippedAt;
@@ -139,6 +140,7 @@ public class OrderResponse {
         response.setCancellationReason(order.getCancellationReason());
         response.setCancelledAt(order.getCancelledAt());
         response.setTrackingNumber(order.getTrackingNumber());
+        response.setCourierCompany(order.getCourierCompany());
 
         response.setShippedAt(order.getShippedAt());
         response.setDeliveredAt(order.getDeliveredAt());

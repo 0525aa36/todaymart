@@ -55,6 +55,8 @@ interface Order {
   orderStatus: string
   paymentStatus: string
   orderItems: OrderItem[]
+  trackingNumber?: string
+  courierCompany?: string
 }
 
 interface UserCoupon {
@@ -382,6 +384,22 @@ export function MyPage() {
                           <span className="font-semibold">총 결제금액</span>
                           <span className="text-xl font-bold text-primary">{order.totalAmount.toLocaleString()}원</span>
                         </div>
+
+                        {/* Tracking Information */}
+                        {(order.orderStatus === "SHIPPED" || order.orderStatus === "DELIVERED") && order.trackingNumber && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                            <div className="flex items-center gap-2 text-sm">
+                              {order.courierCompany && (
+                                <span className="text-muted-foreground">
+                                  {order.courierCompany}
+                                </span>
+                              )}
+                              <span className="font-medium font-mono text-blue-700">
+                                {order.trackingNumber}
+                              </span>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="flex gap-2 mt-4">
                           <Button variant="outline" className="flex-1 bg-transparent" asChild>

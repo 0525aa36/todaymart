@@ -53,6 +53,8 @@ interface Order {
   shippingAddressLine1: string
   shippingAddressLine2: string
   shippingPostcode: string
+  trackingNumber?: string
+  courierCompany?: string
 }
 
 export default function OrderDetailPage() {
@@ -277,6 +279,20 @@ export default function OrderDetailPage() {
                   {order.shippingAddressLine2 && ` ${order.shippingAddressLine2}`}
                 </p>
               </div>
+              {(order.orderStatus === "SHIPPED" || order.orderStatus === "DELIVERED") && order.trackingNumber && (
+                <>
+                  {order.courierCompany && (
+                    <div>
+                      <span className="text-muted-foreground">택배사</span>
+                      <p className="font-medium mt-1">{order.courierCompany}</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">송장번호</span>
+                    <p className="font-medium mt-1 font-mono">{order.trackingNumber}</p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 

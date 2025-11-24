@@ -37,6 +37,8 @@ interface Order {
   orderStatus: string
   paymentStatus: string
   orderItems: OrderItem[]
+  trackingNumber?: string
+  courierCompany?: string
 }
 
 export function OrdersPage() {
@@ -260,6 +262,22 @@ export function OrdersPage() {
                         <span className="font-semibold">총 결제금액</span>
                         <span className="text-xl font-bold text-primary">{order.totalAmount.toLocaleString()}원</span>
                       </div>
+
+                      {/* Tracking Information */}
+                      {(order.orderStatus === "SHIPPED" || order.orderStatus === "DELIVERED") && order.trackingNumber && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 text-sm">
+                            {order.courierCompany && (
+                              <span className="text-muted-foreground">
+                                {order.courierCompany}
+                              </span>
+                            )}
+                            <span className="font-medium font-mono text-blue-700">
+                              {order.trackingNumber}
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Actions */}
                       <div className="flex gap-2">

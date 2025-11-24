@@ -188,6 +188,14 @@ public class OrderService {
         order.setTotalAmount(totalAmount);
         order.setShippingFee(totalShippingFee);
 
+        // 택배사 정보 설정 (첫 번째 상품의 택배사 사용)
+        if (!orderItems.isEmpty()) {
+            OrderItem firstItem = orderItems.iterator().next();
+            if (firstItem.getProduct() != null && firstItem.getProduct().getCourierCompany() != null) {
+                order.setCourierCompany(firstItem.getProduct().getCourierCompany());
+            }
+        }
+
         // 쿠폰 적용 로직
         BigDecimal couponDiscountAmount = BigDecimal.ZERO;
         UserCoupon appliedUserCoupon = null;

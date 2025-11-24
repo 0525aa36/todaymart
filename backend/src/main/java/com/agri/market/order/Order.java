@@ -75,6 +75,9 @@ public class Order {
     private LocalDateTime cancelledAt; // 취소 시간
     private String trackingNumber; // 송장 번호 (배송 추적용)
 
+    @Column(length = 50)
+    private String courierCompany; // 택배사 (CJ대한통운, 로젠택배, 한진택배 등)
+
     // Delivery information
     private LocalDateTime shippedAt; // 배송 시작 시간
     private LocalDateTime deliveredAt; // 배송 완료 시간
