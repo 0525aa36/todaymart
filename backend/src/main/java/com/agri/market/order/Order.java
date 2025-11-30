@@ -78,6 +78,9 @@ public class Order {
     @Column(length = 50)
     private String courierCompany; // 택배사 (CJ대한통운, 로젠택배, 한진택배 등)
 
+    @Column(length = 10)
+    private String courierCode; // 택배사 코드 (스마트택배 API용: 04=CJ대한통운, 05=한진, 06=로젠 등)
+
     // Delivery information
     private LocalDateTime shippedAt; // 배송 시작 시간
     private LocalDateTime deliveredAt; // 배송 완료 시간

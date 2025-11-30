@@ -15,6 +15,7 @@ import { useRouter, useParams } from "next/navigation"
 import { ChevronLeft, Package, MapPin, CreditCard, RotateCcw, AlertTriangle } from "lucide-react"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { ReturnRequestDialog } from "@/components/returns/return-request-dialog"
+import { DeliveryTracking } from "@/components/delivery-tracking"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +56,7 @@ interface Order {
   shippingPostcode: string
   trackingNumber?: string
   courierCompany?: string
+  courierCode?: string
 }
 
 export default function OrderDetailPage() {
@@ -279,22 +281,20 @@ export default function OrderDetailPage() {
                   {order.shippingAddressLine2 && ` ${order.shippingAddressLine2}`}
                 </p>
               </div>
-              {(order.orderStatus === "SHIPPED" || order.orderStatus === "DELIVERED") && order.trackingNumber && (
-                <>
-                  {order.courierCompany && (
-                    <div>
-                      <span className="text-muted-foreground">택배사</span>
-                      <p className="font-medium mt-1">{order.courierCompany}</p>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-muted-foreground">송장번호</span>
-                    <p className="font-medium mt-1 font-mono">{order.trackingNumber}</p>
-                  </div>
-                </>
-              )}
             </CardContent>
           </Card>
+
+          {/* Delivery Tracking - show for SHIPPED/DELIVERED orders with tracking info */}
+          {(order.orderStatus === "SHIPPED" || order.orderStatus === "DELIVERED") &&
+           order.trackingNumber && order.courierCode && (
+            <div className="mb-6">
+              <DeliveryTracking
+                courierCode={order.courierCode}
+                trackingNumber={order.trackingNumber}
+                courierName={order.courierCompany}
+              />
+            </div>
+          )}
 
           {/* Order Items */}
           <Card className="mb-6">

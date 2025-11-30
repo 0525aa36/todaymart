@@ -78,6 +78,10 @@ public class Product {
     @Column(length = 50)
     private String courierCompany;
 
+    // 택배사 코드 (스마트택배 API용: 04=CJ대한통운, 05=한진, 06=로젠 등)
+    @Column(length = 10)
+    private String courierCode;
+
     // 최소 주문 수량
     @Column(nullable = false)
     private Integer minOrderQuantity = 1;

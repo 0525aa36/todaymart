@@ -186,8 +186,15 @@ function extractErrorMessage(status: number, payload: unknown): string {
     return payload
   }
 
-  if (payload && typeof payload === "object" && "message" in payload && typeof payload.message === "string") {
-    return payload.message
+  if (payload && typeof payload === "object") {
+    // 스마트택배 API 등에서 사용하는 errorMessage 필드 확인
+    if ("errorMessage" in payload && typeof payload.errorMessage === "string" && payload.errorMessage.trim().length > 0) {
+      return payload.errorMessage
+    }
+    // 일반적인 message 필드 확인
+    if ("message" in payload && typeof payload.message === "string") {
+      return payload.message
+    }
   }
 
   return `요청이 실패했습니다. (HTTP ${status})`

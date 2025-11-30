@@ -616,6 +616,36 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    /**
+     * 송장 번호 및 택배사 정보 업데이트
+     * @param orderId 주문 ID
+     * @param trackingNumber 송장 번호
+     * @param courierCode 택배사 코드 (스마트택배 API용)
+     * @param courierCompany 택배사 이름
+     * @return 업데이트된 주문
+     */
+    @Transactional
+    public Order updateTrackingInfo(Long orderId, String trackingNumber, String courierCode, String courierCompany) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+
+        order.setTrackingNumber(trackingNumber);
+        if (courierCode != null && !courierCode.trim().isEmpty()) {
+            order.setCourierCode(courierCode);
+        }
+        if (courierCompany != null && !courierCompany.trim().isEmpty()) {
+            order.setCourierCompany(courierCompany);
+        }
+
+        // 송장 번호 등록 시 자동으로 SHIPPED 상태로 변경
+        if (order.getOrderStatus() == OrderStatus.PAID) {
+            order.setOrderStatus(OrderStatus.SHIPPED);
+            order.setShippedAt(LocalDateTime.now());
+        }
+
+        return orderRepository.save(order);
+    }
+
     @Transactional
     public void completePayment(Long orderId) {
         Order order = orderRepository.findById(orderId)

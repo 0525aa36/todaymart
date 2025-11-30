@@ -158,6 +158,9 @@ public class AdminOrderController {
             @RequestBody Map<String, String> request) {
         try {
             String trackingNumber = request.get("trackingNumber");
+            String courierCode = request.get("courierCode");
+            String courierCompany = request.get("courierCompany");
+
             if (trackingNumber == null || trackingNumber.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("Tracking number is required");
             }
@@ -167,8 +170,8 @@ public class AdminOrderController {
                     .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다."));
             String oldTrackingNumber = order.getTrackingNumber();
 
-            // 송장번호 업데이트
-            Order updatedOrder = orderService.updateTrackingNumber(orderId, trackingNumber);
+            // 송장번호 및 택배사 정보 업데이트
+            Order updatedOrder = orderService.updateTrackingInfo(orderId, trackingNumber, courierCode, courierCompany);
 
             // 감사 로그 기록
             auditLogService.log(
@@ -176,7 +179,7 @@ public class AdminOrderController {
                     "ORDER",
                     orderId,
                     oldTrackingNumber != null ? oldTrackingNumber : "null",
-                    trackingNumber
+                    trackingNumber + " (" + (courierCompany != null ? courierCompany : "택배사 미지정") + ")"
             );
 
             // DTO로 변환하여 반환

@@ -44,6 +44,7 @@ public class OrderResponse {
     private LocalDateTime cancelledAt;
     private String trackingNumber;
     private String courierCompany;
+    private String courierCode; // 택배사 코드 (스마트택배 API용)
 
     // Delivery information
     private LocalDateTime shippedAt;
@@ -141,6 +142,7 @@ public class OrderResponse {
         response.setCancelledAt(order.getCancelledAt());
         response.setTrackingNumber(order.getTrackingNumber());
         response.setCourierCompany(order.getCourierCompany());
+        response.setCourierCode(order.getCourierCode());
 
         response.setShippedAt(order.getShippedAt());
         response.setDeliveredAt(order.getDeliveredAt());

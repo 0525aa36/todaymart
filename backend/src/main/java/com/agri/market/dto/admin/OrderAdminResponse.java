@@ -48,6 +48,8 @@ public class OrderAdminResponse {
     private String shippingAddressLine2;
     private String shippingPostcode; // 마스킹
     private String trackingNumber; // 마스킹 안 함
+    private String courierCode; // 택배사 코드 (스마트택배 API용)
+    private String courierCompany; // 택배사 이름
 
     // 보내는 사람 정보 (마스킹 처리됨)
     private String senderName; // 마스킹
@@ -91,6 +93,8 @@ public class OrderAdminResponse {
                 .shippingAddressLine2(order.getShippingAddressLine2())
                 .shippingPostcode(MaskingUtils.maskPostcode(order.getShippingPostcode()))
                 .trackingNumber(order.getTrackingNumber()) // 송장번호는 마스킹 안 함
+                .courierCode(order.getCourierCode()) // 택배사 코드
+                .courierCompany(order.getCourierCompany()) // 택배사 이름
                 // 보내는 사람 정보 마스킹
                 .senderName(order.getSenderName() != null ? MaskingUtils.maskName(order.getSenderName()) : null)
                 .senderPhone(order.getSenderPhone() != null ? MaskingUtils.maskPhone(order.getSenderPhone()) : null)

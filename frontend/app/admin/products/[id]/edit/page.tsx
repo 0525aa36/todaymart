@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ProductNoticeForm, ProductNoticeData } from "@/components/admin/ProductNoticeForm"
+import { COURIER_COMPANIES, getCourierCodeByName } from "@/lib/courier-companies"
 
 interface Seller {
   id: number
@@ -76,6 +77,7 @@ export default function EditProductPage() {
     canCombineShipping: false,
     combineShippingUnit: "",
     courierCompany: "",
+    courierCode: "",
     minOrderQuantity: "1",
     maxOrderQuantity: "",
     isEventProduct: false,
@@ -211,6 +213,8 @@ export default function EditProductPage() {
   const fetchProduct = async () => {
     try {
       const product = await apiFetch<any>(`/api/products/${productId}`)
+      // courierCode 결정: courierCode가 있으면 사용, 없으면 courierCompany 이름으로 코드 조회
+      const courierCode = product.courierCode || getCourierCodeByName(product.courierCompany) || ""
       setFormData({
         name: product.name || "",
         category: product.category || "",
@@ -227,6 +231,7 @@ export default function EditProductPage() {
         canCombineShipping: product.canCombineShipping || false,
         combineShippingUnit: product.combineShippingUnit?.toString() || "",
         courierCompany: product.courierCompany || "",
+        courierCode: courierCode,
         minOrderQuantity: product.minOrderQuantity?.toString() || "1",
         maxOrderQuantity: product.maxOrderQuantity?.toString() || "",
         isEventProduct: product.isEventProduct || false,
@@ -442,6 +447,7 @@ export default function EditProductPage() {
       canCombineShipping: formData.canCombineShipping,
       combineShippingUnit: formData.combineShippingUnit ? parseInt(formData.combineShippingUnit) : null,
       courierCompany: formData.courierCompany || null,
+      courierCode: formData.courierCode || null,
       minOrderQuantity: parseInt(formData.minOrderQuantity),
       maxOrderQuantity: formData.maxOrderQuantity ? parseInt(formData.maxOrderQuantity) : null,
       isEventProduct: formData.isEventProduct,
@@ -947,11 +953,28 @@ export default function EditProductPage() {
                 </div>
                 <div>
                   <Label htmlFor="courierCompany">택배사</Label>
-                  <Input
-                    id="courierCompany"
-                    value={formData.courierCompany}
-                    onChange={(e) => setFormData({ ...formData, courierCompany: e.target.value })}
-                  />
+                  <Select
+                    value={formData.courierCode || ""}
+                    onValueChange={(value) => {
+                      const courier = COURIER_COMPANIES.find(c => c.code === value)
+                      setFormData({
+                        ...formData,
+                        courierCode: value,
+                        courierCompany: courier?.name || ""
+                      })
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="택배사 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COURIER_COMPANIES.map((courier) => (
+                        <SelectItem key={courier.code} value={courier.code}>
+                          {courier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

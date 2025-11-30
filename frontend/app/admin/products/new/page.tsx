@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ProductNoticeForm, ProductNoticeData } from "@/components/admin/ProductNoticeForm"
+import { COURIER_COMPANIES, getCourierNameByCode } from "@/lib/courier-companies"
 
 interface Seller {
   id: number
@@ -62,6 +63,7 @@ export default function NewProductPage() {
     canCombineShipping: false,
     combineShippingUnit: "",
     courierCompany: "",
+    courierCode: "",
     minOrderQuantity: "1",
     maxOrderQuantity: "",
     isEventProduct: false,
@@ -312,6 +314,7 @@ export default function NewProductPage() {
       canCombineShipping: formData.canCombineShipping,
       combineShippingUnit: formData.combineShippingUnit ? parseInt(formData.combineShippingUnit) : null,
       courierCompany: formData.courierCompany || null,
+      courierCode: formData.courierCode || null,
       minOrderQuantity: parseInt(formData.minOrderQuantity),
       maxOrderQuantity: formData.maxOrderQuantity ? parseInt(formData.maxOrderQuantity) : null,
       isEventProduct: formData.isEventProduct,
@@ -842,12 +845,28 @@ export default function NewProductPage() {
                 </div>
                 <div>
                   <Label htmlFor="courierCompany">택배사</Label>
-                  <Input
-                    id="courierCompany"
-                    value={formData.courierCompany}
-                    onChange={(e) => setFormData({ ...formData, courierCompany: e.target.value })}
-                    placeholder="CJ대한통운"
-                  />
+                  <Select
+                    value={formData.courierCode || ""}
+                    onValueChange={(value) => {
+                      const courier = COURIER_COMPANIES.find(c => c.code === value)
+                      setFormData({
+                        ...formData,
+                        courierCode: value,
+                        courierCompany: courier?.name || ""
+                      })
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="택배사 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COURIER_COMPANIES.map((courier) => (
+                        <SelectItem key={courier.code} value={courier.code}>
+                          {courier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

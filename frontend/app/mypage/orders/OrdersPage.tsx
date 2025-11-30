@@ -9,11 +9,18 @@ import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { OrderStatusBadge } from "@/components/order-status-badge"
+import { DeliveryTracking } from "@/components/delivery-tracking"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Search } from "lucide-react"
+import { ChevronLeft, Search, Truck } from "lucide-react"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { formatOrderDate } from "@/lib/format-date"
 
@@ -39,6 +46,7 @@ interface Order {
   orderItems: OrderItem[]
   trackingNumber?: string
   courierCompany?: string
+  courierCode?: string
 }
 
 export function OrdersPage() {
@@ -51,6 +59,8 @@ export function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(0)
   const [itemsPerPage] = useState(5)
+  const [trackingDialogOpen, setTrackingDialogOpen] = useState(false)
+  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<Order | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -263,35 +273,27 @@ export function OrdersPage() {
                         <span className="text-xl font-bold text-primary">{order.totalAmount.toLocaleString()}원</span>
                       </div>
 
-                      {/* Tracking Information */}
-                      {(order.orderStatus === "SHIPPED" || order.orderStatus === "DELIVERED") && order.trackingNumber && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <div className="flex items-center gap-2 text-sm">
-                            {order.courierCompany && (
-                              <span className="text-muted-foreground">
-                                {order.courierCompany}
-                              </span>
-                            )}
-                            <span className="font-medium font-mono text-blue-700">
-                              {order.trackingNumber}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
                       {/* Actions */}
                       <div className="flex gap-2">
                         <Button variant="outline" className="flex-1 bg-transparent" asChild>
                           <Link href={`/mypage/orders/${order.id}`}>주문 상세</Link>
                         </Button>
+                        {(order.orderStatus === "SHIPPED" || order.orderStatus === "DELIVERED") && (
+                          <Button
+                            variant="outline"
+                            className="flex-1 bg-transparent"
+                            onClick={() => {
+                              setSelectedOrderForTracking(order)
+                              setTrackingDialogOpen(true)
+                            }}
+                          >
+                            <Truck className="h-4 w-4 mr-2" />
+                            배송 조회
+                          </Button>
+                        )}
                         {order.orderStatus === "DELIVERED" && (
                           <Button variant="outline" className="flex-1 bg-transparent">
                             리뷰 작성
-                          </Button>
-                        )}
-                        {order.orderStatus === "PAID" && (
-                          <Button variant="outline" className="flex-1 bg-transparent">
-                            배송 조회
                           </Button>
                         )}
                       </div>
@@ -347,6 +349,29 @@ export function OrdersPage() {
       </main>
 
       <Footer />
+
+      {/* Delivery Tracking Dialog - 반응형 */}
+      <Dialog open={trackingDialogOpen} onOpenChange={setTrackingDialogOpen}>
+        <DialogContent className="max-w-lg p-0 gap-0 max-h-[90vh] overflow-hidden flex flex-col sm:max-h-[85vh] fixed bottom-0 sm:bottom-auto sm:top-[50%] sm:translate-y-[-50%] translate-y-0 rounded-t-xl sm:rounded-lg [&>button]:hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>배송 조회</DialogTitle>
+          </DialogHeader>
+          {selectedOrderForTracking && selectedOrderForTracking.trackingNumber && selectedOrderForTracking.courierCode ? (
+            <DeliveryTracking
+              courierCode={selectedOrderForTracking.courierCode}
+              trackingNumber={selectedOrderForTracking.trackingNumber}
+              courierName={selectedOrderForTracking.courierCompany}
+              onClose={() => setTrackingDialogOpen(false)}
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Truck className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p>송장 정보가 아직 등록되지 않았습니다.</p>
+              <p className="text-sm mt-2">판매자가 상품을 발송하면 배송 조회가 가능합니다.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

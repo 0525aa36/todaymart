@@ -36,6 +36,7 @@ import { useRouter } from "next/navigation"
 import { ChevronLeft, Search, Truck, Package2, Edit, RefreshCw, CheckSquare } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
+import { COURIER_COMPANIES, getCourierCodeByName } from "@/lib/courier-companies"
 import { AdminPagination } from "@/components/admin/AdminPagination"
 import { AdminLoadingSpinner } from "@/components/admin/AdminLoadingSpinner"
 import { LoadingButton } from "@/components/admin/LoadingButton"
@@ -70,6 +71,8 @@ interface Order {
   shippingAddressLine2: string
   shippingPostcode: string
   trackingNumber?: string
+  courierCode?: string
+  courierCompany?: string
   cancellationReason?: string
 }
 
@@ -102,6 +105,7 @@ export default function AdminOrdersPage() {
   const [newStatus, setNewStatus] = useState<string>("")
   const [bulkNewStatus, setBulkNewStatus] = useState<string>("")
   const [trackingNumber, setTrackingNumber] = useState("")
+  const [courierCode, setCourierCode] = useState("")
   const [updating, setUpdating] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
@@ -305,17 +309,22 @@ export default function AdminOrdersPage() {
   }
 
   const handleUpdateTracking = async () => {
-    if (!selectedOrder || !trackingNumber.trim()) return
+    if (!selectedOrder || !trackingNumber.trim() || !courierCode) return
 
     const token = localStorage.getItem("token")
     if (!token) return
 
     setUpdating(true)
     try {
+      const courier = COURIER_COMPANIES.find(c => c.code === courierCode)
       await apiFetch(`/api/admin/orders/${selectedOrder.orderId}/tracking`, {
         method: "PUT",
         auth: true,
-        body: JSON.stringify({ trackingNumber: trackingNumber.trim() }),
+        body: JSON.stringify({
+          trackingNumber: trackingNumber.trim(),
+          courierCode: courierCode,
+          courierCompany: courier?.name || ""
+        }),
         parseResponse: "json",
       })
 
@@ -325,6 +334,7 @@ export default function AdminOrdersPage() {
       })
       setTrackingDialogOpen(false)
       setTrackingNumber("")
+      setCourierCode("")
       fetchOrders()
     } catch (error) {
       console.error("Error updating tracking:", error)
@@ -352,6 +362,7 @@ export default function AdminOrdersPage() {
   const openTrackingDialog = (order: Order) => {
     setSelectedOrder(order)
     setTrackingNumber(order.trackingNumber || "")
+    setCourierCode(order.courierCode || "")
     setTrackingDialogOpen(true)
   }
 
@@ -944,6 +955,21 @@ export default function AdminOrdersPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
+              <Label htmlFor="courier-company">택배사</Label>
+              <Select value={courierCode} onValueChange={setCourierCode}>
+                <SelectTrigger id="courier-company">
+                  <SelectValue placeholder="택배사를 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COURIER_COMPANIES.map((courier) => (
+                    <SelectItem key={courier.code} value={courier.code}>
+                      {courier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label htmlFor="tracking-number">송장번호</Label>
               <Input
                 id="tracking-number"
@@ -962,7 +988,7 @@ export default function AdminOrdersPage() {
             <Button variant="outline" onClick={() => setTrackingDialogOpen(false)} disabled={updating}>
               취소
             </Button>
-            <Button onClick={handleUpdateTracking} disabled={updating || !trackingNumber.trim()}>
+            <Button onClick={handleUpdateTracking} disabled={updating || !trackingNumber.trim() || !courierCode}>
               {updating ? "등록 중..." : "등록"}
             </Button>
           </DialogFooter>
