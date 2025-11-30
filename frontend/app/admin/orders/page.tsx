@@ -33,7 +33,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Search, Truck, Package2, Edit, RefreshCw, CheckSquare } from "lucide-react"
+import { ChevronLeft, Search, Truck, Package2, Edit, RefreshCw, CheckSquare, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { COURIER_COMPANIES, getCourierCodeByName } from "@/lib/courier-companies"
@@ -364,6 +364,36 @@ export default function AdminOrdersPage() {
     setTrackingNumber(order.trackingNumber || "")
     setCourierCode(order.courierCode || "")
     setTrackingDialogOpen(true)
+  }
+
+  const handleConfirmOrder = async (order: Order) => {
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    setUpdating(true)
+    try {
+      await apiFetch(`/api/admin/orders/${order.orderId}/status`, {
+        method: "PUT",
+        auth: true,
+        body: JSON.stringify({ status: "PREPARING" }),
+        parseResponse: "json",
+      })
+
+      toast({
+        title: "주문 확인 완료",
+        description: "상품 준비중 상태로 변경되었습니다.",
+      })
+      fetchOrders()
+    } catch (error) {
+      console.error("Error confirming order:", error)
+      toast({
+        title: "주문 확인 실패",
+        description: getErrorMessage(error, "주문 확인 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    } finally {
+      setUpdating(false)
+    }
   }
 
   const checkGoogleSheetsEnabled = async () => {
@@ -825,6 +855,17 @@ export default function AdminOrdersPage() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                               {order.orderStatus === "PAID" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleConfirmOrder(order)}
+                                  title="주문 확인 (상품 준비중으로 변경)"
+                                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {order.orderStatus === "PREPARING" && (
                                 <Button
                                   size="sm"
                                   variant="outline"

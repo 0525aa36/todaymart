@@ -607,8 +607,8 @@ public class OrderService {
 
         order.setTrackingNumber(trackingNumber);
 
-        // 송장 번호 등록 시 자동으로 SHIPPED 상태로 변경
-        if (order.getOrderStatus() == OrderStatus.PAID) {
+        // 송장 번호 등록 시 자동으로 SHIPPED 상태로 변경 (PREPARING 상태에서만)
+        if (order.getOrderStatus() == OrderStatus.PREPARING) {
             order.setOrderStatus(OrderStatus.SHIPPED);
             order.setShippedAt(LocalDateTime.now());
         }
@@ -637,8 +637,8 @@ public class OrderService {
             order.setCourierCompany(courierCompany);
         }
 
-        // 송장 번호 등록 시 자동으로 SHIPPED 상태로 변경
-        if (order.getOrderStatus() == OrderStatus.PAID) {
+        // 송장 번호 등록 시 자동으로 SHIPPED 상태로 변경 (PREPARING 상태에서만)
+        if (order.getOrderStatus() == OrderStatus.PREPARING) {
             order.setOrderStatus(OrderStatus.SHIPPED);
             order.setShippedAt(LocalDateTime.now());
         }

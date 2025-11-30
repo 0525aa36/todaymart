@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Clock } from 'lucide-react'
 
 interface CountdownTimerProps {
@@ -19,6 +19,13 @@ interface TimeLeft {
 export function CountdownTimer({ endTime, onExpire, className = '' }: CountdownTimerProps) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null)
   const [isExpired, setIsExpired] = useState(false)
+  const onExpireCalledRef = useRef(false)
+  const onExpireRef = useRef(onExpire)
+
+  // onExpire를 ref로 저장하여 useEffect dependency에서 제외
+  useEffect(() => {
+    onExpireRef.current = onExpire
+  }, [onExpire])
 
   useEffect(() => {
     const calculateTimeLeft = (): TimeLeft | null => {
@@ -26,7 +33,11 @@ export function CountdownTimer({ endTime, onExpire, className = '' }: CountdownT
 
       if (difference <= 0) {
         setIsExpired(true)
-        if (onExpire) onExpire()
+        // onExpire는 한 번만 호출
+        if (!onExpireCalledRef.current && onExpireRef.current) {
+          onExpireCalledRef.current = true
+          onExpireRef.current()
+        }
         return null
       }
 
@@ -47,7 +58,7 @@ export function CountdownTimer({ endTime, onExpire, className = '' }: CountdownT
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [endTime, onExpire])
+  }, [endTime]) // onExpire를 dependency에서 제거
 
   if (isExpired) {
     return (
