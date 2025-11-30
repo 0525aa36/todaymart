@@ -65,4 +65,5 @@ public class DeliveryTrackingController {
     public ResponseEntity<List<CourierCompanyResponse>> getMajorCourierList() {
         return ResponseEntity.ok(deliveryTrackingService.getMajorCourierList());
     }
+
 }

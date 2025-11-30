@@ -110,4 +110,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "LEFT JOIN FETCH oi.productOption po " +
            "WHERE o.id = :id")
     java.util.Optional<Order> findByIdWithItems(@Param("id") Long id);
+
+    /**
+     * 배송중인 주문 목록 조회 (송장번호와 택배사코드가 있는 주문만)
+     * 배송 상태 자동 동기화용
+     */
+    @Query("SELECT o FROM Order o WHERE o.orderStatus = :status AND o.trackingNumber IS NOT NULL AND o.courierCode IS NOT NULL")
+    List<Order> findByOrderStatusWithTracking(@Param("status") OrderStatus status);
 }

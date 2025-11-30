@@ -8,6 +8,7 @@ import com.agri.market.order.OrderService;
 import com.agri.market.order.OrderStatus;
 import com.agri.market.seller.Seller;
 import com.agri.market.seller.SellerRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -28,6 +29,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/admin/orders")
 @PreAuthorize("hasRole('ADMIN')")
