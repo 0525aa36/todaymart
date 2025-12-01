@@ -1246,11 +1246,11 @@ export function ProductDetailPage() {
                 <div>
                   <h3 className="text-lg font-bold mb-3">배송 안내</h3>
                   <ul className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-                    <li>• 배송비: 3,000원 (50,000원 이상 구매 시 무료배송)</li>
+                    <li>• 배송비: 상품별 배송비가 상이합니다</li>
                     <li>• 배송 방법: 택배배송</li>
-                    <li>• 배송 기간: 결제 완료 후 2~5일 이내 출고 (주말/공휴일 제외)</li>
+                    <li>• 배송 기간: 결제 완료 후 당일~5일 이내 출고 (주말/공휴일 제외)</li>
                     <li>• 산지 직송 상품의 경우 기상 상황에 따라 배송이 지연될 수 있습니다</li>
-                    <li>• 제주/도서산간 지역은 추가 배송비 3,000원이 발생합니다</li>
+                    <li>• 제주/도서산간 지역은 추가 배송비가 발생할 수 있습니다</li>
                   </ul>
                 </div>
                 <Separator />
@@ -1261,7 +1261,7 @@ export function ProductDetailPage() {
                     <li>• 상품 파손, 변질, 오배송의 경우 수령 후 24시간 이내 사진과 함께 연락해 주시면 교환/환불해 드립니다</li>
                     <li>• 상품 하자로 인한 교환/반품 시 배송비는 판매자가 부담합니다</li>
                     <li>• 냉장/냉동 상품은 수령 즉시 상태를 확인해 주세요</li>
-                    <li>• 문의: 카카오톡 채널 &apos;오늘의농산물&apos; (평일 10:00-18:00)</li>
+                    <li>• 문의: 카카오톡 채널 &apos;오늘마트&apos; (평일 10:00-18:00)</li>
                   </ul>
                 </div>
               </div>
