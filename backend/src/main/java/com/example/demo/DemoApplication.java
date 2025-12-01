@@ -27,6 +27,10 @@ public class DemoApplication {
 	}
 
 	public static void main(String[] args) {
+		// JVM 전체의 기본 시간대를 한국 시간으로 설정 (Spring Context 생성 전에 실행)
+		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
+		System.out.println("JVM Timezone set to: " + TimeZone.getDefault().getID());
+
 		SpringApplication.run(DemoApplication.class, args);
 	}
 

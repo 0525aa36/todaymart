@@ -138,7 +138,14 @@
       "WebFetch(domain:info.sweettracker.co.kr)",
       "WebFetch(domain:weezip.treefeely.com)",
       "Bash(JWT_SECRET=l+M2HT323RdnuAjRZB/KsXeREnG47s70ff/m1nty6fZK3dLSrXOgKek14a1Lzl+6twRjlfs4lShBy6MveP9yuA== NAVER_CLIENT_ID=mclMxOndgnb3NwKPSLcx NAVER_CLIENT_SECRET=bdkPlBthqK KAKAO_CLIENT_ID=56380206602abece46af0dabc59a7c66 KAKAO_CLIENT_SECRET=b06HyFFbPBgEndovP5UGf3uLPkYPaTFv GOOGLE_SHEETS_ENABLED=false SENDGRID_API_KEY=test TOSS_PAYMENTS_CLIENT_KEY=test_gck_ex6BJGQOVDKR16DAee4Q3W4w2zNb TOSS_PAYMENTS_SECRET_KEY=test_gsk_5OWRapdA8dWg4pRQMmvPro1zEqZK WEBHOOK_SECRET=test-webhook-secret ./gradlew:*)",
-      "Bash(SWEETTRACKER_API_KEY=\"OXglMvwwEmG4PXG44kzKFw\":*)"
+      "Bash(SWEETTRACKER_API_KEY=\"OXglMvwwEmG4PXG44kzKFw\":*)",
+      "Bash(docker exec:*)",
+      "Bash(pnpm run lint)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(backend/src/main/java/com/agri/market/order/PaymentStatus.java )",
+      "Bash(backend/src/main/java/com/agri/market/payment/PaymentRepository.java )",
+      "Bash(backend/src/main/java/com/agri/market/payment/PaymentService.java )",
+      "Bash(frontend/app/payment/[orderId]/page.tsx)"
     ],
     "deny": [],
     "ask": []
