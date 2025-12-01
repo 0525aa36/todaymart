@@ -32,6 +32,9 @@ public class SlackNotificationService {
     @Value("${slack.webhook.url:}")
     private String slackWebhookUrl;
 
+    @Value("${slack.webhook.inquiry.url:}")
+    private String slackInquiryWebhookUrl;
+
     @Value("${slack.notification.enabled:true}")
     private boolean notificationEnabled;
 
@@ -172,16 +175,23 @@ public class SlackNotificationService {
     }
 
     /**
-     * Slack 웹훅으로 메시지 전송
+     * Slack 웹훅으로 메시지 전송 (기본 URL)
      */
     private void sendSlackMessage(Map<String, Object> payload) {
+        sendSlackMessageToUrl(payload, slackWebhookUrl);
+    }
+
+    /**
+     * Slack 웹훅으로 메시지 전송 (지정된 URL)
+     */
+    private void sendSlackMessageToUrl(Map<String, Object> payload, String webhookUrl) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                slackWebhookUrl,
+                webhookUrl,
                 entity,
                 String.class
         );
@@ -216,7 +226,11 @@ public class SlackNotificationService {
     @Async
     @Transactional(readOnly = true)
     public void sendInquiryNotification(Long inquiryId) {
-        if (!notificationEnabled || slackWebhookUrl == null || slackWebhookUrl.isBlank()) {
+        // 문의용 webhook URL이 없으면 기본 URL 사용
+        String webhookUrl = (slackInquiryWebhookUrl != null && !slackInquiryWebhookUrl.isBlank())
+                ? slackInquiryWebhookUrl : slackWebhookUrl;
+
+        if (!notificationEnabled || webhookUrl == null || webhookUrl.isBlank()) {
             logger.debug("Slack notification is disabled or webhook URL is not configured");
             return;
         }
@@ -226,7 +240,7 @@ public class SlackNotificationService {
                     .orElseThrow(() -> new RuntimeException("Inquiry not found: " + inquiryId));
 
             Map<String, Object> payload = buildInquiryNotificationPayload(inquiry);
-            sendSlackMessage(payload);
+            sendSlackMessageToUrl(payload, webhookUrl);
             logger.info("Inquiry notification sent to Slack for inquiry: {}", inquiryId);
         } catch (Exception e) {
             logger.error("Failed to send Slack notification for inquiryId: {}", inquiryId, e);
