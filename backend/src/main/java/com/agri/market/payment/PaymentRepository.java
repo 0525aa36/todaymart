@@ -17,4 +17,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     // 사용자별 결제 내역 조회
     @Query("SELECT p FROM Payment p WHERE p.order.user = :user ORDER BY p.paymentDate DESC")
     List<Payment> findByUser(@Param("user") User user);
+
+    // paymentKey(transactionId)로 결제 조회 - 멱등성 체크용
+    Optional<Payment> findByTransactionId(String transactionId);
 }

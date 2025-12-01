@@ -52,6 +52,7 @@ export default function PaymentPage() {
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [widgetReady, setWidgetReady] = useState(false)
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -164,6 +165,9 @@ export default function PaymentPage() {
   }, [order, clientKey, toast])
 
   const handlePayment = async () => {
+    // 이미 처리 중이면 무시 (중복 클릭 방지)
+    if (isPaymentProcessing) return
+
     if (!order) {
       toast({
         title: "오류",
@@ -176,6 +180,7 @@ export default function PaymentPage() {
     // 0원 주문은 결제 없이 바로 완료 처리
     const paymentAmount = order.finalAmount ?? order.totalAmount
     if (paymentAmount === 0) {
+      setIsPaymentProcessing(true)
       toast({
         title: "주문 완료",
         description: "0원 주문이 완료되었습니다.",
@@ -192,6 +197,8 @@ export default function PaymentPage() {
       })
       return
     }
+
+    setIsPaymentProcessing(true)
 
     try {
       const orderNumber = order.orderNumber || `ORDER_${order.id}_${Date.now()}`
@@ -221,6 +228,7 @@ export default function PaymentPage() {
         description: "결제 요청 중 오류가 발생했습니다.",
         variant: "destructive",
       })
+      setIsPaymentProcessing(false)
     }
   }
 
@@ -361,16 +369,18 @@ export default function PaymentPage() {
               className="w-full"
               size="lg"
               onClick={handlePayment}
+              disabled={isPaymentProcessing || !widgetReady}
             >
-              {`${paymentAmount.toLocaleString()}원 결제하기`}
+              {isPaymentProcessing ? "결제 처리 중..." : `${paymentAmount.toLocaleString()}원 결제하기`}
             </Button>
           ) : (
             <Button
               className="w-full"
               size="lg"
               onClick={handlePayment}
+              disabled={isPaymentProcessing}
             >
-              주문 완료하기
+              {isPaymentProcessing ? "처리 중..." : "주문 완료하기"}
             </Button>
           )}
         </div>

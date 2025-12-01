@@ -191,7 +191,7 @@ public class PaymentService {
                    "CANCELED".equalsIgnoreCase(webhookRequest.getStatus())) {
             // 토스에서 결제 취소된 경우
             order.setOrderStatus(OrderStatus.CANCELLED);
-            payment.setStatus(PaymentStatus.FAILED);
+            payment.setStatus(PaymentStatus.FULLY_REFUNDED);
 
             // 취소 정보 저장
             if (webhookRequest.getCancellationReason() != null) {
@@ -278,10 +278,14 @@ public class PaymentService {
         payment.setRefundTransactionId((String) cancelResult.get("transactionKey"));
         payment.setRefundReason(refundReason);
 
-        // 전액 환불 시에만 주문 취소 처리
+        // 환불 상태 업데이트 - 부분 환불 vs 전액 환불 구분
         if (newRefundAmount.compareTo(payment.getAmount()) >= 0) {
-            payment.setStatus(PaymentStatus.FAILED);
+            // 전액 환불
+            payment.setStatus(PaymentStatus.FULLY_REFUNDED);
             order.setOrderStatus(OrderStatus.CANCELLED);
+        } else {
+            // 부분 환불
+            payment.setStatus(PaymentStatus.PARTIALLY_REFUNDED);
         }
 
         paymentRepository.save(payment);
@@ -398,10 +402,25 @@ public class PaymentService {
             logger.debug("Payment amount: {}", amount);
             // SECURITY: Never log payment keys or sensitive payment information
 
+            // 멱등성 체크: 이미 처리된 paymentKey인지 확인
+            if (paymentRepository.findByTransactionId(paymentKey).isPresent()) {
+                logger.info("Payment already processed for paymentKey (idempotent request)");
+                Map<String, Object> existingResult = new HashMap<>();
+                existingResult.put("status", "already_processed");
+                existingResult.put("message", "Payment has already been processed");
+                return existingResult;
+            }
+
             // orderId는 orderNumber 형식 (ORDER_1234567890)
             // OrderRepository에서 orderNumber로 조회
             Order order = orderRepository.findByOrderNumber(orderId)
                     .orElseThrow(() -> new RuntimeException("Order not found with orderNumber: " + orderId));
+
+            // 주문 상태가 PENDING_PAYMENT인지 확인 (이중 결제 방지)
+            if (order.getOrderStatus() != OrderStatus.PENDING_PAYMENT) {
+                logger.warn("Order {} is not in PENDING_PAYMENT status. Current: {}", orderId, order.getOrderStatus());
+                throw new RuntimeException("Order is not in pending payment status: " + order.getOrderStatus());
+            }
 
             logger.debug("Found order with ID: {}", order.getId());
 
@@ -455,6 +474,10 @@ public class PaymentService {
             } else {
                 throw new RuntimeException("Payment confirmation failed");
             }
+        } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+            // 동시 결제 요청으로 인한 낙관적 락 충돌 - 이미 다른 요청에서 처리됨
+            logger.warn("Concurrent payment request detected for orderId: {}. Order may have been updated by another request.", orderId);
+            throw new RuntimeException("Payment is being processed by another request. Please refresh and try again.", e);
         } catch (Exception e) {
             logger.error("Payment confirmation failed for orderId: {}", orderId, e);
             throw new RuntimeException("Failed to confirm payment: " + e.getMessage(), e);

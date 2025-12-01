@@ -25,6 +25,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    private Long version; // Optimistic locking을 위한 버전 필드
+
     @Column(unique = true, nullable = false)
     private String orderNumber;
 
