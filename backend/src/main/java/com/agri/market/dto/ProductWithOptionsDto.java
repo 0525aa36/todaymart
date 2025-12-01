@@ -28,6 +28,28 @@ public class ProductWithOptionsDto {
     private Integer combineShippingUnit;
     private Integer minOrderQuantity;
     private Integer maxOrderQuantity;
+    private String courierCompany;
+    private String courierCode;
+    private SellerDto seller;
+    private Boolean isEventProduct;
+
+    // Inner DTO for seller
+    public static class SellerDto {
+        private Long id;
+        private String name;
+
+        public SellerDto() {}
+
+        public SellerDto(Long id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+    }
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -98,4 +120,16 @@ public class ProductWithOptionsDto {
 
     public Integer getMaxOrderQuantity() { return maxOrderQuantity; }
     public void setMaxOrderQuantity(Integer maxOrderQuantity) { this.maxOrderQuantity = maxOrderQuantity; }
+
+    public String getCourierCompany() { return courierCompany; }
+    public void setCourierCompany(String courierCompany) { this.courierCompany = courierCompany; }
+
+    public String getCourierCode() { return courierCode; }
+    public void setCourierCode(String courierCode) { this.courierCode = courierCode; }
+
+    public SellerDto getSeller() { return seller; }
+    public void setSeller(SellerDto seller) { this.seller = seller; }
+
+    public Boolean getIsEventProduct() { return isEventProduct; }
+    public void setIsEventProduct(Boolean isEventProduct) { this.isEventProduct = isEventProduct; }
 }

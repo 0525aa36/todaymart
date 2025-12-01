@@ -89,6 +89,17 @@ public class ProductController {
         dto.setCombineShippingUnit(product.getCombineShippingUnit());
         dto.setMinOrderQuantity(product.getMinOrderQuantity());
         dto.setMaxOrderQuantity(product.getMaxOrderQuantity());
+        dto.setCourierCompany(product.getCourierCompany());
+        dto.setCourierCode(product.getCourierCode());
+        dto.setIsEventProduct(product.getIsEventProduct());
+
+        // 판매자 정보 추가
+        if (product.getSeller() != null) {
+            dto.setSeller(new ProductWithOptionsDto.SellerDto(
+                product.getSeller().getId(),
+                product.getSeller().getName()
+            ));
+        }
 
         // 옵션 정보 추가
         List<ProductOptionResponse> options = product.getOptions().stream()
