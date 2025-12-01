@@ -3,7 +3,9 @@ package com.agri.market.admin;
 import com.agri.market.admin.audit.ActionType;
 import com.agri.market.admin.audit.AdminAuditLogService;
 import com.agri.market.dto.admin.OrderAdminResponse;
+import com.agri.market.dto.admin.OrderItemAdminResponse;
 import com.agri.market.order.Order;
+import com.agri.market.order.OrderItem;
 import com.agri.market.order.OrderService;
 import com.agri.market.order.OrderStatus;
 import com.agri.market.payment.PaymentService;
@@ -21,6 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -294,6 +297,102 @@ public class AdminOrderController {
             log.error("Payment sync failed for order {}: {}", orderId, e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
                 "error", "동기화 실패",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    // ==================== 상품별 송장 관리 API ====================
+
+    /**
+     * 개별 주문 항목(상품)의 송장번호 등록
+     * 택배사 정보를 지정하지 않으면 상품에 등록된 기본 택배사 사용
+     */
+    @PutMapping("/items/{orderItemId}/tracking")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> updateOrderItemTracking(
+            @PathVariable Long orderItemId,
+            @RequestBody Map<String, String> request) {
+        try {
+            String trackingNumber = request.get("trackingNumber");
+            String courierCode = request.get("courierCode");
+            String courierCompany = request.get("courierCompany");
+
+            if (trackingNumber == null || trackingNumber.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "송장번호는 필수입니다"
+                ));
+            }
+
+            OrderItem updatedItem = orderService.updateOrderItemTracking(
+                orderItemId, trackingNumber.trim(), courierCode, courierCompany
+            );
+
+            // 감사 로그 기록
+            auditLogService.log(
+                ActionType.ORDER_TRACKING_UPDATE,
+                "ORDER_ITEM",
+                orderItemId,
+                null,
+                trackingNumber + " (" + (updatedItem.getCourierCompany() != null ? updatedItem.getCourierCompany() : "택배사 미지정") + ")"
+            );
+
+            return ResponseEntity.ok(OrderItemAdminResponse.from(updatedItem));
+        } catch (RuntimeException e) {
+            log.error("Failed to update tracking for orderItem {}: {}", orderItemId, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "송장 등록 실패",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 엑셀 파일 업로드로 송장번호 일괄 등록
+     * 엑셀 형식: 1열=주문번호(ORDER_xxx_1), 12열=송장번호
+     */
+    @PostMapping("/tracking/upload")
+    public ResponseEntity<?> uploadTrackingExcel(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "파일이 비어있습니다"
+            ));
+        }
+
+        String filename = file.getOriginalFilename();
+        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "엑셀 파일(.xlsx, .xls)만 업로드 가능합니다"
+            ));
+        }
+
+        try {
+            // 엑셀 파싱
+            Map<String, String> trackingData = excelService.parseTrackingExcel(file.getInputStream());
+
+            if (trackingData.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "송장번호가 입력된 데이터가 없습니다"
+                ));
+            }
+
+            // 일괄 등록
+            Map<String, Object> result = orderService.bulkUploadTracking(trackingData);
+
+            // 감사 로그 기록 (일괄 작업이므로 entityId는 0L 사용)
+            auditLogService.log(
+                ActionType.ORDER_TRACKING_UPDATE,
+                "ORDER_BULK",
+                0L,
+                null,
+                "엑셀 업로드: " + result.get("successCount") + "건 성공, " + result.get("failureCount") + "건 실패"
+            );
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Failed to process tracking Excel: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "엑셀 처리 실패",
                 "message", e.getMessage()
             ));
         }

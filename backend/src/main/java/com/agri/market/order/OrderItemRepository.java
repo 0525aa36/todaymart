@@ -15,6 +15,8 @@ import java.util.List;
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     boolean existsByProduct(Product product);
 
+    List<OrderItem> findByOrderId(Long orderId);
+
     @Query("SELECT new com.agri.market.dto.TopProductDTO(" +
             "oi.product.id, " +
             "oi.product.name, " +

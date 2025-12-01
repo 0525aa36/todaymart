@@ -41,16 +41,34 @@ import { AdminPagination } from "@/components/admin/AdminPagination"
 import { AdminLoadingSpinner } from "@/components/admin/AdminLoadingSpinner"
 import { LoadingButton } from "@/components/admin/LoadingButton"
 import { SortableTableHead, SortDirection } from "@/components/ui/sortable-table-head"
-import { Download } from "lucide-react"
+import { Download, Upload } from "lucide-react"
 
 interface OrderItem {
   id: number
   productId: number
   productName: string
+  optionName: string | null
   quantity: number
   price: number
   sellerId: number | null
   sellerName: string | null
+  // 송장 정보
+  trackingNumber: string | null
+  courierCompany: string | null
+  courierCode: string | null
+  shippedAt: string | null
+  // 상품 기본 택배사 (송장 등록 시 기본값)
+  productCourierCompany: string | null
+  productCourierCode: string | null
+}
+
+interface ItemTrackingInput {
+  orderItemId: number
+  productName: string
+  optionName: string | null
+  trackingNumber: string
+  courierCode: string
+  existingTracking: string | null
 }
 
 interface Order {
@@ -106,7 +124,9 @@ export default function AdminOrdersPage() {
   const [bulkNewStatus, setBulkNewStatus] = useState<string>("")
   const [trackingNumber, setTrackingNumber] = useState("")
   const [courierCode, setCourierCode] = useState("")
+  const [itemTrackingInputs, setItemTrackingInputs] = useState<ItemTrackingInput[]>([])
   const [updating, setUpdating] = useState(false)
+  const [uploadingExcel, setUploadingExcel] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncingPaymentOrderId, setSyncingPaymentOrderId] = useState<number | null>(null)
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
@@ -310,32 +330,76 @@ export default function AdminOrdersPage() {
   }
 
   const handleUpdateTracking = async () => {
-    if (!selectedOrder || !trackingNumber.trim() || !courierCode) return
+    if (!selectedOrder) return
+
+    // 송장번호가 입력된 항목만 필터
+    const itemsToUpdate = itemTrackingInputs.filter(
+      item => item.trackingNumber.trim() && item.courierCode
+    )
+
+    if (itemsToUpdate.length === 0) {
+      toast({
+        title: "입력 필요",
+        description: "송장번호를 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
 
     const token = localStorage.getItem("token")
     if (!token) return
 
     setUpdating(true)
-    try {
-      const courier = COURIER_COMPANIES.find(c => c.code === courierCode)
-      await apiFetch(`/api/admin/orders/${selectedOrder.orderId}/tracking`, {
-        method: "PUT",
-        auth: true,
-        body: JSON.stringify({
-          trackingNumber: trackingNumber.trim(),
-          courierCode: courierCode,
-          courierCompany: courier?.name || ""
-        }),
-        parseResponse: "json",
-      })
+    let successCount = 0
+    let failureCount = 0
 
-      toast({
-        title: "송장번호 등록 완료",
-        description: "송장번호가 등록되었습니다.",
-      })
+    try {
+      // 각 상품별로 송장 등록 API 호출
+      for (const item of itemsToUpdate) {
+        // 기존 송장과 동일하면 스킵
+        if (item.existingTracking === item.trackingNumber.trim()) {
+          continue
+        }
+
+        try {
+          const courier = COURIER_COMPANIES.find(c => c.code === item.courierCode)
+          await apiFetch(`/api/admin/orders/items/${item.orderItemId}/tracking`, {
+            method: "PUT",
+            auth: true,
+            body: JSON.stringify({
+              trackingNumber: item.trackingNumber.trim(),
+              courierCode: item.courierCode,
+              courierCompany: courier?.name || ""
+            }),
+            parseResponse: "json",
+          })
+          successCount++
+        } catch (error) {
+          console.error(`Error updating tracking for item ${item.orderItemId}:`, error)
+          failureCount++
+        }
+      }
+
+      if (successCount > 0) {
+        toast({
+          title: "송장번호 등록 완료",
+          description: failureCount > 0
+            ? `${successCount}건 성공, ${failureCount}건 실패`
+            : `${successCount}건의 송장번호가 등록되었습니다.`,
+          variant: failureCount > 0 ? "destructive" : "default",
+        })
+      } else if (failureCount > 0) {
+        toast({
+          title: "송장번호 등록 실패",
+          description: "모든 항목 등록에 실패했습니다.",
+          variant: "destructive",
+        })
+      }
+
       setTrackingDialogOpen(false)
       setTrackingNumber("")
       setCourierCode("")
+      setItemTrackingInputs([])
       fetchOrders()
     } catch (error) {
       console.error("Error updating tracking:", error)
@@ -346,6 +410,77 @@ export default function AdminOrdersPage() {
       })
     } finally {
       setUpdating(false)
+    }
+  }
+
+  const updateItemTracking = (orderItemId: number, field: 'trackingNumber' | 'courierCode', value: string) => {
+    setItemTrackingInputs(prev =>
+      prev.map(item =>
+        item.orderItemId === orderItemId
+          ? { ...item, [field]: value }
+          : item
+      )
+    )
+  }
+
+  const handleUploadExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // 파일 확장자 확인
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      toast({
+        title: "파일 형식 오류",
+        description: "엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setUploadingExcel(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const result = await apiFetch<{
+        successCount: number
+        failureCount: number
+        failures?: Array<{ orderNumber: string; reason: string }>
+      }>('/api/admin/orders/tracking/upload', {
+        method: 'POST',
+        auth: true,
+        body: formData,
+        parseResponse: 'json',
+        // FormData는 Content-Type 헤더를 자동 설정하므로 수동 설정 불필요
+      })
+
+      if (result.successCount > 0) {
+        toast({
+          title: "송장 업로드 완료",
+          description: result.failureCount > 0
+            ? `${result.successCount}건 성공, ${result.failureCount}건 실패`
+            : `${result.successCount}건의 송장번호가 등록되었습니다.`,
+          variant: result.failureCount > 0 ? "default" : "default",
+        })
+        fetchOrders()
+      } else {
+        toast({
+          title: "송장 업로드 실패",
+          description: result.failures?.[0]?.reason || "등록할 데이터가 없거나 모두 실패했습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error uploading tracking Excel:", error)
+      toast({
+        title: "송장 업로드 실패",
+        description: getErrorMessage(error, "엑셀 파일 업로드 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingExcel(false)
+      // 파일 input 초기화
+      event.target.value = ''
     }
   }
 
@@ -364,6 +499,17 @@ export default function AdminOrdersPage() {
     setSelectedOrder(order)
     setTrackingNumber(order.trackingNumber || "")
     setCourierCode(order.courierCode || "")
+    // 상품별 송장 입력 필드 초기화
+    const inputs: ItemTrackingInput[] = order.orderItems.map(item => ({
+      orderItemId: item.id,
+      productName: item.productName,
+      optionName: item.optionName,
+      trackingNumber: item.trackingNumber || "",
+      // 기존 송장이 없으면 상품 기본 택배사 사용
+      courierCode: item.courierCode || item.productCourierCode || "",
+      existingTracking: item.trackingNumber
+    }))
+    setItemTrackingInputs(inputs)
     setTrackingDialogOpen(true)
   }
 
@@ -674,6 +820,25 @@ export default function AdminOrdersPage() {
                 </span>
               )}
             </LoadingButton>
+            <div className="relative">
+              <input
+                type="file"
+                id="tracking-excel-upload"
+                accept=".xlsx,.xls"
+                onChange={handleUploadExcel}
+                className="hidden"
+                disabled={uploadingExcel}
+              />
+              <LoadingButton
+                onClick={() => document.getElementById('tracking-excel-upload')?.click()}
+                isLoading={uploadingExcel}
+                loadingText="업로드 중..."
+                variant="outline"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                송장 업로드
+              </LoadingButton>
+            </div>
             {googleSheetsEnabled && (
               <LoadingButton
                 onClick={handleSyncToGoogleSheets}
@@ -902,11 +1067,32 @@ export default function AdminOrdersPage() {
                                   {order.cancellationReason}
                                 </p>
                               </div>
-                            ) : order.trackingNumber ? (
-                              <span className="text-sm text-gray-900 font-mono">{order.trackingNumber}</span>
-                            ) : (
-                              <span className="text-xs text-gray-400">-</span>
-                            )}
+                            ) : (() => {
+                              // 상품별 송장번호 표시
+                              const itemsWithTracking = order.orderItems.filter(item => item.trackingNumber)
+                              if (itemsWithTracking.length === 0) {
+                                return <span className="text-xs text-gray-400">-</span>
+                              }
+                              if (itemsWithTracking.length === 1) {
+                                const item = itemsWithTracking[0]
+                                return (
+                                  <div className="text-xs">
+                                    <span className="text-gray-500">{item.courierCompany || '택배'}: </span>
+                                    <span className="font-mono text-gray-900">{item.trackingNumber}</span>
+                                  </div>
+                                )
+                              }
+                              // 여러 상품에 송장이 있는 경우
+                              return (
+                                <div className="text-xs">
+                                  <span className="text-gray-500">{itemsWithTracking[0].courierCompany || '택배'}: </span>
+                                  <span className="font-mono text-gray-900">{itemsWithTracking[0].trackingNumber}</span>
+                                  {itemsWithTracking.length > 1 && (
+                                    <span className="text-gray-400 ml-1">외 {itemsWithTracking.length - 1}건</span>
+                                  )}
+                                </div>
+                              )
+                            })()}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2 justify-center">
@@ -1064,50 +1250,87 @@ export default function AdminOrdersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Tracking Number Dialog */}
+      {/* Tracking Number Dialog - 상품별 송장 등록 */}
       <Dialog open={trackingDialogOpen} onOpenChange={setTrackingDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>송장번호 등록</DialogTitle>
             <DialogDescription>주문번호: {selectedOrder?.orderNumber}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="courier-company">택배사</Label>
-              <Select value={courierCode} onValueChange={setCourierCode}>
-                <SelectTrigger id="courier-company">
-                  <SelectValue placeholder="택배사를 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  {COURIER_COMPANIES.map((courier) => (
-                    <SelectItem key={courier.code} value={courier.code}>
-                      {courier.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* 배송지 정보 */}
+            <div className="text-sm text-muted-foreground bg-gray-50 p-3 rounded-md">
+              <p><span className="font-medium">배송지:</span> {selectedOrder?.shippingAddressLine1} {selectedOrder?.shippingAddressLine2}</p>
+              <p><span className="font-medium">수령인:</span> {selectedOrder?.recipientName}</p>
+              <p><span className="font-medium">연락처:</span> {selectedOrder?.recipientPhone}</p>
             </div>
-            <div>
-              <Label htmlFor="tracking-number">송장번호</Label>
-              <Input
-                id="tracking-number"
-                placeholder="송장번호를 입력하세요"
-                value={trackingNumber}
-                onChange={(e) => setTrackingNumber(e.target.value)}
-              />
+
+            {/* 상품별 송장 입력 */}
+            <div className="space-y-4">
+              <Label className="text-base font-semibold">상품별 송장 등록</Label>
+              {itemTrackingInputs.map((item, index) => (
+                <div key={item.orderItemId} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{item.productName}</p>
+                      {item.optionName && (
+                        <p className="text-xs text-gray-500">옵션: {item.optionName}</p>
+                      )}
+                    </div>
+                    {item.existingTracking && (
+                      <Badge variant="secondary" className="text-xs">
+                        등록됨
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor={`courier-${item.orderItemId}`} className="text-xs">택배사</Label>
+                      <Select
+                        value={item.courierCode}
+                        onValueChange={(value) => updateItemTracking(item.orderItemId, 'courierCode', value)}
+                      >
+                        <SelectTrigger id={`courier-${item.orderItemId}`} className="h-9">
+                          <SelectValue placeholder="택배사 선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COURIER_COMPANIES.map((courier) => (
+                            <SelectItem key={courier.code} value={courier.code}>
+                              {courier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor={`tracking-${item.orderItemId}`} className="text-xs">송장번호</Label>
+                      <Input
+                        id={`tracking-${item.orderItemId}`}
+                        placeholder="송장번호 입력"
+                        value={item.trackingNumber}
+                        onChange={(e) => updateItemTracking(item.orderItemId, 'trackingNumber', e.target.value)}
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="text-sm text-muted-foreground">
-              <p>배송지: {selectedOrder?.shippingAddressLine1}</p>
-              <p>수령인: {selectedOrder?.recipientName}</p>
-              <p>연락처: {selectedOrder?.recipientPhone}</p>
+
+            <div className="text-xs text-muted-foreground bg-blue-50 p-3 rounded-md">
+              <p>상품에 등록된 기본 택배사가 자동으로 선택됩니다.</p>
+              <p>모든 상품의 송장번호가 등록되면 주문 상태가 &apos;배송중&apos;으로 변경됩니다.</p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTrackingDialogOpen(false)} disabled={updating}>
               취소
             </Button>
-            <Button onClick={handleUpdateTracking} disabled={updating || !trackingNumber.trim() || !courierCode}>
-              {updating ? "등록 중..." : "등록"}
+            <Button
+              onClick={handleUpdateTracking}
+              disabled={updating || itemTrackingInputs.every(item => !item.trackingNumber.trim())}
+            >
+              {updating ? "등록 중..." : "송장 등록"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -591,6 +591,18 @@ public class OrderService {
             order.setDeliveredAt(LocalDateTime.now());
         }
 
+        // 상품 준비중으로 변경 시 송장번호 초기화
+        if (newStatus == OrderStatus.PREPARING) {
+            order.setShippedAt(null);
+            // OrderItem의 송장번호도 초기화
+            for (OrderItem item : order.getOrderItems()) {
+                item.setTrackingNumber(null);
+                item.setCourierCode(null);
+                item.setCourierCompany(null);
+                item.setShippedAt(null);
+            }
+        }
+
         return orderRepository.save(order);
     }
 
@@ -706,6 +718,169 @@ public class OrderService {
         result.put("failureCount", failedOrders.size());
         result.put("successIds", successIds);
         result.put("failedOrders", failedOrders);
+
+        return result;
+    }
+
+    // ==================== 상품별 송장 관리 메서드 ====================
+
+    /**
+     * 개별 주문 항목의 송장 정보 업데이트
+     * @param orderItemId 주문 항목 ID
+     * @param trackingNumber 송장 번호
+     * @param courierCode 택배사 코드 (null이면 상품 기본값 사용)
+     * @param courierCompany 택배사 이름 (null이면 상품 기본값 사용)
+     * @return 업데이트된 주문 항목
+     */
+    @Transactional
+    public OrderItem updateOrderItemTracking(Long orderItemId, String trackingNumber,
+                                             String courierCode, String courierCompany) {
+        OrderItem orderItem = orderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new RuntimeException("OrderItem not found with id: " + orderItemId));
+
+        orderItem.setTrackingNumber(trackingNumber);
+
+        // 택배사 정보: 파라미터가 없으면 상품 기본값 사용
+        if (courierCode != null && !courierCode.trim().isEmpty()) {
+            orderItem.setCourierCode(courierCode);
+        } else if (orderItem.getProduct().getCourierCode() != null) {
+            orderItem.setCourierCode(orderItem.getProduct().getCourierCode());
+        }
+
+        if (courierCompany != null && !courierCompany.trim().isEmpty()) {
+            orderItem.setCourierCompany(courierCompany);
+        } else if (orderItem.getProduct().getCourierCompany() != null) {
+            orderItem.setCourierCompany(orderItem.getProduct().getCourierCompany());
+        }
+
+        orderItem.setShippedAt(LocalDateTime.now());
+
+        OrderItem savedItem = orderItemRepository.save(orderItem);
+
+        // 해당 주문의 모든 상품에 송장번호가 등록되었는지 확인 → Order 상태 변경
+        checkAndUpdateOrderStatus(orderItem.getOrder());
+
+        return savedItem;
+    }
+
+    /**
+     * 주문의 모든 상품에 송장번호가 등록되었는지 확인하고 Order 상태 업데이트
+     */
+    private void checkAndUpdateOrderStatus(Order order) {
+        // DB에서 최신 OrderItem 목록을 다시 조회
+        Order freshOrder = orderRepository.findById(order.getId())
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // 모든 OrderItem에 trackingNumber가 있는지 확인
+        List<OrderItem> items = orderItemRepository.findByOrderId(freshOrder.getId());
+        boolean allItemsShipped = items.stream()
+                .allMatch(item -> item.getTrackingNumber() != null && !item.getTrackingNumber().trim().isEmpty());
+
+        // 모든 상품이 배송 시작됐으면 Order를 SHIPPED 상태로 변경
+        if (allItemsShipped && freshOrder.getOrderStatus() == OrderStatus.PREPARING) {
+            freshOrder.setOrderStatus(OrderStatus.SHIPPED);
+            freshOrder.setShippedAt(LocalDateTime.now());
+            orderRepository.save(freshOrder);
+        }
+    }
+
+    /**
+     * 주문번호와 순번으로 OrderItem 조회
+     * @param orderNumber 주문번호 (ORDER_xxx 또는 ORDER_xxx_n 형식)
+     * @return OrderItem (없으면 null)
+     */
+    @Transactional(readOnly = true)
+    public OrderItem findOrderItemByOrderNumberAndIndex(String orderNumber) {
+        // ORDER_xxx_1 형식인지 확인
+        String baseOrderNumber;
+        int itemIndex = 0;
+
+        if (orderNumber.matches("ORDER_\\d+_\\d+")) {
+            // ORDER_xxx_n 형식
+            int lastUnderscore = orderNumber.lastIndexOf('_');
+            baseOrderNumber = orderNumber.substring(0, lastUnderscore);
+            itemIndex = Integer.parseInt(orderNumber.substring(lastUnderscore + 1)) - 1; // 0-based index
+        } else {
+            // ORDER_xxx 형식 (첫 번째 상품)
+            baseOrderNumber = orderNumber;
+            itemIndex = 0;
+        }
+
+        Order order = orderRepository.findByOrderNumber(baseOrderNumber)
+                .orElse(null);
+
+        if (order == null) {
+            return null;
+        }
+
+        // OrderItem을 ID 순으로 정렬하여 인덱스로 접근
+        List<OrderItem> sortedItems = order.getOrderItems().stream()
+                .sorted((a, b) -> a.getId().compareTo(b.getId()))
+                .collect(Collectors.toList());
+
+        if (itemIndex >= 0 && itemIndex < sortedItems.size()) {
+            return sortedItems.get(itemIndex);
+        }
+
+        return null;
+    }
+
+    /**
+     * 엑셀 업로드로 송장번호 일괄 등록
+     * @param trackingData 주문번호 -> 송장번호 매핑
+     * @return 처리 결과 (성공/실패 카운트 및 상세 정보)
+     */
+    @Transactional
+    public Map<String, Object> bulkUploadTracking(Map<String, String> trackingData) {
+        List<Map<String, Object>> successList = new ArrayList<>();
+        List<Map<String, Object>> failedList = new ArrayList<>();
+
+        for (Map.Entry<String, String> entry : trackingData.entrySet()) {
+            String orderNumber = entry.getKey();
+            String trackingNumber = entry.getValue();
+
+            try {
+                OrderItem orderItem = findOrderItemByOrderNumberAndIndex(orderNumber);
+
+                if (orderItem == null) {
+                    Map<String, Object> failed = new HashMap<>();
+                    failed.put("orderNumber", orderNumber);
+                    failed.put("error", "주문을 찾을 수 없습니다");
+                    failedList.add(failed);
+                    continue;
+                }
+
+                // 이미 송장번호가 있으면 스킵 (덮어쓰기 방지)
+                if (orderItem.getTrackingNumber() != null && !orderItem.getTrackingNumber().trim().isEmpty()) {
+                    Map<String, Object> failed = new HashMap<>();
+                    failed.put("orderNumber", orderNumber);
+                    failed.put("error", "이미 송장번호가 등록되어 있습니다: " + orderItem.getTrackingNumber());
+                    failedList.add(failed);
+                    continue;
+                }
+
+                // 송장번호 업데이트 (택배사는 상품 기본값 사용)
+                updateOrderItemTracking(orderItem.getId(), trackingNumber, null, null);
+
+                Map<String, Object> success = new HashMap<>();
+                success.put("orderNumber", orderNumber);
+                success.put("trackingNumber", trackingNumber);
+                success.put("productName", orderItem.getProduct().getName());
+                successList.add(success);
+
+            } catch (Exception e) {
+                Map<String, Object> failed = new HashMap<>();
+                failed.put("orderNumber", orderNumber);
+                failed.put("error", e.getMessage());
+                failedList.add(failed);
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("successCount", successList.size());
+        result.put("failureCount", failedList.size());
+        result.put("successList", successList);
+        result.put("failedList", failedList);
 
         return result;
     }
