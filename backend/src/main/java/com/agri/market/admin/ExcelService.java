@@ -4,6 +4,8 @@ import com.agri.market.order.Order;
 import com.agri.market.order.OrderRepository;
 import com.agri.market.order.OrderItem;
 import com.agri.market.order.OrderStatus;
+import com.agri.market.seller.Seller;
+import com.agri.market.seller.SellerRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -20,23 +22,37 @@ import java.util.List;
 public class ExcelService {
 
     private final OrderRepository orderRepository;
+    private final SellerRepository sellerRepository;
 
-    public ExcelService(OrderRepository orderRepository) {
+    public ExcelService(OrderRepository orderRepository, SellerRepository sellerRepository) {
         this.orderRepository = orderRepository;
+        this.sellerRepository = sellerRepository;
     }
 
     @Transactional(readOnly = true)
-    public ByteArrayOutputStream exportOrdersToExcel(LocalDate fromDate, LocalDate toDate, OrderStatus status) throws IOException {
+    public ByteArrayOutputStream exportOrdersToExcel(LocalDate fromDate, LocalDate toDate, OrderStatus status, Long sellerId) throws IOException {
         LocalDateTime startDateTime = fromDate != null ? fromDate.atStartOfDay() : null;
         LocalDateTime endDateTime = toDate != null ? toDate.atTime(LocalTime.MAX) : null;
 
-        List<Order> orders = orderRepository.findOrdersForExport(startDateTime, endDateTime, status);
+        List<Order> orders;
+        String sellerName = "오늘마트"; // 기본값
+
+        if (sellerId != null) {
+            orders = orderRepository.findOrdersForExportBySeller(startDateTime, endDateTime, status, sellerId);
+            // 판매자명 조회
+            Seller seller = sellerRepository.findById(sellerId).orElse(null);
+            if (seller != null) {
+                sellerName = seller.getName();
+            }
+        } else {
+            orders = orderRepository.findOrdersForExport(startDateTime, endDateTime, status);
+        }
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Orders");
 
-        // Create header row - 본사 요청 양식
-        String[] headers = {"주문번호", "기재X", "송하인", "송하인 연락처", "수취인", "수취인 연락처", "우편번호", "주소", "상품명", "수량", "배송 메세지", "송장번호"};
+        // Create header row - 판매자 양식에 맞춤
+        String[] headers = {sellerName, "기재X", "송하인", "송하인 연락처", "수취인", "수취인 연락처", "우편번호", "주소", "상품명", "수량", "배송 메세지", "송장번호"};
         Row headerRow = sheet.createRow(0);
         for (int i = 0; i < headers.length; i++) {
             Cell cell = headerRow.createCell(i);
@@ -48,8 +64,14 @@ public class ExcelService {
 
         for (Order order : orders) {
             for (OrderItem item : order.getOrderItems()) {
+                // 판매자 필터가 있는 경우, 해당 판매자 상품만 포함
+                if (sellerId != null && item.getProduct().getSeller() != null
+                    && !item.getProduct().getSeller().getId().equals(sellerId)) {
+                    continue;
+                }
+
                 Row row = sheet.createRow(rowNum++);
-                row.createCell(0).setCellValue(order.getId()); // 주문번호
+                row.createCell(0).setCellValue(order.getOrderNumber()); // 주문번호 (ORDER_xxx 형식)
                 row.createCell(1).setCellValue(""); // 기재X
                 row.createCell(2).setCellValue("오늘마트"); // 송하인
                 row.createCell(3).setCellValue("1644-1473"); // 송하인 연락처

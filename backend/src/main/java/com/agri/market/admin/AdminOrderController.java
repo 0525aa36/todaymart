@@ -57,16 +57,25 @@ public class AdminOrderController {
             @RequestParam(required = false) String format,
             @RequestParam(required = false) LocalDate from,
             @RequestParam(required = false) LocalDate to,
-            @RequestParam(required = false, defaultValue = "PAID") OrderStatus status) throws IOException {
+            @RequestParam(required = false, defaultValue = "PREPARING") OrderStatus status,
+            @RequestParam(required = false) Long sellerId) throws IOException {
 
         // Default to XLSX if format is not specified or invalid
         if (format == null || (!format.equalsIgnoreCase("xlsx") && !format.equalsIgnoreCase("csv"))) {
             format = "xlsx";
         }
 
-        ByteArrayOutputStream outputStream = excelService.exportOrdersToExcel(from, to, status); // Currently only supports XLSX
+        ByteArrayOutputStream outputStream = excelService.exportOrdersToExcel(from, to, status, sellerId);
 
-        String filename = "orders_" + LocalDate.now().format(DateTimeFormatter.ISO_DATE) + "." + format;
+        // 파일명에 판매자명 포함
+        String sellerSuffix = "";
+        if (sellerId != null) {
+            Seller seller = sellerRepository.findById(sellerId).orElse(null);
+            if (seller != null) {
+                sellerSuffix = "_" + seller.getName();
+            }
+        }
+        String filename = "orders" + sellerSuffix + "_" + LocalDate.now().format(DateTimeFormatter.ISO_DATE) + "." + format;
         MediaType mediaType = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); // For XLSX
 
         if (format.equalsIgnoreCase("csv")) {

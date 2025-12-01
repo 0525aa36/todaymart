@@ -81,6 +81,24 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         @Param("status") OrderStatus status
     );
 
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.user u " +
+           "LEFT JOIN FETCH o.orderItems oi " +
+           "LEFT JOIN FETCH oi.product p " +
+           "LEFT JOIN FETCH p.seller s " +
+           "LEFT JOIN FETCH oi.productOption po " +
+           "WHERE (:startDate IS NULL OR o.createdAt >= :startDate) " +
+           "AND (:endDate IS NULL OR o.createdAt <= :endDate) " +
+           "AND (:status IS NULL OR o.orderStatus = :status) " +
+           "AND (:sellerId IS NULL OR p.seller.id = :sellerId) " +
+           "ORDER BY o.createdAt DESC")
+    List<Order> findOrdersForExportBySeller(
+        @Param("startDate") LocalDateTime startDate,
+        @Param("endDate") LocalDateTime endDate,
+        @Param("status") OrderStatus status,
+        @Param("sellerId") Long sellerId
+    );
+
     // 사용자별 주문 수 조회
     long countByUserId(Long userId);
 
