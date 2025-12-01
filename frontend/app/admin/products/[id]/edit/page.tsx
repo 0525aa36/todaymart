@@ -424,6 +424,47 @@ export default function EditProductPage() {
     }
   }
 
+  const handleEditOption = (option: ProductOption) => {
+    setEditingOption(option)
+  }
+
+  const handleUpdateOption = async () => {
+    if (!editingOption) return
+
+    try {
+      await apiFetch(`/api/admin/products/options/${editingOption.id}`, {
+        method: "PUT",
+        auth: true,
+        body: JSON.stringify({
+          optionName: editingOption.optionName,
+          optionValue: editingOption.optionValue,
+          additionalPrice: editingOption.additionalPrice,
+          stock: editingOption.stock,
+          isAvailable: editingOption.isAvailable,
+        }),
+        parseResponse: "none",
+      })
+
+      toast({
+        title: "수정 완료",
+        description: "옵션이 수정되었습니다.",
+      })
+
+      setEditingOption(null)
+      fetchOptions()
+    } catch (error) {
+      toast({
+        title: "오류",
+        description: getErrorMessage(error, "옵션 수정 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingOption(null)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -771,23 +812,99 @@ export default function EditProductPage() {
                   {options.length > 0 && (
                     <div className="space-y-2">
                       {options.map((option) => (
-                        <div key={option.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                          <div className="flex-1">
-                            <span className="font-medium">{option.optionName}:</span> {option.optionValue}
-                            <span className="text-gray-500 ml-2">{option.additionalPrice >= 0 ? '+' : ''}{option.additionalPrice}원</span>
-                            <span className="text-gray-500 ml-2">재고 {option.stock}개</span>
-                            <Badge variant={option.isAvailable ? "default" : "secondary"} className="ml-2 text-xs">
-                              {option.isAvailable ? "판매중" : "중지"}
-                            </Badge>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteOption(option.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                        <div key={option.id}>
+                          {editingOption?.id === option.id ? (
+                            // 수정 폼
+                            <div className="p-3 bg-blue-50 rounded border border-blue-200 space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <Label className="text-xs">옵션명</Label>
+                                  <Input
+                                    value={editingOption.optionName}
+                                    onChange={(e) => setEditingOption({ ...editingOption, optionName: e.target.value })}
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">옵션값</Label>
+                                  <Input
+                                    value={editingOption.optionValue}
+                                    onChange={(e) => setEditingOption({ ...editingOption, optionValue: e.target.value })}
+                                    className="h-8"
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                  <Label className="text-xs">추가금액</Label>
+                                  <Input
+                                    type="number"
+                                    value={editingOption.additionalPrice}
+                                    onChange={(e) => setEditingOption({ ...editingOption, additionalPrice: parseFloat(e.target.value) || 0 })}
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">재고</Label>
+                                  <Input
+                                    type="number"
+                                    value={editingOption.stock}
+                                    onChange={(e) => setEditingOption({ ...editingOption, stock: parseInt(e.target.value) || 0 })}
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">판매가능</Label>
+                                  <div className="flex items-center h-8">
+                                    <input
+                                      type="checkbox"
+                                      checked={editingOption.isAvailable}
+                                      onChange={(e) => setEditingOption({ ...editingOption, isAvailable: e.target.checked })}
+                                      className="h-4 w-4"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button type="button" size="sm" className="h-7" onClick={handleUpdateOption}>
+                                  저장
+                                </Button>
+                                <Button type="button" size="sm" variant="outline" className="h-7" onClick={handleCancelEdit}>
+                                  취소
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            // 옵션 표시
+                            <div className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                              <div className="flex-1">
+                                <span className="font-medium">{option.optionName}:</span> {option.optionValue}
+                                <span className="text-gray-500 ml-2">{option.additionalPrice >= 0 ? '+' : ''}{option.additionalPrice}원</span>
+                                <span className="text-gray-500 ml-2">재고 {option.stock}개</span>
+                                <Badge variant={option.isAvailable ? "default" : "secondary"} className="ml-2 text-xs">
+                                  {option.isAvailable ? "판매중" : "중지"}
+                                </Badge>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditOption(option)}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteOption(option.id)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
