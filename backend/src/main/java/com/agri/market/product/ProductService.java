@@ -391,6 +391,9 @@ public class ProductService {
             throw new BusinessException("이 옵션으로 주문된 내역이 있어 삭제할 수 없습니다. 옵션을 비활성화하세요.");
         }
 
+        // 장바구니에 있는 해당 옵션 항목 먼저 삭제
+        cartItemRepository.deleteByProductOptionId(optionId);
+
         productOptionRepository.delete(option);
     }
 

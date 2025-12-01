@@ -13,6 +13,12 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     Optional<CartItem> findByCartAndProduct(Cart cart, Product product);
     void deleteByProduct(Product product);
 
+    // 해당 ProductOption을 참조하는 장바구니 항목이 있는지 확인
+    boolean existsByProductOptionId(Long productOptionId);
+
+    // 해당 ProductOption을 참조하는 장바구니 항목 삭제
+    void deleteByProductOptionId(Long productOptionId);
+
     // Lazy Loading 오류 방지를 위한 fetch join 쿼리
     @Query("SELECT ci FROM CartItem ci " +
            "JOIN FETCH ci.cart c " +
