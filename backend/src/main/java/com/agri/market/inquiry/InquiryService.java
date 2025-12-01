@@ -1,5 +1,6 @@
 package com.agri.market.inquiry;
 
+import com.agri.market.notification.SlackNotificationService;
 import com.agri.market.user.User;
 import com.agri.market.user.UserService;
 import org.springframework.stereotype.Service;
@@ -12,10 +13,13 @@ import java.util.List;
 public class InquiryService {
     private final InquiryRepository inquiryRepository;
     private final UserService userService;
+    private final SlackNotificationService slackNotificationService;
 
-    public InquiryService(InquiryRepository inquiryRepository, UserService userService) {
+    public InquiryService(InquiryRepository inquiryRepository, UserService userService,
+                         SlackNotificationService slackNotificationService) {
         this.inquiryRepository = inquiryRepository;
         this.userService = userService;
+        this.slackNotificationService = slackNotificationService;
     }
 
     @Transactional(readOnly = true)
@@ -49,7 +53,12 @@ public class InquiryService {
         User user = userService.getUserByEmail(userEmail);
         inquiry.setUser(user);
         inquiry.setStatus(InquiryStatus.PENDING);
-        return inquiryRepository.save(inquiry);
+        Inquiry savedInquiry = inquiryRepository.save(inquiry);
+
+        // Slack 알림 전송 (비동기)
+        slackNotificationService.sendInquiryNotification(savedInquiry.getId());
+
+        return savedInquiry;
     }
 
     @Transactional

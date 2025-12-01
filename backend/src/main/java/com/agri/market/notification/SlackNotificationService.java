@@ -1,5 +1,7 @@
 package com.agri.market.notification;
 
+import com.agri.market.inquiry.Inquiry;
+import com.agri.market.inquiry.InquiryRepository;
 import com.agri.market.order.Order;
 import com.agri.market.order.OrderRepository;
 import org.slf4j.Logger;
@@ -25,6 +27,7 @@ public class SlackNotificationService {
 
     private final RestTemplate restTemplate;
     private final OrderRepository orderRepository;
+    private final InquiryRepository inquiryRepository;
 
     @Value("${slack.webhook.url:}")
     private String slackWebhookUrl;
@@ -32,9 +35,10 @@ public class SlackNotificationService {
     @Value("${slack.notification.enabled:true}")
     private boolean notificationEnabled;
 
-    public SlackNotificationService(RestTemplate restTemplate, OrderRepository orderRepository) {
+    public SlackNotificationService(RestTemplate restTemplate, OrderRepository orderRepository, InquiryRepository inquiryRepository) {
         this.restTemplate = restTemplate;
         this.orderRepository = orderRepository;
+        this.inquiryRepository = inquiryRepository;
     }
 
     /**
@@ -203,5 +207,109 @@ public class SlackNotificationService {
         } catch (Exception e) {
             logger.error("Failed to send test message to Slack", e);
         }
+    }
+
+    /**
+     * 고객 문의 알림을 Slack으로 전송
+     * @param inquiryId 문의 ID
+     */
+    @Async
+    @Transactional(readOnly = true)
+    public void sendInquiryNotification(Long inquiryId) {
+        if (!notificationEnabled || slackWebhookUrl == null || slackWebhookUrl.isBlank()) {
+            logger.debug("Slack notification is disabled or webhook URL is not configured");
+            return;
+        }
+
+        try {
+            Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                    .orElseThrow(() -> new RuntimeException("Inquiry not found: " + inquiryId));
+
+            Map<String, Object> payload = buildInquiryNotificationPayload(inquiry);
+            sendSlackMessage(payload);
+            logger.info("Inquiry notification sent to Slack for inquiry: {}", inquiryId);
+        } catch (Exception e) {
+            logger.error("Failed to send Slack notification for inquiryId: {}", inquiryId, e);
+        }
+    }
+
+    /**
+     * 고객 문의 알림 메시지 구성 (Block Kit 형식)
+     */
+    private Map<String, Object> buildInquiryNotificationPayload(Inquiry inquiry) {
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        String createdTime = inquiry.getCreatedAt().format(dateFormatter);
+        String customerName = inquiry.getUser() != null ? inquiry.getUser().getName() : "고객";
+
+        // 문의 내용 미리보기 (100자 제한)
+        String contentPreview = inquiry.getContent();
+        if (contentPreview.length() > 100) {
+            contentPreview = contentPreview.substring(0, 100) + "...";
+        }
+
+        List<Map<String, Object>> blocks = new ArrayList<>();
+
+        // 헤더
+        blocks.add(Map.of(
+                "type", "header",
+                "text", Map.of(
+                        "type", "plain_text",
+                        "text", "새로운 고객 문의",
+                        "emoji", false
+                )
+        ));
+
+        // 구분선
+        blocks.add(Map.of("type", "divider"));
+
+        // 문의 정보 섹션
+        blocks.add(Map.of(
+                "type", "section",
+                "fields", Arrays.asList(
+                        Map.of("type", "mrkdwn", "text", "*카테고리:*\n" + inquiry.getCategory()),
+                        Map.of("type", "mrkdwn", "text", "*고객:*\n" + customerName),
+                        Map.of("type", "mrkdwn", "text", "*등록:*\n" + createdTime)
+                )
+        ));
+
+        // 제목
+        blocks.add(Map.of(
+                "type", "section",
+                "text", Map.of(
+                        "type", "mrkdwn",
+                        "text", "*제목:*\n" + inquiry.getTitle()
+                )
+        ));
+
+        // 내용 미리보기
+        blocks.add(Map.of(
+                "type", "section",
+                "text", Map.of(
+                        "type", "mrkdwn",
+                        "text", "*내용:*\n" + contentPreview
+                )
+        ));
+
+        // 구분선
+        blocks.add(Map.of("type", "divider"));
+
+        // 관리자 페이지 링크 버튼
+        blocks.add(Map.of(
+                "type", "actions",
+                "elements", List.of(
+                        Map.of(
+                                "type", "button",
+                                "text", Map.of(
+                                        "type", "plain_text",
+                                        "text", "문의 확인하기",
+                                        "emoji", false
+                                ),
+                                "url", "https://todaymart.co.kr/admin/help/inquiries",
+                                "action_id", "view_inquiry"
+                        )
+                )
+        ));
+
+        return Map.of("blocks", blocks);
     }
 }
