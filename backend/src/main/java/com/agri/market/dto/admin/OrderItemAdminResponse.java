@@ -1,10 +1,12 @@
 package com.agri.market.dto.admin;
 
 import com.agri.market.order.OrderItem;
+import com.agri.market.product.ProductOption;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.Hibernate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -39,13 +41,25 @@ public class OrderItemAdminResponse {
 
     /**
      * OrderItem 엔티티로부터 DTO 생성
+     * Lazy proxy 접근 시 LazyInitializationException 방지
      */
     public static OrderItemAdminResponse from(OrderItem orderItem) {
+        // ProductOption이 초기화되었는지 확인 후 안전하게 접근
+        String optionName = null;
+        ProductOption productOption = orderItem.getProductOption();
+        if (productOption != null && Hibernate.isInitialized(productOption)) {
+            try {
+                optionName = productOption.getOptionName();
+            } catch (Exception e) {
+                // LazyInitializationException 발생 시 null 유지
+            }
+        }
+
         return OrderItemAdminResponse.builder()
                 .id(orderItem.getId())
                 .productId(orderItem.getProduct().getId())
                 .productName(orderItem.getProduct().getName())
-                .optionName(orderItem.getProductOption() != null ? orderItem.getProductOption().getOptionName() : null)
+                .optionName(optionName)
                 .quantity(orderItem.getQuantity())
                 .price(orderItem.getPrice())
                 .sellerId(orderItem.getProduct().getSeller() != null ? orderItem.getProduct().getSeller().getId() : null)
