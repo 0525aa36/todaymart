@@ -80,12 +80,18 @@ public class SlackNotificationService {
         String formattedAmount = currencyFormat.format(amount) + "원";
         String orderTime = LocalDateTime.now().format(dateFormatter);
 
-        // 상품 목록 생성
+        // 상품 목록 생성 (LazyInitializationException 방지)
         String productList = order.getOrderItems().stream()
                 .map(item -> {
                     String productName = item.getProduct() != null ? item.getProduct().getName() : "상품";
-                    String optionName = item.getProductOption() != null ?
-                            " (" + item.getProductOption().getOptionName() + ")" : "";
+                    String optionName = "";
+                    try {
+                        if (item.getProductOption() != null) {
+                            optionName = " (" + item.getProductOption().getOptionName() + ")";
+                        }
+                    } catch (Exception e) {
+                        // LazyInitializationException 무시
+                    }
                     return "• " + productName + optionName + " x " + item.getQuantity() + "개";
                 })
                 .collect(Collectors.joining("\n"));
@@ -235,15 +241,37 @@ public class SlackNotificationService {
             return;
         }
 
-        try {
-            Inquiry inquiry = inquiryRepository.findById(inquiryId)
-                    .orElseThrow(() -> new RuntimeException("Inquiry not found: " + inquiryId));
+        // 트랜잭션 커밋 전에 조회하면 실패할 수 있으므로 재시도 로직 추가
+        int maxRetries = 3;
+        int retryDelayMs = 500;
 
-            Map<String, Object> payload = buildInquiryNotificationPayload(inquiry);
-            sendSlackMessageToUrl(payload, webhookUrl);
-            logger.info("Inquiry notification sent to Slack for inquiry: {}", inquiryId);
-        } catch (Exception e) {
-            logger.error("Failed to send Slack notification for inquiryId: {}", inquiryId, e);
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                // 잠시 대기 (트랜잭션 커밋 대기)
+                if (attempt > 1) {
+                    Thread.sleep(retryDelayMs * attempt);
+                }
+
+                Inquiry inquiry = inquiryRepository.findById(inquiryId).orElse(null);
+                if (inquiry == null) {
+                    logger.warn("Inquiry not found (attempt {}/{}): {}", attempt, maxRetries, inquiryId);
+                    continue;
+                }
+
+                Map<String, Object> payload = buildInquiryNotificationPayload(inquiry);
+                sendSlackMessageToUrl(payload, webhookUrl);
+                logger.info("Inquiry notification sent to Slack for inquiry: {}", inquiryId);
+                return; // 성공하면 종료
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.error("Interrupted while waiting to retry inquiry notification", e);
+                return;
+            } catch (Exception e) {
+                logger.warn("Failed to send inquiry notification (attempt {}/{}): {}", attempt, maxRetries, e.getMessage());
+                if (attempt == maxRetries) {
+                    logger.error("Failed to send Slack notification for inquiryId after {} attempts: {}", maxRetries, inquiryId, e);
+                }
+            }
         }
     }
 
