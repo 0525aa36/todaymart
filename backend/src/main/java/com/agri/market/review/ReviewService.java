@@ -106,7 +106,16 @@ public class ReviewService {
     public Page<Review> getReviewsByUserEmail(String userEmail, Pageable pageable) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
-        return reviewRepository.findByUserId(user.getId(), pageable);
+        Page<Review> reviews = reviewRepository.findByUserId(user.getId(), pageable);
+
+        // LAZY 로딩된 엔티티들을 트랜잭션 내에서 초기화 (open-in-view=false 대응)
+        reviews.getContent().forEach(review -> {
+            review.getProduct().getName();
+            review.getUser().getName();
+            review.getImages().size();
+        });
+
+        return reviews;
     }
 
     // 리뷰 상세 조회
