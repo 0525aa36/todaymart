@@ -6,6 +6,7 @@ import com.agri.market.dto.admin.OrderAdminResponse;
 import com.agri.market.order.Order;
 import com.agri.market.order.OrderService;
 import com.agri.market.order.OrderStatus;
+import com.agri.market.payment.PaymentService;
 import com.agri.market.seller.Seller;
 import com.agri.market.seller.SellerRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -39,13 +40,16 @@ public class AdminOrderController {
     private final OrderService orderService;
     private final SellerRepository sellerRepository;
     private final AdminAuditLogService auditLogService;
+    private final PaymentService paymentService;
 
     public AdminOrderController(ExcelService excelService, OrderService orderService,
-                                SellerRepository sellerRepository, AdminAuditLogService auditLogService) {
+                                SellerRepository sellerRepository, AdminAuditLogService auditLogService,
+                                PaymentService paymentService) {
         this.excelService = excelService;
         this.orderService = orderService;
         this.sellerRepository = sellerRepository;
         this.auditLogService = auditLogService;
+        this.paymentService = paymentService;
     }
 
     @GetMapping("/export")
@@ -251,5 +255,38 @@ public class AdminOrderController {
     public ResponseEntity<List<Seller>> getAllSellers() {
         List<Seller> sellers = sellerRepository.findAll();
         return ResponseEntity.ok(sellers);
+    }
+
+    /**
+     * 토스페이먼츠에서 결제 상태를 조회하여 주문에 동기화
+     * 토스에서 취소된 결제를 주문에 반영할 때 사용
+     */
+    @PostMapping("/{orderId}/sync-payment")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> syncPaymentStatus(@PathVariable Long orderId) {
+        try {
+            Map<String, Object> result = paymentService.syncPaymentStatusFromToss(orderId);
+
+            // 취소가 반영된 경우 감사 로그 기록
+            String action = (String) result.get("action");
+            if ("cancelled".equals(action) || "partial_refund".equals(action)) {
+                auditLogService.log(
+                    ActionType.ORDER_STATUS_CHANGE,
+                    "ORDER",
+                    orderId,
+                    (String) result.get("previousStatus"),
+                    (String) result.get("newStatus"),
+                    "토스 결제 상태 동기화: " + result.get("cancelReason")
+                );
+            }
+
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            log.error("Payment sync failed for order {}: {}", orderId, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "동기화 실패",
+                "message", e.getMessage()
+            ));
+        }
     }
 }

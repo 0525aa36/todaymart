@@ -145,7 +145,12 @@
       "Bash(backend/src/main/java/com/agri/market/order/PaymentStatus.java )",
       "Bash(backend/src/main/java/com/agri/market/payment/PaymentRepository.java )",
       "Bash(backend/src/main/java/com/agri/market/payment/PaymentService.java )",
-      "Bash(frontend/app/payment/[orderId]/page.tsx)"
+      "Bash(frontend/app/payment/[orderId]/page.tsx)",
+      "Bash(bash -c 'aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 940482431364.dkr.ecr.ap-northeast-2.amazonaws.com')",
+      "Bash(bash -c 'aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 940482431364.dkr.ecr.ap-northeast-2.amazonaws.com && docker push 940482431364.dkr.ecr.ap-northeast-2.amazonaws.com/korean-agri-shop/backend:latest')",
+      "Bash(backend/src/main/java/com/agri/market/notification/SlackNotificationService.java )",
+      "Bash(backend/src/main/resources/application.properties )",
+      "Bash(.aws/task-definition.json)"
     ],
     "deny": [],
     "ask": []

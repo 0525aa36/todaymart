@@ -489,4 +489,142 @@ public class PaymentService {
             throw new RuntimeException("Failed to confirm payment: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * 토스페이먼츠에서 결제 상태를 조회하여 주문에 동기화 (관리자용)
+     * @param orderId 주문 ID
+     * @return 동기화 결과
+     */
+    @Transactional
+    public Map<String, Object> syncPaymentStatusFromToss(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+
+        Payment payment = paymentRepository.findByOrder(order)
+                .orElseThrow(() -> new RuntimeException("Payment not found for order: " + orderId));
+
+        String paymentKey = payment.getTransactionId();
+        if (paymentKey == null || paymentKey.startsWith("MOCK_")) {
+            throw new RuntimeException("Invalid payment key for order: " + orderId);
+        }
+
+        try {
+            // 토스 API로 결제 상태 조회
+            Map<String, Object> tossPayment = queryTossPaymentStatus(paymentKey);
+
+            String tossStatus = (String) tossPayment.get("status");
+            Map<String, Object> result = new HashMap<>();
+            result.put("orderId", orderId);
+            result.put("orderNumber", order.getOrderNumber());
+            result.put("tossStatus", tossStatus);
+            result.put("previousStatus", payment.getStatus().name());
+
+            // 취소 상태 처리
+            if ("CANCELED".equals(tossStatus)) {
+                // 이미 취소 상태면 스킵
+                if (payment.getStatus() == PaymentStatus.FULLY_REFUNDED) {
+                    result.put("action", "already_cancelled");
+                    result.put("message", "이미 취소된 주문입니다.");
+                    return result;
+                }
+
+                // 취소 정보 추출
+                List<Map<String, Object>> cancels = (List<Map<String, Object>>) tossPayment.get("cancels");
+                String cancelReason = "토스에서 취소됨";
+                BigDecimal cancelAmount = BigDecimal.ZERO;
+
+                if (cancels != null && !cancels.isEmpty()) {
+                    Map<String, Object> lastCancel = cancels.get(cancels.size() - 1);
+                    cancelReason = (String) lastCancel.getOrDefault("cancelReason", cancelReason);
+                    Object cancelAmountObj = lastCancel.get("cancelAmount");
+                    if (cancelAmountObj instanceof Number) {
+                        cancelAmount = new BigDecimal(((Number) cancelAmountObj).toString());
+                    }
+                }
+
+                // 결제 상태 업데이트
+                payment.setStatus(PaymentStatus.FULLY_REFUNDED);
+                payment.setRefundAmount(cancelAmount.compareTo(BigDecimal.ZERO) > 0 ? cancelAmount : payment.getAmount());
+                payment.setRefundReason(cancelReason);
+                payment.setRefundedAt(LocalDateTime.now());
+                paymentRepository.save(payment);
+
+                // 주문 상태 업데이트
+                order.setOrderStatus(OrderStatus.CANCELLED);
+                order.setCancellationReason(cancelReason);
+                order.setCancelledAt(LocalDateTime.now());
+                orderRepository.save(order);
+
+                // 재고 복구
+                orderService.restoreStock(orderId);
+
+                result.put("action", "cancelled");
+                result.put("newStatus", "CANCELLED");
+                result.put("cancelReason", cancelReason);
+                result.put("message", "토스에서 취소된 결제가 주문에 반영되었습니다.");
+
+                logger.info("Payment sync: Order {} cancelled from Toss. Reason: {}", orderId, cancelReason);
+            } else if ("PARTIAL_CANCELED".equals(tossStatus)) {
+                // 부분 취소 처리
+                List<Map<String, Object>> cancels = (List<Map<String, Object>>) tossPayment.get("cancels");
+                BigDecimal totalCancelAmount = BigDecimal.ZERO;
+
+                if (cancels != null) {
+                    for (Map<String, Object> cancel : cancels) {
+                        Object cancelAmountObj = cancel.get("cancelAmount");
+                        if (cancelAmountObj instanceof Number) {
+                            totalCancelAmount = totalCancelAmount.add(new BigDecimal(((Number) cancelAmountObj).toString()));
+                        }
+                    }
+                }
+
+                payment.setStatus(PaymentStatus.PARTIALLY_REFUNDED);
+                payment.setRefundAmount(totalCancelAmount);
+                payment.setRefundedAt(LocalDateTime.now());
+                paymentRepository.save(payment);
+
+                result.put("action", "partial_refund");
+                result.put("newStatus", "PARTIALLY_REFUNDED");
+                result.put("refundAmount", totalCancelAmount);
+                result.put("message", "토스에서 부분 취소된 결제가 주문에 반영되었습니다.");
+
+                logger.info("Payment sync: Order {} partially refunded from Toss. Amount: {}", orderId, totalCancelAmount);
+            } else {
+                result.put("action", "no_change");
+                result.put("message", "토스 결제 상태가 동일합니다: " + tossStatus);
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            logger.error("Failed to sync payment status from Toss for order: {}", orderId, e);
+            throw new RuntimeException("토스 결제 상태 동기화 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 토스페이먼츠 API로 결제 상태 조회
+     * @param paymentKey 결제 키
+     * @return 토스 결제 정보
+     */
+    private Map<String, Object> queryTossPaymentStatus(String paymentKey) {
+        String auth = tossPaymentsConfig.getSecretKey() + ":";
+        String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Basic " + encodedAuth);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        String url = tossPaymentsConfig.getApiUrl() + "/v1/payments/" + paymentKey;
+        logger.debug("Querying Toss payment status: {}", url);
+
+        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
+
+        if (response.getStatusCode() == HttpStatus.OK) {
+            return response.getBody();
+        } else {
+            throw new RuntimeException("Failed to query Toss payment status: " + response.getStatusCode());
+        }
+    }
 }
