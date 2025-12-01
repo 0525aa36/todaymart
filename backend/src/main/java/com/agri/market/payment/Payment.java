@@ -32,8 +32,8 @@ public class Payment {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PaymentStatus status; // PENDING, PAID, FAILED
+    @Column(nullable = false, length = 20)
+    private PaymentStatus status; // PENDING, PAID, FAILED, PARTIALLY_REFUNDED, FULLY_REFUNDED
 
     private String transactionId; // From payment gateway (e.g., paymentKey from Toss Payments)
 
