@@ -489,20 +489,34 @@ export default function AdminOrdersPage() {
     setExportingExcel(true)
     try {
       const params = new URLSearchParams()
+      // 판매자 필터가 선택된 경우 추가
+      if (selectedSellerId !== "ALL") {
+        params.append('sellerId', selectedSellerId)
+      }
+      // 상태 필터도 추가 (기본값: PREPARING)
+      if (selectedStatus !== "ALL") {
+        params.append('status', selectedStatus)
+      }
       const url = `/api/admin/orders/export${params.toString() ? '?' + params.toString() : ''}`
 
-      const blob = await apiFetch(url, {
+      const blob = await apiFetch<Blob>(url, {
         auth: true,
         parseResponse: 'blob'
       })
 
-      const downloadUrl = window.URL.createObjectURL(blob)
+      const downloadUrl = window.URL.createObjectURL(blob as Blob)
       const link = document.createElement('a')
       link.href = downloadUrl
 
       const now = new Date()
       const dateStr = now.toISOString().split('T')[0]
-      link.download = `orders_${dateStr}.xlsx`
+      // 판매자명을 파일명에 포함
+      const sellerName = selectedSellerId !== "ALL"
+        ? sellers.find(s => s.id.toString() === selectedSellerId)?.name
+        : null
+      link.download = sellerName
+        ? `orders_${sellerName}_${dateStr}.xlsx`
+        : `orders_${dateStr}.xlsx`
 
       document.body.appendChild(link)
       link.click()
@@ -511,7 +525,9 @@ export default function AdminOrdersPage() {
 
       toast({
         title: "다운로드 완료",
-        description: "주문 내역 엑셀 파일이 다운로드되었습니다.",
+        description: sellerName
+          ? `${sellerName} 주문 내역 엑셀 파일이 다운로드되었습니다.`
+          : "주문 내역 엑셀 파일이 다운로드되었습니다.",
       })
     } catch (error) {
       console.error("Error exporting Excel:", error)
@@ -652,6 +668,11 @@ export default function AdminOrdersPage() {
             >
               <Download className="h-4 w-4 mr-2" />
               엑셀 다운로드
+              {selectedSellerId !== "ALL" && (
+                <span className="ml-1 text-xs text-blue-600">
+                  ({sellers.find(s => s.id.toString() === selectedSellerId)?.name})
+                </span>
+              )}
             </LoadingButton>
             {googleSheetsEnabled && (
               <LoadingButton
