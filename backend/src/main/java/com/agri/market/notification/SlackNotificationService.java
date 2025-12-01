@@ -250,20 +250,24 @@ public class SlackNotificationService {
 
         // 트랜잭션 커밋 전에 조회하면 실패할 수 있으므로 재시도 로직 추가
         int maxRetries = 3;
-        int retryDelayMs = 500;
+        int baseDelayMs = 1000; // 첫 시도 전 1초 대기
+
+        logger.info("Preparing to send inquiry notification for inquiryId: {}", inquiryId);
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                // 잠시 대기 (트랜잭션 커밋 대기)
-                if (attempt > 1) {
-                    Thread.sleep(retryDelayMs * attempt);
-                }
+                // 트랜잭션 커밋 대기 - 모든 시도에서 딜레이
+                int delayMs = baseDelayMs * attempt;
+                logger.debug("Waiting {}ms before attempt {}/{}", delayMs, attempt, maxRetries);
+                Thread.sleep(delayMs);
 
                 Inquiry inquiry = inquiryRepository.findById(inquiryId).orElse(null);
                 if (inquiry == null) {
                     logger.warn("Inquiry not found (attempt {}/{}): {}", attempt, maxRetries, inquiryId);
                     continue;
                 }
+
+                logger.info("Found inquiry: id={}, title={}", inquiry.getId(), inquiry.getTitle());
 
                 Map<String, Object> payload = buildInquiryNotificationPayload(inquiry);
                 sendSlackMessageToUrl(payload, webhookUrl);
