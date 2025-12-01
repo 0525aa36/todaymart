@@ -113,8 +113,8 @@ public class LocalStorageService implements StorageService {
 
     @Override
     public String getFileUrl(String fileName) {
-        // 로컬 파일은 API 엔드포인트를 통해 제공
-        return "/api/files/" + fileName;
+        // 로컬 파일은 API 엔드포인트를 통해 제공 (절대 URL로 반환)
+        return "http://localhost:" + serverPort + "/api/files/" + fileName;
     }
 
     @Override

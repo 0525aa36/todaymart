@@ -15,7 +15,6 @@ import { useRouter, useParams } from "next/navigation"
 import { ChevronLeft, Package, MapPin, CreditCard, RotateCcw, AlertTriangle } from "lucide-react"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { ReturnRequestDialog } from "@/components/returns/return-request-dialog"
-import { DeliveryTracking } from "@/components/delivery-tracking"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -132,37 +131,6 @@ export default function OrderDetailPage() {
       })
     } finally {
       setCancelling(false)
-    }
-  }
-
-  const handleConfirmDelivery = async () => {
-    if (!order) return
-
-    const confirmDelivery = confirm("배송을 확인하시겠습니까?")
-    if (!confirmDelivery) return
-
-    const token = localStorage.getItem("token")
-    if (!token) return
-
-    try {
-      await apiFetch(`/api/orders/${order.id}/confirm`, {
-        method: "POST",
-        auth: true,
-        parseResponse: "none",
-      })
-
-      toast({
-        title: "배송 확인 완료",
-        description: "구매가 확정되었습니다.",
-      })
-      fetchOrder()
-    } catch (error) {
-      console.error("Error confirming delivery:", error)
-      toast({
-        title: "배송 확인 실패",
-        description: getErrorMessage(error, "배송 확인 중 오류가 발생했습니다."),
-        variant: "destructive",
-      })
     }
   }
 
@@ -284,18 +252,6 @@ export default function OrderDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Delivery Tracking - show for SHIPPED/DELIVERED orders with tracking info */}
-          {(order.orderStatus === "SHIPPED" || order.orderStatus === "DELIVERED") &&
-           order.trackingNumber && order.courierCode && (
-            <div className="mb-6">
-              <DeliveryTracking
-                courierCode={order.courierCode}
-                trackingNumber={order.trackingNumber}
-                courierName={order.courierCompany}
-              />
-            </div>
-          )}
-
           {/* Order Items */}
           <Card className="mb-6">
             <CardHeader>
@@ -381,14 +337,15 @@ export default function OrderDetailPage() {
             )}
             {order.orderStatus === "DELIVERED" && (
               <>
-                <Button variant="outline" className="flex-1" onClick={handleConfirmDelivery}>
-                  구매 확정
-                </Button>
                 <Button variant="outline" className="flex-1" onClick={() => setReturnDialogOpen(true)}>
                   <RotateCcw className="h-4 w-4 mr-2" />
                   반품 신청
                 </Button>
-                <Button className="flex-1">리뷰 작성</Button>
+                {order.orderItems[0]?.productId && (
+                  <Button className="flex-1" style={{ backgroundColor: '#23747C' }} asChild>
+                    <Link href={`/product/${order.orderItems[0].productId}?tab=reviews`}>리뷰 작성</Link>
+                  </Button>
+                )}
               </>
             )}
           </div>

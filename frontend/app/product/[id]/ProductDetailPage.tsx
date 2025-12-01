@@ -31,8 +31,8 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { useState, useEffect, useMemo } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { ShoppingCart, Heart, Share2, Minus, Plus, Star, Truck, Shield, RefreshCw, ChevronRight, Home } from "lucide-react"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
+import { ShoppingCart, Heart, Share2, Minus, Plus, Star, Truck, Shield, RefreshCw, ChevronRight, Home, ImageIcon, X, ChevronLeft } from "lucide-react"
 import { ApiError, apiFetch, getErrorMessage } from "@/lib/api-client"
 import { ProductNoticeDisplay, ProductNoticeData } from "@/components/product/ProductNoticeDisplay"
 
@@ -61,6 +61,12 @@ interface Product {
   maxOrderQuantity: number | null
 }
 
+interface ReviewImage {
+  id: number
+  imageUrl: string
+  displayOrder: number
+}
+
 interface Review {
   id: number
   productId: number
@@ -70,6 +76,7 @@ interface Review {
   rating: number
   title: string
   content: string
+  images: ReviewImage[]
   createdAt: string
   updatedAt: string
 }
@@ -91,8 +98,13 @@ interface ProductOption {
 export function ProductDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const productId = params.id as string
+
+  // URL 쿼리 파라미터에서 탭 값 읽기
+  const tabFromUrl = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(tabFromUrl === 'reviews' ? 'review' : 'detail')
 
   const [product, setProduct] = useState<Product | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
@@ -111,6 +123,27 @@ export function ProductDetailPage() {
   const [reviewTitle, setReviewTitle] = useState("")
   const [reviewContent, setReviewContent] = useState("")
   const [submittingReview, setSubmittingReview] = useState(false)
+  const [reviewImages, setReviewImages] = useState<File[]>([])
+  const [reviewImagePreviews, setReviewImagePreviews] = useState<string[]>([])
+
+  // Image viewer state
+  const [imageViewerOpen, setImageViewerOpen] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [viewerImages, setViewerImages] = useState<string[]>([])
+
+  const openImageViewer = (images: string[], startIndex: number) => {
+    setViewerImages(images)
+    setCurrentImageIndex(startIndex)
+    setImageViewerOpen(true)
+  }
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % viewerImages.length)
+  }
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + viewerImages.length) % viewerImages.length)
+  }
 
   useEffect(() => {
     if (productId) {
@@ -458,6 +491,50 @@ export function ProductDetailPage() {
     }
   }
 
+  const handleReviewImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    const newFiles = Array.from(files)
+    const totalFiles = reviewImages.length + newFiles.length
+
+    if (totalFiles > 5) {
+      toast({
+        title: "이미지 개수 초과",
+        description: "리뷰 이미지는 최대 5장까지 등록 가능합니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 파일 크기 체크 (5MB)
+    const oversizedFiles = newFiles.filter(file => file.size > 5 * 1024 * 1024)
+    if (oversizedFiles.length > 0) {
+      toast({
+        title: "파일 크기 초과",
+        description: "이미지 파일은 5MB 이하만 업로드 가능합니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setReviewImages(prev => [...prev, ...newFiles])
+
+    // 프리뷰 생성
+    newFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setReviewImagePreviews(prev => [...prev, e.target?.result as string])
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeReviewImage = (index: number) => {
+    setReviewImages(prev => prev.filter((_, i) => i !== index))
+    setReviewImagePreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
   const submitReview = async () => {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -481,17 +558,28 @@ export function ProductDetailPage() {
 
     setSubmittingReview(true)
     try {
-      await apiFetch("/api/reviews", {
-        method: "POST",
-        auth: true,
-        body: JSON.stringify({
-          productId: Number(productId),
-          rating: reviewRating,
-          title: reviewTitle,
-          content: reviewContent,
-        }),
-        parseResponse: "none",
+      const formData = new FormData()
+      formData.append("productId", productId)
+      formData.append("rating", reviewRating.toString())
+      formData.append("title", reviewTitle)
+      formData.append("content", reviewContent)
+
+      // 이미지 추가
+      reviewImages.forEach((image) => {
+        formData.append("images", image)
       })
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/reviews`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token.replace('Bearer ', '')}`,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error("리뷰 작성 실패")
+      }
 
       toast({
         title: "리뷰 작성 완료",
@@ -501,6 +589,8 @@ export function ProductDetailPage() {
       setReviewTitle("")
       setReviewContent("")
       setReviewRating(5)
+      setReviewImages([])
+      setReviewImagePreviews([])
       fetchReviews()
       fetchReviewStats()
     } catch (error) {
@@ -522,6 +612,16 @@ export function ProductDetailPage() {
       month: "2-digit",
       day: "2-digit",
     })
+  }
+
+  // 이름 마스킹 함수
+  const maskName = (name: string) => {
+    if (!name) return "익명"
+
+    if (name.length === 1) return name + "**"
+    if (name.length === 2) return name.charAt(0) + "*"
+    // 3글자 이상이면 첫 글자만 보이고 나머지 마스킹
+    return name.charAt(0) + "*".repeat(name.length - 1)
   }
 
   const getCategoryName = (category: string) => {
@@ -814,7 +914,7 @@ export function ProductDetailPage() {
           </div>
 
           {/* Tabs Section */}
-          <Tabs defaultValue="detail" className="mb-12">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
             <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
               <TabsTrigger
                 value="detail"
@@ -1038,6 +1138,41 @@ export function ProductDetailPage() {
                               maxLength={1000}
                             />
                           </div>
+                          <div>
+                            <Label className="mb-2 block">사진 첨부 (최대 5장)</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {reviewImagePreviews.map((preview, index) => (
+                                <div key={index} className="relative w-20 h-20">
+                                  <img
+                                    src={preview}
+                                    alt={`리뷰 이미지 ${index + 1}`}
+                                    className="w-full h-full object-cover rounded-md border"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeReviewImage(index)}
+                                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                              {reviewImages.length < 5 && (
+                                <label className="w-20 h-20 border-2 border-dashed border-muted-foreground/30 rounded-md flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors">
+                                  <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground mt-1">추가</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handleReviewImageSelect}
+                                    className="hidden"
+                                  />
+                                </label>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">이미지는 최대 5MB까지 업로드 가능합니다.</p>
+                          </div>
                         </div>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setReviewDialogOpen(false)}>
@@ -1066,7 +1201,7 @@ export function ProductDetailPage() {
                           <div className="flex items-start justify-between mb-3">
                             <div>
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-semibold">{review.userName}</span>
+                                <span className="font-semibold">{maskName(review.userName)}</span>
                                 <div className="flex">
                                   {[...Array(5)].map((_, i) => (
                                     <Star
@@ -1081,6 +1216,23 @@ export function ProductDetailPage() {
                           </div>
                           <h4 className="font-semibold mb-2">{review.title}</h4>
                           <p className="text-sm leading-relaxed whitespace-pre-wrap">{review.content}</p>
+                          {review.images && review.images.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {review.images.map((image, index) => (
+                                <button
+                                  key={image.id}
+                                  onClick={() => openImageViewer(review.images.map(img => img.imageUrl), index)}
+                                  className="block cursor-pointer"
+                                >
+                                  <img
+                                    src={image.imageUrl}
+                                    alt="리뷰 이미지"
+                                    className="w-20 h-20 object-cover rounded-md hover:opacity-80 transition-opacity"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     ))
@@ -1115,6 +1267,58 @@ export function ProductDetailPage() {
           </Tabs>
         </div>
       </main>
+
+      {/* Image Viewer Modal */}
+      <Dialog open={imageViewerOpen} onOpenChange={setImageViewerOpen}>
+        <DialogContent className="max-w-4xl p-0 border-0 bg-black overflow-hidden">
+          <DialogTitle className="sr-only">리뷰 이미지 보기</DialogTitle>
+          <div className="relative bg-black">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white"
+              onClick={() => setImageViewerOpen(false)}
+            >
+              <X className="h-6 w-6" />
+            </Button>
+
+            {viewerImages.length > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white"
+                  onClick={prevImage}
+                >
+                  <ChevronLeft className="h-8 w-8" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white"
+                  onClick={nextImage}
+                >
+                  <ChevronRight className="h-8 w-8" />
+                </Button>
+              </>
+            )}
+
+            <div className="relative w-full aspect-square">
+              <img
+                src={viewerImages[currentImageIndex]}
+                alt={`이미지 ${currentImageIndex + 1}`}
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            {viewerImages.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                {currentImageIndex + 1} / {viewerImages.length}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>

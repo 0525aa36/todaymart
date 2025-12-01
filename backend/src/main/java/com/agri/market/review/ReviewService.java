@@ -1,6 +1,7 @@
 package com.agri.market.review;
 
 import com.agri.market.exception.ForbiddenException;
+import com.agri.market.file.FileStorageService;
 import com.agri.market.product.Product;
 import com.agri.market.product.ProductRepository;
 import com.agri.market.user.User;
@@ -9,7 +10,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -18,18 +21,21 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
 
     public ReviewService(ReviewRepository reviewRepository,
                         ProductRepository productRepository,
-                        UserRepository userRepository) {
+                        UserRepository userRepository,
+                        FileStorageService fileStorageService) {
         this.reviewRepository = reviewRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
+        this.fileStorageService = fileStorageService;
     }
 
-    // 리뷰 생성
+    // 리뷰 생성 (이미지 포함)
     @Transactional
-    public Review createReview(Long productId, String userEmail, Integer rating, String title, String content) {
+    public Review createReview(Long productId, String userEmail, Integer rating, String title, String content, List<MultipartFile> images) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
 
@@ -43,14 +49,50 @@ public class ReviewService {
         review.setTitle(title);
         review.setContent(content);
 
-        return reviewRepository.save(review);
+        // 이미지 저장
+        if (images != null && !images.isEmpty()) {
+            int order = 0;
+            for (MultipartFile image : images) {
+                if (!image.isEmpty()) {
+                    String fileName = fileStorageService.storeFile(image);
+                    String imageUrl = fileStorageService.getFileUrl(fileName);
+
+                    ReviewImage reviewImage = new ReviewImage();
+                    reviewImage.setImageUrl(imageUrl);
+                    reviewImage.setDisplayOrder(order++);
+                    review.addImage(reviewImage);
+                }
+            }
+        }
+
+        Review savedReview = reviewRepository.save(review);
+
+        // LAZY 로딩된 엔티티들을 트랜잭션 내에서 초기화 (open-in-view=false 대응)
+        // Product와 User의 필요한 필드를 미리 로드
+        savedReview.getProduct().getName();
+        savedReview.getUser().getName();
+        // 이미지도 초기화
+        savedReview.getImages().size();
+
+        return savedReview;
+    }
+
+    // 리뷰 생성 (이미지 없음 - 기존 호환성 유지)
+    @Transactional
+    public Review createReview(Long productId, String userEmail, Integer rating, String title, String content) {
+        return createReview(productId, userEmail, rating, title, content, null);
     }
 
     // 상품별 리뷰 조회
     @Transactional(readOnly = true)
     public Page<Review> getReviewsByProductId(Long productId, Pageable pageable) {
         // Product와 User를 함께 로딩하여 LAZY 로딩 문제 방지
-        return reviewRepository.findByProductIdWithProductAndUser(productId, pageable);
+        Page<Review> reviews = reviewRepository.findByProductIdWithProductAndUser(productId, pageable);
+
+        // 이미지 컬렉션도 트랜잭션 내에서 초기화 (open-in-view=false 대응)
+        reviews.getContent().forEach(review -> review.getImages().size());
+
+        return reviews;
     }
 
     // 사용자별 리뷰 조회

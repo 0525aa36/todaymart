@@ -2,20 +2,28 @@ package com.agri.market.review;
 
 import com.agri.market.dto.ReviewRequest;
 import com.agri.market.dto.ReviewResponse;
+import com.agri.market.exception.UnauthorizedException;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reviews")
 public class ReviewController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ReviewController.class);
 
     private final ReviewService reviewService;
 
@@ -23,9 +31,48 @@ public class ReviewController {
         this.reviewService = reviewService;
     }
 
-    // 리뷰 생성 (인증 필요)
-    @PostMapping
+    // 리뷰 생성 (인증 필요) - 이미지 포함 multipart 방식
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ReviewResponse> createReview(
+            @RequestParam("productId") Long productId,
+            @RequestParam("rating") Integer rating,
+            @RequestParam("title") String title,
+            @RequestParam(value = "content", required = false) String content,
+            @RequestParam(value = "images", required = false) List<MultipartFile> images,
+            Authentication authentication) {
+
+        logger.info("Creating review with multipart - productId: {}, rating: {}, title: {}, images count: {}",
+            productId, rating, title, images != null ? images.size() : 0);
+
+        if (authentication == null || authentication.getPrincipal() == null) {
+            logger.error("Authentication is null for review creation");
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String userEmail = userDetails.getUsername();
+        logger.info("Creating review for user: {}", userEmail);
+
+        try {
+            Review review = reviewService.createReview(
+                productId,
+                userEmail,
+                rating,
+                title,
+                content,
+                images
+            );
+            logger.info("Review created successfully with id: {}", review.getId());
+            return ResponseEntity.ok(ReviewResponse.from(review));
+        } catch (Exception e) {
+            logger.error("Error creating review: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    // 리뷰 생성 (인증 필요) - 이미지 없이 JSON 방식 (기존 호환성 유지)
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ReviewResponse> createReviewJson(
             @Valid @RequestBody ReviewRequest request,
             Authentication authentication) {
 

@@ -291,9 +291,11 @@ export function OrdersPage() {
                             배송 조회
                           </Button>
                         )}
-                        {order.orderStatus === "DELIVERED" && (
-                          <Button variant="outline" className="flex-1 bg-transparent">
-                            리뷰 작성
+                        {order.orderStatus === "DELIVERED" && order.orderItems[0]?.productId && (
+                          <Button className="flex-1" style={{ backgroundColor: '#23747C' }} asChild>
+                            <Link href={`/product/${order.orderItems[0].productId}?tab=reviews`}>
+                              리뷰 작성
+                            </Link>
                           </Button>
                         )}
                       </div>
@@ -352,7 +354,7 @@ export function OrdersPage() {
 
       {/* Delivery Tracking Dialog - 반응형 */}
       <Dialog open={trackingDialogOpen} onOpenChange={setTrackingDialogOpen}>
-        <DialogContent className="max-w-lg p-0 gap-0 max-h-[90vh] overflow-hidden flex flex-col sm:max-h-[85vh] fixed bottom-0 sm:bottom-auto sm:top-[50%] sm:translate-y-[-50%] translate-y-0 rounded-t-xl sm:rounded-lg [&>button]:hidden">
+        <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden sm:max-h-[85vh] fixed bottom-0 sm:bottom-auto sm:top-[50%] sm:translate-y-[-50%] translate-y-0 rounded-t-xl sm:rounded-lg [&>button]:hidden">
           <DialogHeader className="sr-only">
             <DialogTitle>배송 조회</DialogTitle>
           </DialogHeader>

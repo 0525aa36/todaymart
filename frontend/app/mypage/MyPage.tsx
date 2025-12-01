@@ -412,9 +412,11 @@ export function MyPage() {
                               배송 조회
                             </Button>
                           )}
-                          {order.orderStatus === "DELIVERED" && (
-                            <Button variant="outline" className="flex-1 bg-transparent">
-                              리뷰작성
+                          {order.orderStatus === "DELIVERED" && order.orderItems[0]?.productId && (
+                            <Button className="flex-1" style={{ backgroundColor: '#23747C' }} asChild>
+                              <Link href={`/product/${order.orderItems[0].productId}?tab=reviews`}>
+                                리뷰작성
+                              </Link>
                             </Button>
                           )}
                         </div>

@@ -108,9 +108,9 @@ export function DeliveryTracking({ courierCode, trackingNumber, courierName, aut
   const currentStepIndex = trackingData ? getCurrentStepIndex(trackingData.level) : -1
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden flex flex-col max-h-[90vh]">
-      {/* 헤더 - 메인 컬러 배경 */}
-      <div className="p-4 flex-shrink-0" style={{ backgroundColor: '#23747C' }}>
+    <div className="bg-white rounded-lg overflow-y-auto max-h-[85vh] sm:max-h-[80vh]">
+      {/* 헤더 - 메인 컬러 배경, sticky로 고정 */}
+      <div className="p-4 sticky top-0 z-10" style={{ backgroundColor: '#23747C' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Badge className="bg-white/20 text-white border-0 hover:bg-white/30">
@@ -142,8 +142,8 @@ export function DeliveryTracking({ courierCode, trackingNumber, courierName, aut
         </div>
       </div>
 
-      {/* 컨텐츠 영역 - 스크롤 가능 */}
-      <div className="flex-1 overflow-y-auto">
+      {/* 컨텐츠 영역 */}
+      <div className="flex-1">
         {/* 로딩 */}
         {loading && (
           <div className="p-8 text-center">
@@ -342,8 +342,8 @@ export function DeliveryTracking({ courierCode, trackingNumber, courierName, aut
         )}
       </div>
 
-      {/* 푸터 - 네이버 배송조회 */}
-      <div className="p-4 bg-gray-50 border-t flex-shrink-0">
+      {/* 푸터 - 네이버 배송조회, sticky bottom으로 고정 */}
+      <div className="p-4 bg-gray-50 border-t sticky bottom-0 z-10">
         <a
           href={naverTrackingUrl}
           target="_blank"
