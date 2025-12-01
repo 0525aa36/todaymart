@@ -157,7 +157,8 @@ public class CartService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
 
-        CartItem cartItem = cartItemRepository.findById(cartItemId)
+        // Lazy Loading 오류 방지를 위해 fetch join 쿼리 사용
+        CartItem cartItem = cartItemRepository.findByIdWithProductAndOption(cartItemId)
                 .orElseThrow(() -> new RuntimeException("Cart item not found with id: " + cartItemId));
 
         // Verify that the cart item belongs to the user's cart

@@ -26,7 +26,8 @@ public class Order {
     private Long id;
 
     @Version
-    private Long version; // Optimistic locking을 위한 버전 필드
+    @Column(columnDefinition = "BIGINT DEFAULT 0")
+    private long version = 0; // Optimistic locking을 위한 버전 필드 (primitive로 null 방지)
 
     @Column(unique = true, nullable = false)
     private String orderNumber;
