@@ -474,7 +474,7 @@ public class PaymentService {
                 });
 
                 // 결제 완료 Slack 알림 전송 (비동기)
-                slackNotificationService.sendPaymentNotification(order, amount);
+                slackNotificationService.sendPaymentNotification(order.getId(), amount);
 
                 return result;
             } else {

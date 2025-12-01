@@ -1,13 +1,14 @@
 package com.agri.market.notification;
 
 import com.agri.market.order.Order;
-import com.agri.market.order.OrderItem;
+import com.agri.market.order.OrderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -23,6 +24,7 @@ public class SlackNotificationService {
     private static final Logger logger = LoggerFactory.getLogger(SlackNotificationService.class);
 
     private final RestTemplate restTemplate;
+    private final OrderRepository orderRepository;
 
     @Value("${slack.webhook.url:}")
     private String slackWebhookUrl;
@@ -30,28 +32,34 @@ public class SlackNotificationService {
     @Value("${slack.notification.enabled:true}")
     private boolean notificationEnabled;
 
-    public SlackNotificationService(RestTemplate restTemplate) {
+    public SlackNotificationService(RestTemplate restTemplate, OrderRepository orderRepository) {
         this.restTemplate = restTemplate;
+        this.orderRepository = orderRepository;
     }
 
     /**
-     * 결제 완료 알림을 Slack으로 전송
-     * @param order 주문 정보
+     * 결제 완료 알림을 Slack으로 전송 (Order ID로 조회)
+     * @param orderId 주문 ID
      * @param amount 결제 금액
      */
     @Async
-    public void sendPaymentNotification(Order order, BigDecimal amount) {
+    @Transactional(readOnly = true)
+    public void sendPaymentNotification(Long orderId, BigDecimal amount) {
         if (!notificationEnabled || slackWebhookUrl == null || slackWebhookUrl.isBlank()) {
             logger.debug("Slack notification is disabled or webhook URL is not configured");
             return;
         }
 
         try {
+            // 새로운 트랜잭션에서 Order 조회 (OrderItems 포함)
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
             Map<String, Object> payload = buildPaymentNotificationPayload(order, amount);
             sendSlackMessage(payload);
             logger.info("Payment notification sent to Slack for order: {}", order.getOrderNumber());
         } catch (Exception e) {
-            logger.error("Failed to send Slack notification for order: {}", order.getOrderNumber(), e);
+            logger.error("Failed to send Slack notification for orderId: {}", orderId, e);
         }
     }
 
