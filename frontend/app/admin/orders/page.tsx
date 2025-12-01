@@ -33,7 +33,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Search, Truck, Package2, Edit, RefreshCw, CheckSquare, CheckCircle } from "lucide-react"
+import { ChevronLeft, Search, Truck, Package2, Edit, RefreshCw, CheckSquare, CheckCircle, RotateCcw } from "lucide-react"
 import Link from "next/link"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
 import { COURIER_COMPANIES, getCourierCodeByName } from "@/lib/courier-companies"
@@ -108,6 +108,7 @@ export default function AdminOrdersPage() {
   const [courierCode, setCourierCode] = useState("")
   const [updating, setUpdating] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [syncingPaymentOrderId, setSyncingPaymentOrderId] = useState<number | null>(null)
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
   const [googleSheetsEnabled, setGoogleSheetsEnabled] = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
@@ -393,6 +394,49 @@ export default function AdminOrdersPage() {
       })
     } finally {
       setUpdating(false)
+    }
+  }
+
+  const handleSyncPaymentStatus = async (order: Order) => {
+    setSyncingPaymentOrderId(order.orderId)
+    try {
+      const result = await apiFetch<{
+        action: string
+        message: string
+        newStatus?: string
+        cancelReason?: string
+      }>(`/api/admin/orders/${order.orderId}/sync-payment`, {
+        method: "POST",
+        auth: true,
+        parseResponse: "json",
+      })
+
+      if (result.action === "cancelled" || result.action === "partial_refund") {
+        toast({
+          title: "결제 취소 반영됨",
+          description: result.message,
+        })
+        fetchOrders()
+      } else if (result.action === "already_cancelled") {
+        toast({
+          title: "이미 취소됨",
+          description: result.message,
+        })
+      } else {
+        toast({
+          title: "동기화 완료",
+          description: result.message,
+        })
+      }
+    } catch (error) {
+      console.error("Error syncing payment status:", error)
+      toast({
+        title: "동기화 실패",
+        description: getErrorMessage(error, "결제 상태 동기화 중 오류가 발생했습니다."),
+        variant: "destructive",
+      })
+    } finally {
+      setSyncingPaymentOrderId(null)
     }
   }
 
@@ -855,15 +899,27 @@ export default function AdminOrdersPage() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                               {order.orderStatus === "PAID" && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleConfirmOrder(order)}
-                                  title="주문 확인 (상품 준비중으로 변경)"
-                                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleConfirmOrder(order)}
+                                    title="주문 확인 (상품 준비중으로 변경)"
+                                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleSyncPaymentStatus(order)}
+                                    disabled={syncingPaymentOrderId === order.orderId}
+                                    title="토스 결제 상태 동기화 (취소 여부 확인)"
+                                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+                                  >
+                                    <RotateCcw className={`h-4 w-4 ${syncingPaymentOrderId === order.orderId ? 'animate-spin' : ''}`} />
+                                  </Button>
+                                </>
                               )}
                               {order.orderStatus === "PREPARING" && (
                                 <Button
