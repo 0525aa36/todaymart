@@ -6,7 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.Hibernate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -44,15 +43,15 @@ public class OrderItemAdminResponse {
      * Lazy proxy 접근 시 LazyInitializationException 방지
      */
     public static OrderItemAdminResponse from(OrderItem orderItem) {
-        // ProductOption이 초기화되었는지 확인 후 안전하게 접근
+        // ProductOption 안전하게 접근 (전체를 try-catch로 감싸서 lazy loading 예외 방지)
         String optionName = null;
-        ProductOption productOption = orderItem.getProductOption();
-        if (productOption != null && Hibernate.isInitialized(productOption)) {
-            try {
+        try {
+            ProductOption productOption = orderItem.getProductOption();
+            if (productOption != null) {
                 optionName = productOption.getOptionName();
-            } catch (Exception e) {
-                // LazyInitializationException 발생 시 null 유지
             }
+        } catch (Exception e) {
+            // LazyInitializationException 발생 시 null 유지
         }
 
         return OrderItemAdminResponse.builder()
