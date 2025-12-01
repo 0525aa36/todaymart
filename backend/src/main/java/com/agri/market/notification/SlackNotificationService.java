@@ -248,23 +248,18 @@ public class SlackNotificationService {
             return;
         }
 
-        // 트랜잭션 커밋 전에 조회하면 실패할 수 있으므로 재시도 로직 추가
-        int maxRetries = 3;
-        int baseDelayMs = 1000; // 첫 시도 전 1초 대기
+        logger.info("Sending inquiry notification for inquiryId: {}", inquiryId);
 
-        logger.info("Preparing to send inquiry notification for inquiryId: {}", inquiryId);
+        // 재시도 로직 (네트워크 오류 등 대비)
+        int maxRetries = 3;
+        int baseDelayMs = 500;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                // 트랜잭션 커밋 대기 - 모든 시도에서 딜레이
-                int delayMs = baseDelayMs * attempt;
-                logger.debug("Waiting {}ms before attempt {}/{}", delayMs, attempt, maxRetries);
-                Thread.sleep(delayMs);
-
                 Inquiry inquiry = inquiryRepository.findById(inquiryId).orElse(null);
                 if (inquiry == null) {
-                    logger.warn("Inquiry not found (attempt {}/{}): {}", attempt, maxRetries, inquiryId);
-                    continue;
+                    logger.error("Inquiry not found: {}", inquiryId);
+                    return;
                 }
 
                 logger.info("Found inquiry: id={}, title={}", inquiry.getId(), inquiry.getTitle());
@@ -273,13 +268,16 @@ public class SlackNotificationService {
                 sendSlackMessageToUrl(payload, webhookUrl);
                 logger.info("Inquiry notification sent to Slack for inquiry: {}", inquiryId);
                 return; // 성공하면 종료
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logger.error("Interrupted while waiting to retry inquiry notification", e);
-                return;
             } catch (Exception e) {
                 logger.warn("Failed to send inquiry notification (attempt {}/{}): {}", attempt, maxRetries, e.getMessage());
-                if (attempt == maxRetries) {
+                if (attempt < maxRetries) {
+                    try {
+                        Thread.sleep(baseDelayMs * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                } else {
                     logger.error("Failed to send Slack notification for inquiryId after {} attempts: {}", maxRetries, inquiryId, e);
                 }
             }

@@ -5,6 +5,8 @@ import com.agri.market.user.User;
 import com.agri.market.user.UserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -55,8 +57,14 @@ public class InquiryService {
         inquiry.setStatus(InquiryStatus.PENDING);
         Inquiry savedInquiry = inquiryRepository.save(inquiry);
 
-        // Slack 알림 전송 (비동기)
-        slackNotificationService.sendInquiryNotification(savedInquiry.getId());
+        // 트랜잭션 커밋 후 Slack 알림 전송 (비동기)
+        final Long inquiryId = savedInquiry.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                slackNotificationService.sendInquiryNotification(inquiryId);
+            }
+        });
 
         return savedInquiry;
     }
