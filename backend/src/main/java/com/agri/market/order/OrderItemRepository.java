@@ -17,6 +17,9 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
     List<OrderItem> findByOrderId(Long orderId);
 
+    // 해당 ProductOption을 참조하는 주문이 있는지 확인
+    boolean existsByProductOptionId(Long productOptionId);
+
     @Query("SELECT new com.agri.market.dto.TopProductDTO(" +
             "oi.product.id, " +
             "oi.product.name, " +

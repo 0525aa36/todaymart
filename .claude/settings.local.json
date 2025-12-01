@@ -150,7 +150,16 @@
       "Bash(bash -c 'aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 940482431364.dkr.ecr.ap-northeast-2.amazonaws.com && docker push 940482431364.dkr.ecr.ap-northeast-2.amazonaws.com/korean-agri-shop/backend:latest')",
       "Bash(backend/src/main/java/com/agri/market/notification/SlackNotificationService.java )",
       "Bash(backend/src/main/resources/application.properties )",
-      "Bash(.aws/task-definition.json)"
+      "Bash(.aws/task-definition.json)",
+      "Bash(docker buildx build:*)",
+      "Bash(NEXT_PUBLIC_API_URL=https://api.todaymart.co.kr pnpm build:*)",
+      "Bash(backend/src/main/java/com/agri/market/admin/ExcelService.java )",
+      "Bash(backend/src/main/java/com/agri/market/dto/admin/OrderItemAdminResponse.java )",
+      "Bash(backend/src/main/java/com/agri/market/order/OrderItem.java )",
+      "Bash(backend/src/main/java/com/agri/market/order/OrderItemRepository.java )",
+      "Bash(backend/src/main/java/com/agri/market/order/OrderService.java )",
+      "Bash(frontend/app/admin/orders/page.tsx )",
+      "Bash(frontend/components/admin/LoadingButton.tsx)"
     ],
     "deny": [],
     "ask": []

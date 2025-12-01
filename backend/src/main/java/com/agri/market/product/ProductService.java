@@ -385,6 +385,12 @@ public class ProductService {
     public void deleteProductOption(Long optionId) {
         ProductOption option = productOptionRepository.findById(optionId)
                 .orElseThrow(() -> new RuntimeException("Product option not found: " + optionId));
+
+        // 해당 옵션을 참조하는 주문이 있는지 확인
+        if (orderItemRepository.existsByProductOptionId(optionId)) {
+            throw new BusinessException("이 옵션으로 주문된 내역이 있어 삭제할 수 없습니다. 옵션을 비활성화하세요.");
+        }
+
         productOptionRepository.delete(option);
     }
 

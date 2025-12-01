@@ -84,15 +84,22 @@ public class SlackNotificationService {
         String productList = order.getOrderItems().stream()
                 .map(item -> {
                     String productName = item.getProduct() != null ? item.getProduct().getName() : "상품";
-                    String optionName = "";
+                    String optionInfo = "";
                     try {
                         if (item.getProductOption() != null) {
-                            optionName = " (" + item.getProductOption().getOptionName() + ")";
+                            String optName = item.getProductOption().getOptionName();
+                            String optValue = item.getProductOption().getOptionValue();
+                            // 옵션명과 옵션값이 모두 있으면 "옵션명: 옵션값", 아니면 옵션명만
+                            if (optValue != null && !optValue.isBlank()) {
+                                optionInfo = " (" + optName + ": " + optValue + ")";
+                            } else if (optName != null && !optName.isBlank()) {
+                                optionInfo = " (" + optName + ")";
+                            }
                         }
                     } catch (Exception e) {
                         // LazyInitializationException 무시
                     }
-                    return "• " + productName + optionName + " x " + item.getQuantity() + "개";
+                    return "• " + productName + optionInfo + " x " + item.getQuantity() + "개";
                 })
                 .collect(Collectors.joining("\n"));
 
