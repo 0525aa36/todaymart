@@ -5,6 +5,7 @@ import com.agri.market.config.TossPaymentsConfig;
 import com.agri.market.dto.WebhookRequest;
 import com.agri.market.exception.ForbiddenException;
 import com.agri.market.exception.UnauthorizedException;
+import com.agri.market.notification.SlackNotificationService;
 import com.agri.market.order.Order;
 import com.agri.market.order.OrderRepository;
 import com.agri.market.order.OrderService;
@@ -47,6 +48,7 @@ public class PaymentService {
     private final CartRepository cartRepository;
     private final TossPaymentsConfig tossPaymentsConfig;
     private final RestTemplate restTemplate;
+    private final SlackNotificationService slackNotificationService;
 
     @Value("${payment.webhook.secret}")
     private String webhookSecret;
@@ -57,7 +59,7 @@ public class PaymentService {
     public PaymentService(PaymentRepository paymentRepository, OrderRepository orderRepository,
                          OrderService orderService, UserRepository userRepository,
                          CartRepository cartRepository, TossPaymentsConfig tossPaymentsConfig,
-                         RestTemplate restTemplate) {
+                         RestTemplate restTemplate, SlackNotificationService slackNotificationService) {
         this.paymentRepository = paymentRepository;
         this.orderRepository = orderRepository;
         this.orderService = orderService;
@@ -65,6 +67,7 @@ public class PaymentService {
         this.cartRepository = cartRepository;
         this.tossPaymentsConfig = tossPaymentsConfig;
         this.restTemplate = restTemplate;
+        this.slackNotificationService = slackNotificationService;
     }
 
     /**
@@ -469,6 +472,9 @@ public class PaymentService {
                     cartRepository.delete(cart);
                     logger.info("Cart cleared for user {} after payment confirmation", order.getUser().getEmail());
                 });
+
+                // 결제 완료 Slack 알림 전송 (비동기)
+                slackNotificationService.sendPaymentNotification(order, amount);
 
                 return result;
             } else {
