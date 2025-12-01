@@ -33,8 +33,19 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         Pageable pageable
     );
 
-    // 관리자용: 복합 필터링 (상태 + 날짜 + 판매자)
-    @Query("SELECT DISTINCT o FROM Order o " +
+    // 관리자용: 복합 필터링 (상태 + 날짜 + 판매자) - count 쿼리
+    @Query(value = "SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.orderItems oi " +
+           "LEFT JOIN FETCH oi.product p " +
+           "LEFT JOIN FETCH p.seller s " +
+           "LEFT JOIN FETCH oi.productOption po " +
+           "WHERE " +
+           "(:orderStatus IS NULL OR o.orderStatus = :orderStatus) AND " +
+           "(:startDate IS NULL OR o.createdAt >= :startDate) AND " +
+           "(:endDate IS NULL OR o.createdAt <= :endDate) AND " +
+           "(:sellerId IS NULL OR s.id = :sellerId) " +
+           "ORDER BY o.createdAt DESC",
+           countQuery = "SELECT COUNT(DISTINCT o) FROM Order o " +
            "LEFT JOIN o.orderItems oi " +
            "LEFT JOIN oi.product p " +
            "LEFT JOIN p.seller s " +
@@ -42,8 +53,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "(:orderStatus IS NULL OR o.orderStatus = :orderStatus) AND " +
            "(:startDate IS NULL OR o.createdAt >= :startDate) AND " +
            "(:endDate IS NULL OR o.createdAt <= :endDate) AND " +
-           "(:sellerId IS NULL OR s.id = :sellerId) " +
-           "ORDER BY o.createdAt DESC")
+           "(:sellerId IS NULL OR s.id = :sellerId)")
     Page<Order> findOrdersWithFilters(
         @Param("orderStatus") OrderStatus orderStatus,
         @Param("startDate") LocalDateTime startDate,
