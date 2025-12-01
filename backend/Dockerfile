@@ -21,6 +21,10 @@ RUN gradle clean build -x test --no-daemon
 # Stage 2: Runtime stage
 FROM eclipse-temurin:21-jre-jammy
 
+# Set timezone to Asia/Seoul (Korea)
+ENV TZ=Asia/Seoul
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # Install curl for health checks
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
@@ -45,7 +49,8 @@ EXPOSE 8081
 # JVM options for container environment
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 \
                -XX:+UseG1GC \
-               -Djava.security.egd=file:/dev/./urandom"
+               -Djava.security.egd=file:/dev/./urandom \
+               -Duser.timezone=Asia/Seoul"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
