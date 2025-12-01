@@ -249,7 +249,8 @@ export default function MyReviewsPage() {
                         </Button>
                         <Button
                           size="sm"
-                          variant="destructive"
+                          variant="outline"
+                          className="border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700"
                           onClick={() => handleDeleteClick(review)}
                         >
                           <Trash2 className="h-4 w-4 mr-1" />
@@ -345,7 +346,10 @@ export default function MyReviewsPage() {
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               취소
             </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
+            <Button
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={handleDeleteConfirm}
+            >
               삭제
             </Button>
           </DialogFooter>

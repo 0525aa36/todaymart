@@ -28,6 +28,11 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     // 사용자별 리뷰 조회
     Page<Review> findByUserId(Long userId, Pageable pageable);
 
+    // 사용자별 리뷰 조회 - Product, User를 함께 로딩
+    @Query(value = "SELECT r FROM Review r JOIN FETCH r.product JOIN FETCH r.user WHERE r.user.id = :userId",
+           countQuery = "SELECT COUNT(r) FROM Review r WHERE r.user.id = :userId")
+    Page<Review> findByUserIdWithProductAndUser(@Param("userId") Long userId, Pageable pageable);
+
     // 상품별 평균 평점 계산
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.product.id = :productId")
     Double findAverageRatingByProductId(@Param("productId") Long productId);
