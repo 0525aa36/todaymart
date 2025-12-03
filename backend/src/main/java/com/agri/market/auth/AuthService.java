@@ -53,8 +53,19 @@ public class AuthService {
 
     @RateLimiter(name = "auth")
     public void register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Error: Email is already in use!");
+        // 이메일 중복 확인
+        Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
+        if (existingUser.isPresent()) {
+            User user = existingUser.get();
+            String provider = user.getProvider();
+
+            // 소셜 로그인으로 가입된 계정인지 확인
+            if (provider != null && !provider.equals("LOCAL")) {
+                String providerName = getProviderDisplayName(provider);
+                throw new IllegalArgumentException("이미 " + providerName + " 로그인으로 가입된 이메일입니다. " + providerName + " 로그인을 사용해주세요.");
+            } else {
+                throw new IllegalArgumentException("이미 가입된 이메일입니다.");
+            }
         }
 
         User user = new User();
@@ -74,6 +85,22 @@ public class AuthService {
 
         // 회원가입 시 기본 배송지 자동 등록
         createDefaultAddress(savedUser, request);
+    }
+
+    /**
+     * provider 코드를 한글 이름으로 변환
+     */
+    private String getProviderDisplayName(String provider) {
+        switch (provider.toUpperCase()) {
+            case "NAVER":
+                return "네이버";
+            case "KAKAO":
+                return "카카오";
+            case "GOOGLE":
+                return "구글";
+            default:
+                return provider;
+        }
     }
 
     /**
