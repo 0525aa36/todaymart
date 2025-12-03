@@ -94,8 +94,8 @@ public class AdminReturnService {
 
         ReturnRequest saved = returnRequestRepository.save(returnRequest);
 
-        // 사용자에게 알림 발송
-        notificationService.sendToUserAsync(
+        // 사용자에게 알림 저장
+        notificationService.saveNotificationForUser(
             order.getUser().getEmail(),
             "반품 승인",
             "주문번호 " + order.getOrderNumber() + "의 반품이 승인되었습니다. 상품을 반송해주세요.",
@@ -127,8 +127,8 @@ public class AdminReturnService {
 
         ReturnRequest saved = returnRequestRepository.save(returnRequest);
 
-        // 사용자에게 알림 발송
-        notificationService.sendToUserAsync(
+        // 사용자에게 알림 저장
+        notificationService.saveNotificationForUser(
             order.getUser().getEmail(),
             "반품 거부",
             "주문번호 " + order.getOrderNumber() + "의 반품이 거부되었습니다. 사유: " + rejectionReason,
@@ -197,8 +197,8 @@ public class AdminReturnService {
 
         ReturnRequest saved = returnRequestRepository.save(returnRequest);
 
-        // 5. 사용자에게 알림 발송
-        notificationService.sendToUserAsync(
+        // 5. 사용자에게 알림 저장
+        notificationService.saveNotificationForUser(
             order.getUser().getEmail(),
             "반품 완료 및 환불 처리",
             "주문번호 " + order.getOrderNumber() + "의 반품이 완료되었습니다. 환불 금액: " +

@@ -75,8 +75,8 @@ public class DeliveryStatusScheduler {
                 if (tracking.isSuccess() && tracking.getLevel() >= 6) {
                     orderService.updateOrderStatus(order.getId(), OrderStatus.DELIVERED);
 
-                    // 4. 사용자에게 알림 발송
-                    notificationService.sendToUserAsync(
+                    // 4. 사용자에게 알림 저장
+                    notificationService.saveNotificationForUser(
                         order.getUser().getEmail(),
                         "배송이 완료되었습니다",
                         "주문번호 " + order.getOrderNumber() + " 상품이 배송 완료되었습니다.",

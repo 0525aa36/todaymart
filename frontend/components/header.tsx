@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ApiError, apiFetch } from '@/lib/api-client';
-import { useNotifications } from '@/hooks/use-notifications';
 import { CategoryNav } from '@/components/category-nav';
 
 export function Header() {
@@ -39,9 +38,6 @@ export function Header() {
     user?.role === 'ROLE_ADMIN' ||
     user?.roles?.some((role) => role === 'ADMIN' || role === 'ROLE_ADMIN') ||
     false;
-
-  // 관리자만 알림 활성화
-  useNotifications(isAdmin);
 
   const fetchCartCount = useCallback(async () => {
     const token = localStorage.getItem('token');

@@ -180,8 +180,8 @@ public class ReturnService {
         // 저장
         ReturnRequest saved = returnRequestRepository.save(returnRequest);
 
-        // 관리자에게 알림 발송
-        notificationService.sendToAllAdminsAsync(
+        // 관리자에게 알림 저장
+        notificationService.saveNotificationForAdmins(
             "새로운 반품 요청",
             "주문번호: " + order.getOrderNumber() + ", 사유: " + dto.getReasonCategory(),
             NotificationType.RETURN_REQUESTED
