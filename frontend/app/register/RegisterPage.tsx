@@ -235,17 +235,15 @@ export function RegisterPage() {
         description: "오늘마트에 오신 것을 환영합니다!",
       })
     } catch (error: any) {
-      // 서버에서 온 구체적인 에러 메시지 처리
-      let errorMessage = "회원가입 중 오류가 발생했습니다."
+      // 서버에서 온 구체적인 에러 메시지를 우선적으로 사용
+      let errorMessage = error.payload?.message || getErrorMessage(error, "회원가입 중 오류가 발생했습니다.")
 
-      if (error.status === 400) {
-        // 유효성 검사 실패의 경우
+      // 서버 메시지가 없는 400 에러의 경우에만 일반적인 유효성 검사 안내 추가
+      if (!error.payload?.message && error.status === 400) {
         errorMessage = "입력하신 정보를 다시 확인해주세요.\n"
         errorMessage += "• 비밀번호는 영문, 숫자, 특수문자(@$!%*#?&)를 모두 포함해야 합니다\n"
         errorMessage += "• 전화번호는 010-1234-5678 형식이어야 합니다\n"
         errorMessage += "• 생년월일은 YYYY-MM-DD 형식이어야 합니다"
-      } else if (error.payload?.message) {
-        errorMessage = error.payload.message
       }
 
       toast({
