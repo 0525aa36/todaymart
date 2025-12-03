@@ -1030,6 +1030,7 @@ export function ProductDetailPage() {
                                 className="w-full h-auto rounded-lg shadow-sm"
                                 loading="lazy"
                                 quality={85}
+                                unoptimized={true}
                               />
                             </span>
                           );
