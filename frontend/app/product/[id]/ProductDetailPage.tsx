@@ -1018,19 +1018,14 @@ export function ProductDetailPage() {
                             );
                           }
 
-                          // 일반 이미지 처리 - Next.js Image 컴포넌트 사용
+                          // 일반 이미지 처리 - 일반 img 태그 사용
                           return (
                             <span className="block my-6 w-full px-4 sm:px-0 sm:max-w-3xl mx-auto">
-                              <Image
+                              <img
                                 src={src}
                                 alt={props.alt || ''}
-                                width={1200}
-                                height={800}
-                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 60vw"
                                 className="w-full h-auto rounded-lg shadow-sm"
                                 loading="lazy"
-                                quality={85}
-                                unoptimized={true}
                               />
                             </span>
                           );

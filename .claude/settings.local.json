@@ -159,7 +159,8 @@
       "Bash(backend/src/main/java/com/agri/market/order/OrderItemRepository.java )",
       "Bash(backend/src/main/java/com/agri/market/order/OrderService.java )",
       "Bash(frontend/app/admin/orders/page.tsx )",
-      "Bash(frontend/components/admin/LoadingButton.tsx)"
+      "Bash(frontend/components/admin/LoadingButton.tsx)",
+      "WebFetch(domain:korean-agri-shop-uploads-940482431364.s3.ap-northeast-2.amazonaws.com)"
     ],
     "deny": [],
     "ask": []
