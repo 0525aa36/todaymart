@@ -58,6 +58,7 @@ export function RegisterPage() {
         title: "약관 동의 필요",
         description: "필수 약관에 모두 동의해주세요.",
         variant: "destructive",
+        duration: 4000,
       })
       return
     }
@@ -207,6 +208,7 @@ export function RegisterPage() {
         title: "입력 오류",
         description: "모든 필수 항목을 올바르게 입력해주세요.",
         variant: "destructive",
+        duration: 4000,
       })
       return
     }
@@ -233,6 +235,7 @@ export function RegisterPage() {
       toast({
         title: "회원가입 완료",
         description: "오늘마트에 오신 것을 환영합니다!",
+        duration: 4000,
       })
     } catch (error: any) {
       console.log("[Register] 에러 발생:", error)
@@ -259,6 +262,7 @@ export function RegisterPage() {
         title: "회원가입 실패",
         description: errorMessage,
         variant: "destructive",
+        duration: 5000,
       })
 
       console.log("[Register] 토스트 호출 완료")
