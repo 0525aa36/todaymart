@@ -235,8 +235,15 @@ export function RegisterPage() {
         description: "오늘마트에 오신 것을 환영합니다!",
       })
     } catch (error: any) {
+      console.log("[Register] 에러 발생:", error)
+      console.log("[Register] 에러 상태:", error.status)
+      console.log("[Register] 에러 payload:", error.payload)
+      console.log("[Register] 에러 message:", error.message)
+
       // 서버에서 온 구체적인 에러 메시지를 우선적으로 사용
       let errorMessage = error.payload?.message || getErrorMessage(error, "회원가입 중 오류가 발생했습니다.")
+
+      console.log("[Register] 최종 에러 메시지:", errorMessage)
 
       // 서버 메시지가 없는 400 에러의 경우에만 일반적인 유효성 검사 안내 추가
       if (!error.payload?.message && error.status === 400) {
@@ -246,11 +253,15 @@ export function RegisterPage() {
         errorMessage += "• 생년월일은 YYYY-MM-DD 형식이어야 합니다"
       }
 
+      console.log("[Register] 토스트 호출:", { title: "회원가입 실패", description: errorMessage })
+
       toast({
         title: "회원가입 실패",
         description: errorMessage,
         variant: "destructive",
       })
+
+      console.log("[Register] 토스트 호출 완료")
     }
   }
 

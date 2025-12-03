@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
-import { Toaster } from 'sonner'
+import { Toaster as SonnerToaster } from 'sonner'
+import { Toaster as ShadcnToaster } from '@/components/ui/toaster'
 import { ErrorBoundary } from '@/components/error-boundary'
 import './globals.css'
 
@@ -135,7 +136,7 @@ export default function RootLayout({
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
-        <Toaster
+        <SonnerToaster
           position="bottom-right"
           richColors
           closeButton
@@ -153,6 +154,7 @@ export default function RootLayout({
             },
           }}
         />
+        <ShadcnToaster />
       </body>
     </html>
   )
