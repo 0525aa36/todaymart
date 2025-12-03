@@ -16,7 +16,6 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { apiFetch, getErrorMessage } from "@/lib/api-client"
-import { useNotifications } from "@/hooks/use-notifications"
 
 interface TopProduct {
   productId: number
@@ -48,9 +47,6 @@ export default function AdminDashboard() {
   const { toast } = useToast()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
-
-  // 관리자 실시간 알림 활성화
-  useNotifications(true)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
