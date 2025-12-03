@@ -672,7 +672,7 @@ export default function EditProductPage() {
               <div>
                 <Label htmlFor="detailDescription">상품 설명 (마크다운 형식)</Label>
                 <p className="text-xs text-gray-500 mt-1 mb-2">
-                  아래 이미지를 클릭하거나 드래그해서 마크다운에 삽입할 수 있습니다.
+                  오른쪽 컬럼의 이미지 갤러리에서 이미지를 클릭하거나 드래그해서 마크다운에 삽입할 수 있습니다.
                 </p>
                 <Textarea
                   id="detailDescription"
@@ -696,60 +696,6 @@ export default function EditProductPage() {
                   placeholder="# 상품 설명&#10;&#10;## 주요 특징&#10;- 특징 1&#10;- 특징 2&#10;&#10;마크다운 형식으로 상세한 설명을 작성하세요"
                   className="font-mono text-sm"
                 />
-
-                {/* 상세 이미지 갤러리 - 마크다운 에디터 바로 아래로 이동 */}
-                {detailImages.length > 0 && (
-                  <div className="mt-3 p-3 border rounded-lg bg-gray-50">
-                    <Label className="text-sm font-medium mb-2 block">이미지 갤러리 (클릭하여 삽입)</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {detailImages.map((url, index) => {
-                        const isVideo = url.match(/\.(mp4|webm|ogg)$/i)
-                        const fileName = url.split('/').pop() || 'media'
-                        return (
-                          <div
-                            key={index}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData('text/plain', url)
-                              e.dataTransfer.effectAllowed = 'copy'
-                            }}
-                            onClick={() => {
-                              // 클릭 시 마크다운에 삽입
-                              const markdown = `![${fileName}](${url})\n\n`
-                              const currentValue = formData.detailDescription
-                              const needsNewline = currentValue && !currentValue.endsWith('\n')
-                              const newValue = currentValue + (needsNewline ? '\n\n' : '') + markdown
-                              setFormData({ ...formData, detailDescription: newValue })
-                            }}
-                            className="relative group cursor-pointer hover:opacity-80 transition-opacity"
-                            title="클릭하여 마크다운에 삽입"
-                          >
-                            {isVideo ? (
-                              <video src={url} className="w-full h-20 object-cover rounded" />
-                            ) : (
-                              <img src={url} alt="" className="w-full h-20 object-cover rounded" />
-                            )}
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded flex items-center justify-center transition-all">
-                              <Plus className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                removeDetailImage(index)
-                              }}
-                              className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-bl"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1037,7 +983,7 @@ export default function EditProductPage() {
               {/* Detail Page Images Upload Only */}
               <div className="pt-4 border-t">
                 <Label className="text-base font-semibold">상세페이지 이미지/동영상 업로드</Label>
-                <p className="text-xs text-gray-500 mt-1">이미지나 동영상을 업로드하면 마크다운 에디터 아래 갤러리에 나타납니다</p>
+                <p className="text-xs text-gray-500 mt-1">이미지나 동영상을 업로드하면 아래 갤러리에 나타납니다</p>
                 <div className="mt-3">
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -1057,6 +1003,60 @@ export default function EditProductPage() {
                     />
                   </label>
                 </div>
+
+                {/* 상세 이미지 갤러리 - 업로드 섹션 바로 아래 */}
+                {detailImages.length > 0 && (
+                  <div className="mt-3 p-3 border rounded-lg bg-gray-50">
+                    <Label className="text-sm font-medium mb-2 block">이미지 갤러리 (클릭하여 마크다운에 삽입)</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {detailImages.map((url, index) => {
+                        const isVideo = url.match(/\.(mp4|webm|ogg)$/i)
+                        const fileName = url.split('/').pop() || 'media'
+                        return (
+                          <div
+                            key={index}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('text/plain', url)
+                              e.dataTransfer.effectAllowed = 'copy'
+                            }}
+                            onClick={() => {
+                              // 클릭 시 마크다운에 삽입
+                              const markdown = `![${fileName}](${url})\n\n`
+                              const currentValue = formData.detailDescription
+                              const needsNewline = currentValue && !currentValue.endsWith('\n')
+                              const newValue = currentValue + (needsNewline ? '\n\n' : '') + markdown
+                              setFormData({ ...formData, detailDescription: newValue })
+                            }}
+                            className="relative group cursor-pointer hover:opacity-80 transition-opacity"
+                            title="클릭하여 마크다운에 삽입"
+                          >
+                            {isVideo ? (
+                              <video src={url} className="w-full h-20 object-cover rounded" />
+                            ) : (
+                              <img src={url} alt="" className="w-full h-20 object-cover rounded" />
+                            )}
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded flex items-center justify-center transition-all">
+                              <Plus className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                removeDetailImage(index)
+                              }}
+                              className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-bl"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
