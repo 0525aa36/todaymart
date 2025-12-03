@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Toaster as SonnerToaster } from 'sonner'
-import { Toaster as ShadcnToaster } from '@/components/ui/toaster'
+import { ToasterWrapper } from '@/components/toaster-wrapper'
 import { ErrorBoundary } from '@/components/error-boundary'
 import './globals.css'
 
@@ -136,25 +135,7 @@ export default function RootLayout({
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
-        <SonnerToaster
-          position="bottom-right"
-          richColors
-          closeButton
-          duration={4000}
-          toastOptions={{
-            style: {
-              marginBottom: '1rem',
-              marginRight: '1rem',
-              backgroundColor: '#DAE7E9',
-              border: 'none',
-              color: '#1a1a1a',
-            },
-            classNames: {
-              closeButton: '!bg-transparent !text-black hover:!bg-black/10 !border-none',
-            },
-          }}
-        />
-        <ShadcnToaster />
+        <ToasterWrapper />
       </body>
     </html>
   )

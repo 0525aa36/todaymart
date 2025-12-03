@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AddressSearch } from "@/components/address-search"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -21,7 +21,6 @@ import { formatBirthDate } from "@/lib/format-phone"
 
 export function RegisterPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [step, setStep] = useState(1)
   const [allTermsAgreed, setAllTermsAgreed] = useState(false)
   const [termsService, setTermsService] = useState(false)
@@ -54,12 +53,7 @@ export function RegisterPage() {
 
   const handleStep1Next = () => {
     if (!termsService || !termsPrivacy) {
-      toast({
-        title: "약관 동의 필요",
-        description: "필수 약관에 모두 동의해주세요.",
-        variant: "destructive",
-        duration: 4000,
-      })
+      toast.error("필수 약관에 모두 동의해주세요.")
       return
     }
     setStep(2)
@@ -204,12 +198,7 @@ export function RegisterPage() {
 
   const handleRegister = async () => {
     if (!validateForm()) {
-      toast({
-        title: "입력 오류",
-        description: "모든 필수 항목을 올바르게 입력해주세요.",
-        variant: "destructive",
-        duration: 4000,
-      })
+      toast.error("모든 필수 항목을 올바르게 입력해주세요.")
       return
     }
 
@@ -232,40 +221,17 @@ export function RegisterPage() {
       })
 
       setStep(3)
-      toast({
-        title: "회원가입 완료",
-        description: "오늘마트에 오신 것을 환영합니다!",
-        duration: 4000,
-      })
+      toast.success("오늘마트에 오신 것을 환영합니다!")
     } catch (error: any) {
-      console.log("[Register] 에러 발생:", error)
-      console.log("[Register] 에러 상태:", error.status)
-      console.log("[Register] 에러 payload:", error.payload)
-      console.log("[Register] 에러 message:", error.message)
-
       // 서버에서 온 구체적인 에러 메시지를 우선적으로 사용
       let errorMessage = error.payload?.message || getErrorMessage(error, "회원가입 중 오류가 발생했습니다.")
 
-      console.log("[Register] 최종 에러 메시지:", errorMessage)
-
       // 서버 메시지가 없는 400 에러의 경우에만 일반적인 유효성 검사 안내 추가
       if (!error.payload?.message && error.status === 400) {
-        errorMessage = "입력하신 정보를 다시 확인해주세요.\n"
-        errorMessage += "• 비밀번호는 영문, 숫자, 특수문자(@$!%*#?&)를 모두 포함해야 합니다\n"
-        errorMessage += "• 전화번호는 010-1234-5678 형식이어야 합니다\n"
-        errorMessage += "• 생년월일은 YYYY-MM-DD 형식이어야 합니다"
+        errorMessage = "입력하신 정보를 다시 확인해주세요.\n• 비밀번호는 영문, 숫자, 특수문자(@$!%*#?&)를 모두 포함해야 합니다\n• 전화번호는 010-1234-5678 형식이어야 합니다\n• 생년월일은 YYYY-MM-DD 형식이어야 합니다"
       }
 
-      console.log("[Register] 토스트 호출:", { title: "회원가입 실패", description: errorMessage })
-
-      toast({
-        title: "회원가입 실패",
-        description: errorMessage,
-        variant: "destructive",
-        duration: 5000,
-      })
-
-      console.log("[Register] 토스트 호출 완료")
+      toast.error(errorMessage)
     }
   }
 
