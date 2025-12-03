@@ -470,9 +470,12 @@ export default function EditProductPage() {
 
     setLoading(true)
 
+    // category가 빈 문자열이면 선택된 대카테고리 사용
+    const finalCategory = formData.category.trim() !== "" ? formData.category : selectedParentCategory
+
     const productData = {
       name: formData.name,
-      category: formData.category,
+      category: finalCategory,
       origin: formData.origin,
       summary: formData.summary,
       detailDescription: formData.detailDescription,
