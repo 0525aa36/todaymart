@@ -14,6 +14,7 @@ import com.agri.market.notification.NotificationService;
 import com.agri.market.notification.NotificationType;
 import com.agri.market.payment.Payment;
 import com.agri.market.payment.PaymentRepository;
+import com.agri.market.payment.PaymentService;
 import com.agri.market.product.Product;
 import com.agri.market.product.ProductOption;
 import com.agri.market.product.ProductOptionRepository;
@@ -21,6 +22,8 @@ import com.agri.market.product.ProductRepository;
 import com.agri.market.user.User;
 import com.agri.market.user.UserRepository;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -51,7 +54,7 @@ public class OrderService {
 
     private final NotificationService notificationService;
     private final UserCouponService userCouponService;
-    private com.agri.market.payment.PaymentService paymentService;
+    private PaymentService paymentService;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
                         UserRepository userRepository, ProductRepository productRepository,
@@ -72,8 +75,8 @@ public class OrderService {
     /**
      * PaymentService 의존성 주입 (순환 참조 방지를 위한 Setter Injection + @Lazy)
      */
-    @org.springframework.beans.factory.annotation.Autowired
-    public void setPaymentService(@org.springframework.context.annotation.Lazy com.agri.market.payment.PaymentService paymentService) {
+    @Autowired
+    public void setPaymentService(@Lazy PaymentService paymentService) {
         this.paymentService = paymentService;
     }
 

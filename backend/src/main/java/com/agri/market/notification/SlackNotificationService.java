@@ -46,6 +46,7 @@ public class SlackNotificationService {
 
     /**
      * 결제 완료 알림을 Slack으로 전송 (Order ID로 조회)
+     * 지수 백오프 재시도 로직 적용 (500ms × attempt, 최대 3회)
      * @param orderId 주문 ID
      * @param amount 결제 금액
      */
@@ -57,16 +58,33 @@ public class SlackNotificationService {
             return;
         }
 
-        try {
-            // 새로운 트랜잭션에서 Order 조회 (OrderItems 포함)
-            Order order = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+        // 재시도 로직 (네트워크 오류 등 대비)
+        int maxRetries = 3;
+        int baseDelayMs = 500;
 
-            Map<String, Object> payload = buildPaymentNotificationPayload(order, amount);
-            sendSlackMessage(payload);
-            logger.info("Payment notification sent to Slack for order: {}", order.getOrderNumber());
-        } catch (Exception e) {
-            logger.error("Failed to send Slack notification for orderId: {}", orderId, e);
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                // 새로운 트랜잭션에서 Order 조회 (OrderItems 포함)
+                Order order = orderRepository.findById(orderId)
+                        .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+                Map<String, Object> payload = buildPaymentNotificationPayload(order, amount);
+                sendSlackMessage(payload);
+                logger.info("Payment notification sent to Slack for order: {}", order.getOrderNumber());
+                return; // 성공하면 종료
+            } catch (Exception e) {
+                logger.warn("Failed to send payment notification (attempt {}/{}): {}", attempt, maxRetries, e.getMessage());
+                if (attempt < maxRetries) {
+                    try {
+                        Thread.sleep(baseDelayMs * attempt); // 지수 백오프
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                } else {
+                    logger.error("Failed to send Slack notification for orderId after {} attempts: {}", maxRetries, orderId, e);
+                }
+            }
         }
     }
 

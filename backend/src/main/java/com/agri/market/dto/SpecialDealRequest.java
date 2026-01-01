@@ -1,5 +1,6 @@
 package com.agri.market.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,8 +13,13 @@ import java.util.List;
 public class SpecialDealRequest {
     private String title;
     private String description;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime startTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endTime;
+
     private BigDecimal discountRate;
     private Boolean isActive;
     private Integer displayOrder;

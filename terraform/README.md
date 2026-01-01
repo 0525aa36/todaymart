@@ -87,6 +87,7 @@ aws configure
 
 ### 2. Terraform 설치
 
+
 ```bash
 # Ubuntu/Debian
 wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg

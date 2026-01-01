@@ -160,7 +160,13 @@
       "Bash(backend/src/main/java/com/agri/market/order/OrderService.java )",
       "Bash(frontend/app/admin/orders/page.tsx )",
       "Bash(frontend/components/admin/LoadingButton.tsx)",
-      "WebFetch(domain:korean-agri-shop-uploads-940482431364.s3.ap-northeast-2.amazonaws.com)"
+      "WebFetch(domain:korean-agri-shop-uploads-940482431364.s3.ap-northeast-2.amazonaws.com)",
+      "Bash(git show:*)",
+      "Bash(grep:*)",
+      "WebFetch(domain:myrealtrip.career.greetinghr.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(ls:*)",
+      "Bash(git ls-tree:*)"
     ],
     "deny": [],
     "ask": []
